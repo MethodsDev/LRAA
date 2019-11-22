@@ -28,8 +28,10 @@ class splice_graph:
         
         self._contig_acc = ""
         self._contig_seq_str = ""
-        self._contig_base_cov = []
-    
+        
+        self._contig_base_cov = list()
+        self._introns_set = set()
+        
         self._splice_graph = dict()
 
         self._splice_dinucs_top_strand = { "GTAG", "GCAG", "ATAC" }
@@ -73,11 +75,14 @@ class splice_graph:
 
             if len(alignment_segments) > 1:
                 # ensure proper consensus splice sites.
-                if not self._matches_splicing_consensus(alignment_segments):
+                introns_list = self._get_introns_matching_splicing_consensus(alignment_segments)
+                if introns_list is None:
                     continue
-                
 
-            
+                for intron in introns_list:
+                    self._introns_set.add(intron)
+
+                
             
         
         return
@@ -126,37 +131,45 @@ class splice_graph:
         return alignment_segments
     
         
-    def _matches_splicing_consensus(self, alignment_segments):
-
+    def _get_introns_matching_splicing_consensus(self, alignment_segments):
+        
         genome_seq = self._contig_seq_str
 
         top_strand_agreement_count = 0
         bottom_strand_agreement_count = 0
+
+        introns_list = list()
         
         for i in range(len(alignment_segments) -1):
-            seg_left_rend = alignment_segments[i][1]
-            seg_right_lend = alignment_segments[i+1][0]
+            seg_left_rend = alignment_segments[i][1]  # exon coord not inclusive
+            seg_right_lend = alignment_segments[i+1][0] # exon coord inclusive
+
+            intron_lend = seg_left_rend
+            intron_rend = seg_right_lend - 1
             
-            dinuc_left = genome_seq[seg_left_rend] + genome_seq[seg_left_rend + 1]
+            introns_list.append( (intron_lend, intron_rend) )
+            
+            dinuc_left = genome_seq[intron_lend] + genome_seq[intron_lend + 1]
                         
-            dinuc_right = genome_seq[seg_right_lend - 2 ] + genome_seq[seg_right_lend - 1 ]
+            dinuc_right = genome_seq[intron_rend - 1] + genome_seq[intron_rend]
 
             dinuc_combo = dinuc_left + dinuc_right
+            #print(dinuc_combo)
             
             if dinuc_combo in self._splice_dinucs_top_strand:
                 top_strand_agreement_count += 1
             elif dinuc_combo in self._splice_dinucs_bottom_strand:
                 bottom_strand_agreement_count += 1
             else:
-                return False
+                return None
 
 
         if top_strand_agreement_count > 0 and bottom_strand_agreement_count > 0:
             # inconsistent orientation of splicing events
-            return False
+            return None
         elif top_strand_agreement_count > 0 or bottom_strand_agreement_count > 0:
             # all consistent splicing orientations
-            return True
+            return introns_list
         else:
             raise RuntimeError("splicing analysis error... shouldn't happen")
 
