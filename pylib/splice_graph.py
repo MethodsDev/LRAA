@@ -17,7 +17,7 @@ class splice_graph:
     # class variables
     _read_aln_gap_merge_int = 10
     _max_contig_length = 1e10
-
+    _min_alt_splice_freq = 0.05
     
     
     def __init__(self):
@@ -194,5 +194,43 @@ class splice_graph:
     
     def _build_draft_splice_graph(self):
 
-        pass
-    
+        ## do some intron pruning
+        self._prune_likely_false_introns()
+
+
+    def _prune_likely_false_introns(self):
+
+        self._prune_spurious_introns_shared_boundary("left")
+        self._prune_spurious_introns_shared_boundary("right")
+
+    def _prune_spurious_introns_shared_boundary(self, left_or_right):
+
+        idx = 0 if left_or_right == "left" else 1
+        
+        introns_shared_coord = defaultdict(list)
+        
+        for intron in self._introns:
+            intron_left = intron[idx]
+            introns_shared_coord[intron_left].append(intron)
+
+        introns_to_delete = set()
+        
+        # see if there are relatively poorly supported junctions
+        for intron_list in introns_shared_coord.values():
+            intron_list = sorted(intron_list, key=lambda x: self._introns[x])
+            most_supported_intron = intron_list.pop()
+            most_supported_intron_abundance = self._introns[most_supported_intron]
+            for alt_intron in intron_list:
+                alt_intron_abundance = self._introns[alt_intron]
+                alt_intron_relative_freq = alt_intron_abundance / most_supported_intron_abundance
+                #print("alt intron: {}".format(alt_intron) + " has rel freq: {}".format(alt_intron_relative_freq))
+                if (alt_intron_relative_freq < splice_graph._min_alt_splice_freq):
+                    introns_to_delete.add(alt_intron)
+
+        logger.info("removing {} low frequency introns with shared {} coord".format(len(introns_to_delete), left_or_right))
+        
+        for intron in introns_to_delete:
+            del self._introns[intron]
+            
+        return
+
