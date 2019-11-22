@@ -6,6 +6,7 @@ import subprocess
 import logging
 import string
 import pysam
+from collections import defaultdict
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +31,7 @@ class splice_graph:
         self._contig_seq_str = ""
         
         self._contig_base_cov = list()
-        self._introns_set = set()
+        self._introns = defaultdict(int)
         
         self._splice_graph = dict()
 
@@ -57,7 +58,19 @@ class splice_graph:
         self._genome_fasta_filename = genome_fasta_file
         self._alignments_bam_filename = alignments_bam_file
 
+        ## do the work:
+        
+        self._extract_introns_and_contig_coverage()
+        
+        self._build_draft_splice_graph()
 
+        
+        return
+
+    
+
+    def _extract_introns_and_contig_coverage(self):
+        
         # get genome contig sequence
         contig_seq_str = self._retrieve_contig_seq()
         contig_len = len(contig_seq_str)
@@ -68,9 +81,10 @@ class splice_graph:
         
         # init depth of coverage array
         self._contig_base_cov = [0 for i in range(0,contig_len)]
-        
-        samfile = pysam.AlignmentFile(alignments_bam_file, "rb")
-        for read in samfile.fetch(contig_acc):
+
+        # parse read alignments, capture introns and genome coverage info.
+        samfile = pysam.AlignmentFile(self._alignments_bam_filename, "rb")
+        for read in samfile.fetch(self._contig_acc):
             alignment_segments = self._get_alignment_segments(read)
 
             if len(alignment_segments) > 1:
@@ -80,10 +94,13 @@ class splice_graph:
                     continue
 
                 for intron in introns_list:
-                    self._introns_set.add(intron)
+                    self._introns[intron] += 1
 
                 
-            
+            # add to coverage
+            for segment in alignment_segments:
+                for i in range(*segment):
+                    self._contig_base_cov[i] += 1
         
         return
 
@@ -175,4 +192,7 @@ class splice_graph:
 
 
     
-        
+    def _build_draft_splice_graph(self):
+
+        pass
+    
