@@ -1,11 +1,23 @@
 #!/usr/bin/env python
+# encoding: utf-8
 
 import sys, os, re
 import pysam
 import argparse
+import subprocess
 
 sys.path.insert(0, os.path.sep.join([os.path.dirname(os.path.realpath(__file__)), "pylib"]))
 from splice_graph import splice_graph
+
+import logging
+FORMAT = "%(asctime)-15s %(levelname)s %(module)s.%(name)s.%(funcName)s at %(lineno)d :\n\t%(message)s\n"
+global logger
+logger = logging.getLogger()
+logging.basicConfig(filename='pasa-salras.log', format=FORMAT, filemode='w', level=logging.DEBUG)
+# add a new Handler to print all INFO and above messages to stdout
+ch = logging.StreamHandler(sys.stdout)
+ch.setLevel(logging.INFO)
+logger.addHandler(ch)
 
 
 READ_ALN_GAP_MERGE = 10
@@ -17,13 +29,15 @@ def main():
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
     parser.add_argument("--bam", type=str, required=True, help="target bam file")
-
+    parser.add_argument("--genome", type=str, required=True, help="target genome file")
 
     args = parser.parse_args()
 
+    genome_fasta_filename = args.genome
     bam_filename = args.bam
 
-    build_splice_graph(bam_filename,
+    build_splice_graph(genome_fasta_filename,
+                       bam_filename,
                        READ_ALN_GAP_MERGE)
 
     
@@ -32,26 +46,42 @@ def main():
 
 
 
-def build_splice_graph(bam_file, read_aln_gap_merge):
+def build_splice_graph(genome_fasta_filename, bam_file, read_aln_gap_merge):
 
     # data structures want:
     # ultimately exons and introns
     # build from reads.
     # define coverage intervals and introns as graph components.
-    
-    samfile = pysam.AlignmentFile(bam_file, "rb")
 
-    sg = splice_graph()
-    sg.set_read_aln_gap_merge(read_aln_gap_merge)
+    genome_contigs_list = get_genome_contigs_listing(genome_fasta_filename)
     
-    for read in samfile.fetch():
-        print(read)
-        aligned_pairs = read.get_blocks()
-        print(aligned_pairs)
+    for contig in genome_contigs_list:
+        sg = splice_graph()
+        sg.set_read_aln_gap_merge(read_aln_gap_merge)
+        sg.build_splice_graph_for_contig(contig, genome_fasta_filename, bam_file)
+
+
+    
         
-        
     
 
+def get_genome_contigs_listing(genome_fasta_filename):
 
+    fai_file = "{}.fai".format(genome_fasta_filename)
+    if not os.path.exists(fai_file):
+        subprocess.check_call("samtools faidx {}".format(genome_fasta_filename),
+                              shell=True)
+
+    contigs_list = list()
+    
+    with open(fai_file) as fh:
+        for line in fh:
+            vals = line.split("\t")
+            contig_acc = vals[0]
+            contigs_list.append(contig_acc)
+
+    return contigs_list
+    
+            
 if __name__ == '__main__':
     main()
