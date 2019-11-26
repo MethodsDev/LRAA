@@ -20,6 +20,8 @@ class GenomeFeature:
     def __init__(self, lend, rend):
         self._lend = lend
         self._rend = rend
+        self._id = "__id_not_set__"
+        self._contig_acc = "__contig_acc_not_set__"
         return
         
     def get_coords(self):
@@ -31,7 +33,10 @@ class GenomeFeature:
 
     def get_feature_length(self):
         return(self._rend - self._lend + 1)
-        
+
+    def get_bed_row(self, pad=0):
+        return("\t".join([ str(x) for x in [self._contig_acc, self._lend - pad, self._rend + pad, self._id, self.get_read_support()] ])) 
+    
         
 class Intron(GenomeFeature):
 
@@ -100,7 +105,7 @@ class splice_graph:
         self._contig_base_cov = list()
         self._introns = defaultdict(int)
         
-        self._splice_graph = dict()
+        self._splice_graph = None  # becomes networkx digraph
 
         self._splice_dinucs_top_strand = { "GTAG", "GCAG", "ATAC" }
         self._splice_dinucs_bottom_strand = {"CTAC", "CTGC", "GTAT" } # revcomp of top strand dinucs
@@ -135,8 +140,10 @@ class splice_graph:
         draft_splice_graph = self._prune_lowly_expressed_intron_overlapping_exon_segments(draft_splice_graph)
 
         draft_splice_graph = self._prune_disconnected_introns(draft_splice_graph)
+
+        self._splice_graph = draft_splice_graph
         
-        return
+        return self._splice_graph
     
     
 
@@ -560,3 +567,26 @@ class splice_graph:
 
         return draft_splice_graph
     
+
+    def write_intron_exon_splice_graph_bed_files(self, output_prefix):
+
+        exons_bed_file = "{}.exons.bed".format(output_prefix)
+        introns_bed_file = "{}.introns.bed".format(output_prefix)
+
+        exons_ofh = open(exons_bed_file, 'w')
+        introns_ofh = open(introns_bed_file, 'w')
+        
+        for node in self._splice_graph:
+            if type(node) == Exon:
+                exons_ofh.write(node.get_bed_row(pad=1) + "\n")
+            elif type(node) == Intron:
+                introns_ofh.write(node.get_bed_row(pad=1) + "\n")
+            else:
+                raise RuntimeError("not intron or exon object... bug... ")
+
+        exons_ofh.close()
+        introns_ofh.close()
+
+        return
+    
+                
