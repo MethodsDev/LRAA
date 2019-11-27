@@ -17,11 +17,12 @@ DEBUG=True
 
 class GenomeFeature:
 
-    def __init__(self, lend, rend):
+    def __init__(self, contig_acc, lend, rend):
+        self._contig_acc = contig_acc
         self._lend = lend
         self._rend = rend
         self._id = "__id_not_set__"
-        self._contig_acc = "__contig_acc_not_set__"
+
         return
         
     def get_coords(self):
@@ -42,8 +43,8 @@ class Intron(GenomeFeature):
 
     intron_id_counter = 0
     
-    def __init__(self, lend, rend, orient, count):
-        super().__init__(lend, rend)
+    def __init__(self, contig_acc, lend, rend, orient, count):
+        super().__init__(contig_acc, lend, rend)
         self._orient = orient
         self._count = count
 
@@ -63,8 +64,8 @@ class Exon(GenomeFeature):
 
     exon_id_counter = 0
 
-    def __init__(self, lend, rend, mean_coverage):
-        super().__init__(lend, rend)
+    def __init__(self, contig_acc, lend, rend, mean_coverage):
+        super().__init__(contig_acc, lend, rend)
         self._mean_coverage = mean_coverage
 
         Exon.exon_id_counter += 1
@@ -90,7 +91,7 @@ class splice_graph:
     # noise filtering params
     _min_alt_splice_freq = 0.05
     _max_intron_length_for_exon_segment_filtering = 10000
-    
+    _min_intron_support = 2
     
     def __init__(self):
 
@@ -135,14 +136,12 @@ class splice_graph:
         self._extract_contig_coverage()
         self._extract_introns()
         
-        draft_splice_graph = self._build_draft_splice_graph()
+        self._build_draft_splice_graph() # initializes self._splice_graph
 
-        draft_splice_graph = self._prune_lowly_expressed_intron_overlapping_exon_segments(draft_splice_graph)
+        self._prune_lowly_expressed_intron_overlapping_exon_segments()
 
-        draft_splice_graph = self._prune_disconnected_introns(draft_splice_graph)
+        self._prune_disconnected_introns()
 
-        self._splice_graph = draft_splice_graph
-        
         return self._splice_graph
     
     
@@ -159,7 +158,7 @@ class splice_graph:
 
         
         # init depth of coverage array
-        self._contig_base_cov = [0 for i in range(0,contig_len)]
+        self._contig_base_cov = [0 for i in range(0,contig_len+1)]
 
         return
 
@@ -167,11 +166,15 @@ class splice_graph:
     def _extract_introns(self):
         
         ## Intron Capture
+
+        intron_counter = defaultdict(int)
+
         # parse read alignments, capture introns and genome coverage info.
         samfile = pysam.AlignmentFile(self._alignments_bam_filename, "rb")
         for read in samfile.fetch(self._contig_acc):
             alignment_segments = self._get_alignment_segments(read)
-
+            #print(alignment_segments)
+            
             if len(alignment_segments) > 1:
                 # ensure proper consensus splice sites.
                 introns_list = self._get_introns_matching_splicing_consensus(alignment_segments)
@@ -179,13 +182,19 @@ class splice_graph:
                     continue
 
                 for intron in introns_list:
-                    self._introns[intron] += 1
+                    intron_counter[intron] += 1
 
                 
             # add to coverage
             for segment in alignment_segments:
-                for i in range(*segment):
+                for i in range(segment[0], segment[1] + 1):
                     self._contig_base_cov[i] += 1
+
+        # retain only those that meet the min threshold
+        for intron, count in intron_counter.items():
+            if count >= splice_graph._min_intron_support:
+                self._introns[intron] = count
+            
         
         return
 
@@ -214,11 +223,18 @@ class splice_graph:
         
         aligned_pairs = pysam_read_alignment.get_blocks()
 
+        #print(aligned_pairs)
+        
         ## merge adjacent blocks within range.
         alignment_segments = list()
         alignment_segments.append(list(aligned_pairs.pop(0)))
-
+        # block coordinates are zero-based, left inclusive, and right-end exclusive
+        alignment_segments[0][0] += 1 # adjust for zero-based.  note, end position doesn't need to be adjusted. 
+        
         for aligned_pair in aligned_pairs:
+            aligned_pair = list(aligned_pair)
+            aligned_pair[0] += 1
+            
             # extend earlier stored segment or append new one
             if aligned_pair[0] - alignment_segments[-1][1] < splice_graph._read_aln_gap_merge_int:
                 # extend rather than append
@@ -227,7 +243,7 @@ class splice_graph:
                 # append, as too far apart from prev
                 alignment_segments.append(list(aligned_pair))
 
-
+        
         return alignment_segments
     
         
@@ -244,14 +260,14 @@ class splice_graph:
             seg_left_rend = alignment_segments[i][1]  # exon coord not inclusive
             seg_right_lend = alignment_segments[i+1][0] # exon coord inclusive
 
-            intron_lend = seg_left_rend
+            intron_lend = seg_left_rend + 1
             intron_rend = seg_right_lend - 1
             
             introns_list.append( (intron_lend, intron_rend) )
             
-            dinuc_left = genome_seq[intron_lend] + genome_seq[intron_lend + 1]
+            dinuc_left = genome_seq[intron_lend - 1] + genome_seq[intron_lend - 1 + 1]
                         
-            dinuc_right = genome_seq[intron_rend - 1] + genome_seq[intron_rend]
+            dinuc_right = genome_seq[intron_rend - 1 -1] + genome_seq[intron_rend -1]
 
             dinuc_combo = dinuc_left + dinuc_right
             #print(dinuc_combo)
@@ -293,7 +309,7 @@ class splice_graph:
             intron_lend, intron_rend = intron
             count = self._introns[intron]
 
-            intron_obj = Intron(intron_lend, intron_rend, "?", count)
+            intron_obj = Intron(self._contig_acc, intron_lend, intron_rend, "?", count)
             lend_to_intron[intron_lend].append(intron_obj)
             rend_to_intron[intron_rend].append(intron_obj)
 
@@ -307,7 +323,7 @@ class splice_graph:
 
             exon_mean_cov = self._get_mean_coverage(exon_lend, exon_rend)
             
-            exon_obj = Exon(exon_lend, exon_rend, exon_mean_cov)
+            exon_obj = Exon(self._contig_acc, exon_lend, exon_rend, exon_mean_cov)
 
             draft_splice_graph.add_node(exon_obj)
 
@@ -323,8 +339,15 @@ class splice_graph:
                 introns = lend_to_intron[candidate_splice_right]
                 for intron_obj in lend_to_intron[candidate_splice_right]:
                     draft_splice_graph.add_edge(exon_obj, intron_obj)
-        
-        return draft_splice_graph            
+
+
+        self._splice_graph = draft_splice_graph
+
+        if DEBUG:
+            self.write_intron_exon_splice_graph_bed_files("__prefilter", pad=0)
+            self.describe_graph("__prefilter.graph")
+            
+        return
         
         
         
@@ -451,7 +474,7 @@ class splice_graph:
 
         exon_segments = list()
         exon_seg_start = None
-        for i in range(0, len(self._contig_base_cov)):
+        for i in range(1, len(self._contig_base_cov)):
             if exon_seg_start is None:
                 if self._contig_base_cov[i]:
                     # start new exon segment
@@ -462,17 +485,22 @@ class splice_graph:
                     # stop segment, add to seg list
                     exon_segments.append([exon_seg_start, i-1])
                     exon_seg_start = None
-                elif i in left_splice_sites:
-                    exon_segments.append([exon_seg_start, i-1])
-                    exon_seg_start = i
-                elif i in right_splice_sites:
+
+            # splice breakpoint logic
+            if i+1 in left_splice_sites:
+                if exon_seg_start is not None:
                     exon_segments.append([exon_seg_start, i])
-                    exon_seg_start = None
+                exon_seg_start = None
 
+            if i in right_splice_sites:
+                if exon_seg_start is not None:
+                    exon_segments.append([exon_seg_start, i])
+                exon_seg_start = None
 
+                
         # get last one if it runs off to the end of the contig
         if exon_seg_start is not None:
-            exon_segments.append([exon_seg_start, len(self._contig_base_cov)-1])
+            exon_segments.append([exon_seg_start, len(self._contig_base_cov)])
 
 
         if DEBUG:
@@ -491,8 +519,10 @@ class splice_graph:
         return exon_segments
     
 
-    def _prune_lowly_expressed_intron_overlapping_exon_segments(self, draft_splice_graph):
+    def _prune_lowly_expressed_intron_overlapping_exon_segments(self):
 
+        draft_splice_graph = self._splice_graph
+        
         intron_objs = list()
         exon_segment_objs = list()
 
@@ -536,21 +566,29 @@ class splice_graph:
 
                 overlapping_exon_seg = overlapping_exon_seg_iv.data
                 
-                if overlapping_exon_seg.get_read_support() / intron.get_read_support() < splice_graph._min_alt_splice_freq:
+                if float(overlapping_exon_seg.get_read_support()) / float(intron.get_read_support()) < splice_graph._min_alt_splice_freq:
                     exons_to_purge.add(overlapping_exon_seg)
 
 
         logger.info("-removing {} lowly expressed exon segments based on intron overlap".format(len(exons_to_purge)))
         if exons_to_purge:
             draft_splice_graph.remove_nodes_from(exons_to_purge)
-            
 
-        return(draft_splice_graph)
+        if DEBUG:
+            exons_to_purge = list(exons_to_purge)
+            exons_to_purge = sorted(exons_to_purge, key=lambda x: x._lend)
+            with open("__exon_segments_to_purge.bed", 'w') as ofh:
+                for exon in exons_to_purge:
+                    ofh.write(exon.get_bed_row(pad=1) + "\n")
+
+        return
 
 
 
-    def _prune_disconnected_introns(self, draft_splice_graph):
+    def _prune_disconnected_introns(self):
 
+        draft_splice_graph = self._splice_graph
+        
         introns_to_remove = list()
         for node in draft_splice_graph:
             if type(node) == Intron:
@@ -563,30 +601,90 @@ class splice_graph:
 
         logger.info("-pruning {} now disconnected introns".format(len(introns_to_remove)))
 
+        if DEBUG:
+            with open("__pruned_disconnected_introns.bed", 'w') as ofh:
+                for intron in introns_to_remove:
+                    ofh.write(intron.get_bed_row(pad=1) + "\n")
+
+        
         draft_splice_graph.remove_nodes_from(introns_to_remove)
 
-        return draft_splice_graph
+        return
     
 
-    def write_intron_exon_splice_graph_bed_files(self, output_prefix):
+    def write_intron_exon_splice_graph_bed_files(self, output_prefix, pad=0):
 
         exons_bed_file = "{}.exons.bed".format(output_prefix)
         introns_bed_file = "{}.introns.bed".format(output_prefix)
 
         exons_ofh = open(exons_bed_file, 'w')
         introns_ofh = open(introns_bed_file, 'w')
+
+        exons_list = list()
+        introns_list = list()
         
         for node in self._splice_graph:
             if type(node) == Exon:
-                exons_ofh.write(node.get_bed_row(pad=1) + "\n")
+                exons_list.append(node)
             elif type(node) == Intron:
-                introns_ofh.write(node.get_bed_row(pad=1) + "\n")
+                introns_list.append(node)
             else:
                 raise RuntimeError("not intron or exon object... bug... ")
 
+
+        exons_list = sorted(exons_list, key=lambda x: x._lend)
+        introns_list = sorted(introns_list, key=lambda x: x._lend)
+
+        for exon in exons_list:
+            exons_ofh.write(exon.get_bed_row(pad=pad) + "\n")
+
+        for intron in introns_list:
+            introns_ofh.write(intron.get_bed_row(pad=pad) + "\n")
+        
         exons_ofh.close()
         introns_ofh.close()
 
         return
     
-                
+
+    def describe_graph(self, outputfilename):
+
+        ofh = open(outputfilename, 'w')
+        
+        nodes = list(self._splice_graph.nodes)
+
+        nodes = sorted(nodes, key=lambda x: x._lend)
+
+        for node in nodes:
+            node_descr = ""
+            preds = list(self._splice_graph.predecessors(node))
+            if preds:
+                pred_strs = list()
+                for pred in preds:
+                    print(pred)
+                    pred_strs.append(str(pred))
+                node_descr += ">;<".join(pred_strs)
+            else:
+                node_descr += "."
+
+            node_descr += "\t<" + str(node) + ">\t"
+
+            succs = list(self._splice_graph.successors(node))
+            if succs:
+                succs_strs = list()
+                for succ in succs:
+                    succs_strs.append(str(succ))
+                node_descr += ">;<".join(succs_strs)
+            else:
+                node_descr += "."
+
+
+            ofh.write(node_descr + "\n")
+
+
+        ofh.close()
+
+
+        return
+
+    

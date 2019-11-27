@@ -60,7 +60,7 @@ def build_splice_graph(genome_fasta_filename, bam_file, read_aln_gap_merge):
         sg.set_read_aln_gap_merge(read_aln_gap_merge)
         sg.build_splice_graph_for_contig(contig, genome_fasta_filename, bam_file)
 
-        sg.write_intron_exon_splice_graph_bed_files("prereconstruct.{}".format(contig))
+        sg.write_intron_exon_splice_graph_bed_files("prereconstruct.{}.pad1".format(contig), pad=1)
 
         
     
