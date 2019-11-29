@@ -85,15 +85,16 @@ class splice_graph:
     # class variables
     # ---------------
     
-    _read_aln_gap_merge_int = 10
-    _max_contig_length = 1e10
+    _read_aln_gap_merge_int = 10 ## internal alignment gap merging
+    _inter_exon_segment_merge_dist = 50  ## unbranched exon segments within this range get merged into single segments.
+    _max_genomic_contig_length = 1e10
 
     # noise filtering params
     _min_alt_splice_freq = 0.05
     _max_intron_length_for_exon_segment_filtering = 10000
     _min_intron_support = 2
     _min_terminal_splice_exon_anchor_length = 15
-
+    _min_read_aln_per_id = 98
     
     def __init__(self):
 
@@ -145,13 +146,47 @@ class splice_graph:
         self._build_draft_splice_graph() # initializes self._splice_graph
 
         self._prune_lowly_expressed_intron_overlapping_exon_segments()  # removes exon segments, not introns
-
-        
         
         self._prune_disconnected_introns()
 
+        self._merge_neighboring_proximal_unbranched_exon_segments()
+        
         return self._splice_graph
     
+
+    def _node_has_successors(self, node):
+
+        if len(list(self._splice_graph.successors(node))) > 0:
+            return True
+        else:
+            return False
+
+    def _node_has_predecessors(self, node):
+
+        if (len(list(self._splice_graph.predecessors(node)))) > 0:
+            return True
+        else:
+            return False
+        
+
+    def _get_exon_and_intron_nodes(self):
+
+        intron_objs = list()
+        exon_segment_objs = list()
+
+        for node in self._splice_graph:
+            if type(node) == Intron:
+                intron_objs.append(node)
+            elif type(node) == Exon:
+                exon_segment_objs.append(node)
+            else:
+                raise RuntimeError("Error, not identifying node: {} as Exon or Intron type - instead {} ".format(node, type(node)))
+
+        exon_segment_objs = sorted(exon_segment_objs, key=lambda x: x._lend)
+        intron_objs = sorted(intron_objs, key=lambda x: x._lend)
+
+        return (exon_segment_objs, intron_objs)
+
     
 
     def _initialize_contig_coverage(self):
@@ -161,8 +196,8 @@ class splice_graph:
         contig_seq_str = self._retrieve_contig_seq()
         contig_len = len(contig_seq_str)
         logging.info("initing coverage array of len: {}".format(contig_len)) 
-        if (contig_len > splice_graph._max_contig_length):
-            raise RuntimeError("contig length {} exceeds maximum allowed {}".format(contig_len, splice_graph._max_contig_length))
+        if (contig_len > splice_graph._max_genomic_contig_length):
+            raise RuntimeError("genomic contig length {} exceeds maximum allowed {}".format(contig_len, splice_graph._max_genomic_contig_length))
 
         
         # init depth of coverage array
@@ -178,10 +213,45 @@ class splice_graph:
         intron_counter = defaultdict(int)
 
         intron_splice_site_support = defaultdict(int)
+
+        discarded_read_counter = defaultdict(int)
+        total_read_alignments_used = 0
         
         # parse read alignments, capture introns and genome coverage info.
         samfile = pysam.AlignmentFile(self._alignments_bam_filename, "rb")
         for read in samfile.fetch(self._contig_acc):
+
+            if read.is_paired and not read.is_proper_pair:
+                discarded_read_counter["improper_pair"] += 1
+                continue
+
+            if read.is_duplicate:
+                discarded_read_counter["duplicate"] += 1
+                continue
+
+            if read.is_qcfail:
+                discarded_read_counter["qcfail"] += 1
+                continue
+
+            if read.is_secondary:
+                discarded_read_counter["secondary"] += 1
+                continue
+            
+            # check read alignment percent identity
+            cigar_stats = read.get_cigar_stats()
+            aligned_base_count = cigar_stats[0][0]
+            mismatch_count = None
+            if read.has_tag("NM"):
+                mismatch_count = int(read.get_tag("NM"))
+            elif read.has_tag("nM"):
+                mismatch_count = int(read.get_tag("nM"))
+            if mismatch_count is not None:
+                per_id = 100 - (mismatch_count/aligned_base_count)*100
+                if per_id < splice_graph._min_read_aln_per_id:
+                    discarded_read_counter["low_perID"] += 1
+                    continue
+                
+                
             alignment_segments = self._get_alignment_segments(read)
             #print(alignment_segments)
             
@@ -197,12 +267,17 @@ class splice_graph:
                     intron_splice_site_support[intron_lend] += 1
                     intron_splice_site_support[intron_rend] += 1
 
-                
+            total_read_alignments_used += 1
             # add to coverage
             for segment in alignment_segments:
                 for i in range(segment[0], segment[1] + 1):
                     self._contig_base_cov[i] += 1
 
+        # summary of reads parsed
+        logger.info("{} - Counts of discarded alignments: {}".format(self._contig_acc, discarded_read_counter))
+        logger.info("{} - Total read alignments used: {}".format(self._contig_acc, total_read_alignments_used))
+
+        
         # retain only those that meet the min threshold
         for intron, count in intron_counter.items():
             if count >= splice_graph._min_intron_support:
@@ -696,7 +771,7 @@ class splice_graph:
             if preds:
                 pred_strs = list()
                 for pred in preds:
-                    print(pred)
+                    #print(pred)
                     pred_strs.append(str(pred))
                 node_descr += ">;<".join(pred_strs)
             else:
@@ -722,4 +797,31 @@ class splice_graph:
 
         return
 
+    
+    def _merge_neighboring_proximal_unbranched_exon_segments(self):
+
+        exon_segment_objs, intron_objs = self._get_exon_and_intron_nodes()
+        
+        prev_node = exon_segment_objs[0]
+
+        for i in range(1, len(exon_segment_objs)):
+            next_node = exon_segment_objs[i]
+
+            if ( (not self._node_has_successors(prev_node))
+                and
+                (not self._node_has_predecessors(next_node))
+                and next_node._lend - prev_node._rend - 1 < splice_graph._inter_exon_segment_merge_dist):
+
+                # merge next node into the prev node
+                prev_node._rend = next_node._rend
+                prev_node._mean_coverage = self._get_mean_coverage(prev_node._lend, prev_node._rend)
+
+                for next_node_successor in self._splice_graph.successors(next_node):
+                    self._splice_graph.add_edge(prev_node, next_node_successor)
+
+                # remove next node
+                self._splice_graph.remove_node(next_node)
+            else:
+                prev_node = next_node
+                
     
