@@ -92,6 +92,8 @@ class splice_graph:
     _min_alt_splice_freq = 0.05
     _max_intron_length_for_exon_segment_filtering = 10000
     _min_intron_support = 2
+    _min_terminal_splice_exon_anchor_length = 15
+
     
     def __init__(self):
 
@@ -133,20 +135,26 @@ class splice_graph:
 
         ## do the work:
         
-        self._extract_contig_coverage()
-        self._extract_introns()
+        self._initialize_contig_coverage()
+
+        ## intron extracion.
+        # -requires min 2 intron-supporting reads
+        # -excludes introns w/ heavily unbalanced splice site support 
+        self._populate_exon_coverage_and_extract_introns()  
         
         self._build_draft_splice_graph() # initializes self._splice_graph
 
-        self._prune_lowly_expressed_intron_overlapping_exon_segments()
+        self._prune_lowly_expressed_intron_overlapping_exon_segments()  # removes exon segments, not introns
 
+        
+        
         self._prune_disconnected_introns()
 
         return self._splice_graph
     
     
 
-    def _extract_contig_coverage(self):
+    def _initialize_contig_coverage(self):
 
         ## Contig Depth Array Capture
         # get genome contig sequence
@@ -163,12 +171,14 @@ class splice_graph:
         return
 
     
-    def _extract_introns(self):
+    def _populate_exon_coverage_and_extract_introns(self):
         
         ## Intron Capture
 
         intron_counter = defaultdict(int)
 
+        intron_splice_site_support = defaultdict(int)
+        
         # parse read alignments, capture introns and genome coverage info.
         samfile = pysam.AlignmentFile(self._alignments_bam_filename, "rb")
         for read in samfile.fetch(self._contig_acc):
@@ -183,6 +193,9 @@ class splice_graph:
 
                 for intron in introns_list:
                     intron_counter[intron] += 1
+                    intron_lend,intron_rend = intron
+                    intron_splice_site_support[intron_lend] += 1
+                    intron_splice_site_support[intron_rend] += 1
 
                 
             # add to coverage
@@ -193,9 +206,19 @@ class splice_graph:
         # retain only those that meet the min threshold
         for intron, count in intron_counter.items():
             if count >= splice_graph._min_intron_support:
-                self._introns[intron] = count
+                ## check splice support
+                intron_lend,intron_rend = intron
+                splice_support_left = intron_splice_site_support[intron_lend]
+                splice_support_right = intron_splice_site_support[intron_rend]
+
+                min_support = min(splice_support_left, splice_support_right)
+                max_support = max(splice_support_left, splice_support_right)
+
+                if min_support/max_support >= splice_graph._min_alt_splice_freq:
+                    self._introns[intron] = count
             
         
+                
         return
 
     
@@ -243,7 +266,19 @@ class splice_graph:
                 # append, as too far apart from prev
                 alignment_segments.append(list(aligned_pair))
 
-        
+
+        # trim short terminal segments from each end
+        while (len(alignment_segments) > 1 and
+            alignment_segments[0][1] - alignment_segments[0][0] + 1 < splice_graph._min_terminal_splice_exon_anchor_length):
+
+            alignment_segments.pop(0)
+
+        while (len(alignment_segments) > 1 and
+            alignment_segments[len(alignment_segments)-1][1] - alignment_segments[len(alignment_segments)-1][0] + 1 < splice_graph._min_terminal_splice_exon_anchor_length):
+
+            alignment_segments.pop()
+
+            
         return alignment_segments
     
         
