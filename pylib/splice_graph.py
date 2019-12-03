@@ -148,8 +148,10 @@ class splice_graph:
         self._prune_lowly_expressed_intron_overlapping_exon_segments()  # removes exon segments, not introns
         
         self._prune_disconnected_introns()
-
+        
         self._merge_neighboring_proximal_unbranched_exon_segments()
+        
+        self._prune_exon_spurs_at_introns()
         
         return self._splice_graph
     
@@ -427,7 +429,9 @@ class splice_graph:
 
 
         ## add exon nodes and connect to introns.
-        
+        ## also connect adjacent exon segments.
+
+        prev_exon_obj = None
         for exon in exon_segments:
             exon_lend, exon_rend = exon
 
@@ -436,7 +440,16 @@ class splice_graph:
             exon_obj = Exon(self._contig_acc, exon_lend, exon_rend, exon_mean_cov)
 
             draft_splice_graph.add_node(exon_obj)
+            
+            # connect adjacent exon segments.
+            if prev_exon_obj is not None:
+                if prev_exon_obj._rend + 1 == exon_obj._lend:
+                    # adjacent segments.
+                    draft_splice_graph.add_edge(prev_exon_obj, exon_obj)
 
+            prev_exon_obj = exon_obj
+
+            
             ## connect to introns where appropriate
             candidate_splice_left = exon_lend - 1
             if candidate_splice_left in rend_to_intron:
@@ -825,3 +838,49 @@ class splice_graph:
                 prev_node = next_node
                 
     
+    def _prune_exon_spurs_at_introns(self):
+
+        exon_segment_objs, intron_objs = self._get_exon_and_intron_nodes()
+
+
+        #######           ---------------------
+        #                /       ^intron^      \
+        #    -----------/===                 ===\-------------------
+        #                R_spur              L_spur
+
+
+        def is_R_spur(exon_node):
+            for predecessor in self._splice_graph.predecessors(exon_node):
+                if type(predecessor) == Exon:
+                    for successor in self._splice_graph.successors(predecessor):
+                        if type(successor) == Intron:
+                            return True
+            return False
+
+            
+        def is_L_spur(exon_node):
+            for successor in self._splice_graph.successors(exon_node):
+                if type(successor) == Exon:
+                    for predecessor in self._splice_graph.predecessors(successor):
+                        if type(predecessor) == Intron:
+                            return True
+            return False
+        
+
+        exons_to_prune = list()
+                
+        for exon in exon_segment_objs:
+            if exon.get_feature_length() >= splice_graph._min_terminal_splice_exon_anchor_length:
+                # long enough, we'll keep it for now.
+                continue
+
+            # ok shortie, must see if it's a spur
+            if is_L_spur(exon) or is_R_spur(exon):
+                exons_to_prune.append(exon)
+                
+        
+        if exons_to_prune:
+            logger.info("-removing {} exon spurs".format(len(exons_to_prune)))
+            self._splice_graph.remove_nodes_from(exons_to_prune)
+
+        return
