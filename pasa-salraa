@@ -7,7 +7,7 @@ import argparse
 import subprocess
 
 sys.path.insert(0, os.path.sep.join([os.path.dirname(os.path.realpath(__file__)), "pylib"]))
-from splice_graph import splice_graph
+from Splice_graph import Splice_graph
 
 import logging
 FORMAT = "%(asctime)-15s %(levelname)s %(module)s.%(name)s.%(funcName)s at %(lineno)d :\n\t%(message)s\n"
@@ -56,7 +56,7 @@ def build_splice_graph(genome_fasta_filename, bam_file, read_aln_gap_merge):
     genome_contigs_list = get_genome_contigs_listing(genome_fasta_filename)
     
     for contig in genome_contigs_list:
-        sg = splice_graph()
+        sg = Splice_graph()
         sg.set_read_aln_gap_merge(read_aln_gap_merge)
         sg.build_splice_graph_for_contig(contig, genome_fasta_filename, bam_file)
 

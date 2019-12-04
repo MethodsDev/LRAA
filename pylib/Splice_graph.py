@@ -9,6 +9,7 @@ import pysam
 from collections import defaultdict
 import networkx as nx
 import intervaltree as itree
+from Bam_alignment_extractor import Bam_alignment_extractor
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +39,9 @@ class GenomeFeature:
     def get_bed_row(self, pad=0):
         return("\t".join([ str(x) for x in [self._contig_acc, self._lend - pad, self._rend + pad, self._id, self.get_read_support()] ])) 
     
+    def get_id(self):
+        return self._id
+
         
 class Intron(GenomeFeature):
 
@@ -79,7 +83,7 @@ class Exon(GenomeFeature):
     def __repr__(self):
         return("Exon: {} {}-{} mean_cov:{}".format(self._id, self._lend, self._rend, self._mean_coverage))
 
-class splice_graph:
+class Splice_graph:
 
     # ---------------
     # class variables
@@ -107,12 +111,18 @@ class splice_graph:
         self._contig_seq_str = ""
         
         self._contig_base_cov = list()
-        self._introns = defaultdict(int)
+
         
         self._splice_graph = None  # becomes networkx digraph
 
         self._splice_dinucs_top_strand = { "GTAG", "GCAG", "ATAC" }
         self._splice_dinucs_bottom_strand = {"CTAC", "CTGC", "GTAT" } # revcomp of top strand dinucs
+
+        
+        self._node_id_to_node = dict()
+        self._itree_exon_segments = None # becomes itree
+        self._intron_objs = dict() # "lend:rend" => intron_obj
+        
         
         return
 
@@ -141,7 +151,7 @@ class splice_graph:
         ## intron extracion.
         # -requires min 2 intron-supporting reads
         # -excludes introns w/ heavily unbalanced splice site support 
-        self._populate_exon_coverage_and_extract_introns()  
+        self._populate_exon_coverage_and_extract_introns()  # stores intron objs in self._intron_objs
         
         self._build_draft_splice_graph() # initializes self._splice_graph
 
@@ -152,6 +162,8 @@ class splice_graph:
         self._merge_neighboring_proximal_unbranched_exon_segments()
         
         self._prune_exon_spurs_at_introns()
+
+        self._finalize_splice_graph()
         
         return self._splice_graph
     
@@ -198,8 +210,8 @@ class splice_graph:
         contig_seq_str = self._retrieve_contig_seq()
         contig_len = len(contig_seq_str)
         logging.info("initing coverage array of len: {}".format(contig_len)) 
-        if (contig_len > splice_graph._max_genomic_contig_length):
-            raise RuntimeError("genomic contig length {} exceeds maximum allowed {}".format(contig_len, splice_graph._max_genomic_contig_length))
+        if (contig_len > Splice_graph._max_genomic_contig_length):
+            raise RuntimeError("genomic contig length {} exceeds maximum allowed {}".format(contig_len, Splice_graph._max_genomic_contig_length))
 
         
         # init depth of coverage array
@@ -215,46 +227,16 @@ class splice_graph:
         intron_counter = defaultdict(int)
 
         intron_splice_site_support = defaultdict(int)
+        
+        bam_extractor = Bam_alignment_extractor(self._alignments_bam_filename)
 
-        discarded_read_counter = defaultdict(int)
+        pretty_alignments = bam_extractor.get_read_alignments(self._contig_acc, pretty=True)
+
         total_read_alignments_used = 0
         
-        # parse read alignments, capture introns and genome coverage info.
-        samfile = pysam.AlignmentFile(self._alignments_bam_filename, "rb")
-        for read in samfile.fetch(self._contig_acc):
+        for pretty_alignment in pretty_alignments:
 
-            if read.is_paired and not read.is_proper_pair:
-                discarded_read_counter["improper_pair"] += 1
-                continue
-
-            if read.is_duplicate:
-                discarded_read_counter["duplicate"] += 1
-                continue
-
-            if read.is_qcfail:
-                discarded_read_counter["qcfail"] += 1
-                continue
-
-            if read.is_secondary:
-                discarded_read_counter["secondary"] += 1
-                continue
-            
-            # check read alignment percent identity
-            cigar_stats = read.get_cigar_stats()
-            aligned_base_count = cigar_stats[0][0]
-            mismatch_count = None
-            if read.has_tag("NM"):
-                mismatch_count = int(read.get_tag("NM"))
-            elif read.has_tag("nM"):
-                mismatch_count = int(read.get_tag("nM"))
-            if mismatch_count is not None:
-                per_id = 100 - (mismatch_count/aligned_base_count)*100
-                if per_id < splice_graph._min_read_aln_per_id:
-                    discarded_read_counter["low_perID"] += 1
-                    continue
-                
-                
-            alignment_segments = self._get_alignment_segments(read)
+            alignment_segments = pretty_alignment.get_pretty_alignment_segments()
             #print(alignment_segments)
             
             if len(alignment_segments) > 1:
@@ -275,24 +257,23 @@ class splice_graph:
                 for i in range(segment[0], segment[1] + 1):
                     self._contig_base_cov[i] += 1
 
-        # summary of reads parsed
-        logger.info("{} - Counts of discarded alignments: {}".format(self._contig_acc, discarded_read_counter))
-        logger.info("{} - Total read alignments used: {}".format(self._contig_acc, total_read_alignments_used))
-
+        logger.info("-total read alignments used: {}".format(total_read_alignments_used))
         
-        # retain only those that meet the min threshold
-        for intron, count in intron_counter.items():
-            if count >= splice_graph._min_intron_support:
+        # retain only those introns that meet the min threshold
+        for intron_coords, count in intron_counter.items():
+            if count >= Splice_graph._min_intron_support:
                 ## check splice support
-                intron_lend,intron_rend = intron
+                intron_lend,intron_rend = intron_coords
                 splice_support_left = intron_splice_site_support[intron_lend]
                 splice_support_right = intron_splice_site_support[intron_rend]
 
                 min_support = min(splice_support_left, splice_support_right)
                 max_support = max(splice_support_left, splice_support_right)
 
-                if min_support/max_support >= splice_graph._min_alt_splice_freq:
-                    self._introns[intron] = count
+                if min_support/max_support >= Splice_graph._min_alt_splice_freq:
+                    intron_obj = Intron(self._contig_acc, intron_lend, intron_rend, "?", count)
+                    intron_coords_key = "{}:{}".format(intron_lend, intron_rend)
+                    self._intron_objs[intron_coords_key] = intron_obj
             
         
                 
@@ -336,7 +317,7 @@ class splice_graph:
             aligned_pair[0] += 1
             
             # extend earlier stored segment or append new one
-            if aligned_pair[0] - alignment_segments[-1][1] < splice_graph._read_aln_gap_merge_int:
+            if aligned_pair[0] - alignment_segments[-1][1] < Splice_graph._read_aln_gap_merge_int:
                 # extend rather than append
                 alignment_segments[-1][1] = aligned_pair[1]
             else:
@@ -346,12 +327,12 @@ class splice_graph:
 
         # trim short terminal segments from each end
         while (len(alignment_segments) > 1 and
-            alignment_segments[0][1] - alignment_segments[0][0] + 1 < splice_graph._min_terminal_splice_exon_anchor_length):
+            alignment_segments[0][1] - alignment_segments[0][0] + 1 < Splice_graph._min_terminal_splice_exon_anchor_length):
 
             alignment_segments.pop(0)
 
         while (len(alignment_segments) > 1 and
-            alignment_segments[len(alignment_segments)-1][1] - alignment_segments[len(alignment_segments)-1][0] + 1 < splice_graph._min_terminal_splice_exon_anchor_length):
+            alignment_segments[len(alignment_segments)-1][1] - alignment_segments[len(alignment_segments)-1][0] + 1 < Splice_graph._min_terminal_splice_exon_anchor_length):
 
             alignment_segments.pop()
 
@@ -417,15 +398,14 @@ class splice_graph:
         lend_to_intron = defaultdict(list)
         rend_to_intron = defaultdict(list)
 
-        for intron in self._introns:
-            intron_lend, intron_rend = intron
-            count = self._introns[intron]
+        for intron in self._intron_objs.values():
+            intron_lend, intron_rend = intron.get_coords()
+            count = intron.get_read_support()
 
-            intron_obj = Intron(self._contig_acc, intron_lend, intron_rend, "?", count)
-            lend_to_intron[intron_lend].append(intron_obj)
-            rend_to_intron[intron_rend].append(intron_obj)
+            lend_to_intron[intron_lend].append(intron)
+            rend_to_intron[intron_rend].append(intron)
 
-            draft_splice_graph.add_node(intron_obj)
+            draft_splice_graph.add_node(intron)
 
 
         ## add exon nodes and connect to introns.
@@ -489,28 +469,30 @@ class splice_graph:
         
         introns_shared_coord = defaultdict(list)
         
-        for intron in self._introns:
-            intron_left = intron[idx]
+        for intron in self._intron_objs.values():
+            intron_left = intron.get_coords()[idx]
             introns_shared_coord[intron_left].append(intron)
 
         introns_to_delete = set()
         
         # see if there are relatively poorly supported junctions
         for intron_list in introns_shared_coord.values():
-            intron_list = sorted(intron_list, key=lambda x: self._introns[x])
+            intron_list = sorted(intron_list, key=lambda x: x.get_read_support())
             most_supported_intron = intron_list.pop()
-            most_supported_intron_abundance = self._introns[most_supported_intron]
+            most_supported_intron_abundance = most_supported_intron.get_read_support()
             for alt_intron in intron_list:
-                alt_intron_abundance = self._introns[alt_intron]
+                alt_intron_abundance = alt_intron.get_read_support()
                 alt_intron_relative_freq = alt_intron_abundance / most_supported_intron_abundance
                 #print("alt intron: {}".format(alt_intron) + " has rel freq: {}".format(alt_intron_relative_freq))
-                if (alt_intron_relative_freq < splice_graph._min_alt_splice_freq):
+                if (alt_intron_relative_freq < Splice_graph._min_alt_splice_freq):
                     introns_to_delete.add(alt_intron)
 
         logger.info("removing {} low frequency introns with shared {} coord".format(len(introns_to_delete), left_or_right))
         
         for intron in introns_to_delete:
-            del self._introns[intron]
+            intron_coords = intron.get_coords()
+            intron_key = "{}:{}".format(intron_coords[0], intron_coords[1])
+            del self._intron_objs[intron_key]
             
         return
 
@@ -534,9 +516,9 @@ class splice_graph:
         if DEBUG:
             ofh = open("__splice_neighbor_cov_ratios.dat", 'w')
         
-        for intron in self._introns:
-            lend, rend = intron
-            intron_abundance = self._introns[intron]
+        for intron in self._intron_objs.values():
+            lend, rend = intron.get_coords()
+            intron_abundance = intron.get_read_support()
             
             A_mean_cov = self._get_mean_coverage(lend - coverage_window_length, lend - 1)
             B_mean_cov = self._get_mean_coverage(lend, lend + coverage_window_length)
@@ -589,8 +571,8 @@ class splice_graph:
         left_splice_sites = set()
         right_splice_sites = set()
 
-        for intron in self._introns:
-            lend, rend = intron
+        for intron in self._intron_objs.values():
+            lend, rend = intron.get_coords()
             left_splice_sites.add(lend)
             right_splice_sites.add(rend)
 
@@ -633,9 +615,9 @@ class splice_graph:
                     ofh.write("\t".join([self._contig_acc, str(segment[0]-1), str(segment[1]+1)]) + "\n")
 
             with open("__introns.init.bed", 'w') as ofh:
-                for intron in self._introns:
-                    intron_lend, intron_rend = intron
-                    intron_support = self._introns[intron]
+                for intron in self._intron_objs.values():
+                    intron_lend, intron_rend = intron.get_coords()
+                    intron_support = intron.get_read_support()
                     
                     ofh.write("\t".join([self._contig_acc, str(intron_lend), str(intron_rend), "{}-{}".format(intron_lend, intron_rend), str(intron_support)]) + "\n")
                 
@@ -670,13 +652,13 @@ class splice_graph:
 
         exons_to_purge = set()
             
-        min_intron_cov_for_filtering = 1 / splice_graph._min_alt_splice_freq + 1
+        min_intron_cov_for_filtering = 1 / Splice_graph._min_alt_splice_freq + 1
         
         for intron in intron_objs:
 
             if intron.get_read_support() < min_intron_cov_for_filtering:
                 continue
-            if intron.get_feature_length() > splice_graph._max_intron_length_for_exon_segment_filtering:
+            if intron.get_feature_length() > Splice_graph._max_intron_length_for_exon_segment_filtering:
                 continue
             
             
@@ -689,7 +671,7 @@ class splice_graph:
 
                 overlapping_exon_seg = overlapping_exon_seg_iv.data
                 
-                if float(overlapping_exon_seg.get_read_support()) / float(intron.get_read_support()) < splice_graph._min_alt_splice_freq:
+                if float(overlapping_exon_seg.get_read_support()) / float(intron.get_read_support()) < Splice_graph._min_alt_splice_freq:
                     exons_to_purge.add(overlapping_exon_seg)
 
 
@@ -823,7 +805,7 @@ class splice_graph:
             if ( (not self._node_has_successors(prev_node))
                 and
                 (not self._node_has_predecessors(next_node))
-                and next_node._lend - prev_node._rend - 1 < splice_graph._inter_exon_segment_merge_dist):
+                and next_node._lend - prev_node._rend - 1 < Splice_graph._inter_exon_segment_merge_dist):
 
                 # merge next node into the prev node
                 prev_node._rend = next_node._rend
@@ -870,7 +852,7 @@ class splice_graph:
         exons_to_prune = list()
                 
         for exon in exon_segment_objs:
-            if exon.get_feature_length() >= splice_graph._min_terminal_splice_exon_anchor_length:
+            if exon.get_feature_length() >= Splice_graph._min_terminal_splice_exon_anchor_length:
                 # long enough, we'll keep it for now.
                 continue
 
@@ -882,5 +864,15 @@ class splice_graph:
         if exons_to_prune:
             logger.info("-removing {} exon spurs".format(len(exons_to_prune)))
             self._splice_graph.remove_nodes_from(exons_to_prune)
+
+        return
+
+
+    def _finalize_splice_graph(self):
+
+        
+        ## store node ID to node object
+        for node in self._splice_graph:
+            self._node_id_to_node[ node.get_id() ] = node
 
         return
