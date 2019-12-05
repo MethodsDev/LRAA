@@ -42,6 +42,9 @@ class Intron(GenomeFeature):
 
     intron_id_counter = 0
     
+    splice_dinucs_top_strand = { "GTAG", "GCAG", "ATAC" }
+    splice_dinucs_bottom_strand = {"CTAC", "CTGC", "GTAT" } # revcomp of top strand dinucs
+    
     def __init__(self, contig_acc, lend, rend, orient, count):
         super().__init__(contig_acc, lend, rend)
         self._orient = orient
@@ -58,6 +61,21 @@ class Intron(GenomeFeature):
     def __repr__(self):
         return("Intron: {} {}-{} count:{}".format(self._id, self._lend, self._rend, self._count))
         
+
+    # static methods
+    def check_canonical_splicing(intron_lend, intron_rend, contig_seq):
+
+        dinuc_left = contig_seq[intron_lend - 1] + contig_seq[intron_lend - 1 + 1]
+        dinuc_right = contig_seq[intron_rend - 1 -1] + contig_seq[intron_rend -1]
+        dinuc_combo = dinuc_left + dinuc_right
+
+        if dinuc_combo in Intron.splice_dinucs_top_strand:
+            return '+'
+        elif dinuc_combo in Intron.splice_dinucs_bottom_strand:
+            return '-'
+        else:
+            return None
+
     
 class Exon(GenomeFeature):
 

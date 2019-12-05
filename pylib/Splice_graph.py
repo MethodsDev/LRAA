@@ -45,18 +45,12 @@ class Splice_graph:
         self._contig_seq_str = ""
         
         self._contig_base_cov = list()
-
         
         self._splice_graph = None  # becomes networkx digraph
-
-        self._splice_dinucs_top_strand = { "GTAG", "GCAG", "ATAC" }
-        self._splice_dinucs_bottom_strand = {"CTAC", "CTGC", "GTAT" } # revcomp of top strand dinucs
-
         
         self._node_id_to_node = dict()
-        self._itree_exon_segments = None # becomes itree
+        self._itree_exon_segments = itree.IntervalTree()
         self._intron_objs = dict() # "lend:rend" => intron_obj
-        
         
         return
 
@@ -233,45 +227,6 @@ class Splice_graph:
 
         return(contig_seq_str)
 
-
-    def _get_alignment_segments(self, pysam_read_alignment):
-        
-        aligned_pairs = pysam_read_alignment.get_blocks()
-
-        #print(aligned_pairs)
-        
-        ## merge adjacent blocks within range.
-        alignment_segments = list()
-        alignment_segments.append(list(aligned_pairs.pop(0)))
-        # block coordinates are zero-based, left inclusive, and right-end exclusive
-        alignment_segments[0][0] += 1 # adjust for zero-based.  note, end position doesn't need to be adjusted. 
-        
-        for aligned_pair in aligned_pairs:
-            aligned_pair = list(aligned_pair)
-            aligned_pair[0] += 1
-            
-            # extend earlier stored segment or append new one
-            if aligned_pair[0] - alignment_segments[-1][1] < Splice_graph._read_aln_gap_merge_int:
-                # extend rather than append
-                alignment_segments[-1][1] = aligned_pair[1]
-            else:
-                # append, as too far apart from prev
-                alignment_segments.append(list(aligned_pair))
-
-
-        # trim short terminal segments from each end
-        while (len(alignment_segments) > 1 and
-            alignment_segments[0][1] - alignment_segments[0][0] + 1 < Splice_graph._min_terminal_splice_exon_anchor_length):
-
-            alignment_segments.pop(0)
-
-        while (len(alignment_segments) > 1 and
-            alignment_segments[len(alignment_segments)-1][1] - alignment_segments[len(alignment_segments)-1][0] + 1 < Splice_graph._min_terminal_splice_exon_anchor_length):
-
-            alignment_segments.pop()
-
-            
-        return alignment_segments
     
         
     def _get_introns_matching_splicing_consensus(self, alignment_segments):
@@ -291,22 +246,19 @@ class Splice_graph:
             intron_rend = seg_right_lend - 1
             
             introns_list.append( (intron_lend, intron_rend) )
-            
-            dinuc_left = genome_seq[intron_lend - 1] + genome_seq[intron_lend - 1 + 1]
-                        
-            dinuc_right = genome_seq[intron_rend - 1 -1] + genome_seq[intron_rend -1]
 
-            dinuc_combo = dinuc_left + dinuc_right
-            #print(dinuc_combo)
-            
-            if dinuc_combo in self._splice_dinucs_top_strand:
+            splice_type = Intron.check_canonical_splicing(intron_lend, intron_rend, genome_seq)
+
+            if splice_type is None:
+                return
+            elif splice_type == '+':
                 top_strand_agreement_count += 1
-            elif dinuc_combo in self._splice_dinucs_bottom_strand:
+            elif splice_type == '-':
                 bottom_strand_agreement_count += 1
             else:
-                return None
-
-
+                raise RuntimeError("not sure what splice type we have here...")
+            
+        
         if top_strand_agreement_count > 0 and bottom_strand_agreement_count > 0:
             # inconsistent orientation of splicing events
             return None
@@ -803,10 +755,13 @@ class Splice_graph:
 
 
     def _finalize_splice_graph(self):
-
         
         ## store node ID to node object
         for node in self._splice_graph:
             self._node_id_to_node[ node.get_id() ] = node
-
+            if type(node) == Exon:
+                # store exon segments in itree for overlap queries
+                lend, rend = node.get_coords()
+                self._itree_exon_segments[lend:rend+1] = node
+            
         return
