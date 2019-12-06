@@ -26,7 +26,25 @@ class PASA_SALRAA:
 
     def populate_read_multi_paths(self, contig_acc, contig_seq, bam_file):
 
-        
+         bam_extractor = Bam_alignment_extractor(bam_file)
+         pretty_alignments = bam_extractor.get_read_alignments(contig_acc, pretty=True)
 
-    
+         grouped_alignments = self._group_alignments_by_read_name(pretty_alignments)
+
+         print(grouped_alignments)
+
+         return
+
+         
+
+    def _group_alignments_by_read_name(self, pretty_alignments):
+
+        grouped_alignments = defaultdict(list)
+
+        for pretty_alignment in pretty_alignments:
+            pysam_alignment = pretty_alignment.get_pysam_alignment()
+            read_name = pysam_alignment.query_name
+            grouped_alignments[read_name].append(pretty_alignment)
+
+        return grouped_alignments
     

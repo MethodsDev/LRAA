@@ -8,6 +8,8 @@ import subprocess
 
 sys.path.insert(0, os.path.sep.join([os.path.dirname(os.path.realpath(__file__)), "pylib"]))
 from Splice_graph import Splice_graph
+from PASA_SALRAA import PASA_SALRAA
+import Util_funcs
 
 import logging
 FORMAT = "%(asctime)-15s %(levelname)s %(module)s.%(name)s.%(funcName)s at %(lineno)d :\n\t%(message)s\n"
@@ -36,17 +38,17 @@ def main():
     genome_fasta_filename = args.genome
     bam_filename = args.bam
 
-    splice_graph = build_splice_graph(genome_fasta_filename,
-                                      bam_filename,
-                                      READ_ALN_GAP_MERGE)
-
+    run_pasa_salraa(genome_fasta_filename,
+                    bam_filename,
+                    READ_ALN_GAP_MERGE)
+    
     
     sys.exit(0)
 
 
 
 
-def build_splice_graph(genome_fasta_filename, bam_file, read_aln_gap_merge):
+def run_pasa_salraa(genome_fasta_filename, bam_file, read_aln_gap_merge):
 
     # data structures want:
     # ultimately exons and introns
@@ -55,13 +57,16 @@ def build_splice_graph(genome_fasta_filename, bam_file, read_aln_gap_merge):
 
     genome_contigs_list = get_genome_contigs_listing(genome_fasta_filename)
     
-    for contig in genome_contigs_list:
+    for contig_acc in genome_contigs_list:
         sg = Splice_graph()
         sg.set_read_aln_gap_merge(read_aln_gap_merge)
-        sg.build_splice_graph_for_contig(contig, genome_fasta_filename, bam_file)
+        contig_seq_str = Util_funcs.retrieve_contig_seq_from_fasta_file(contig_acc, genome_fasta_filename)
+        sg.build_splice_graph_for_contig(contig_acc, contig_seq_str, bam_file)
 
-        sg.write_intron_exon_splice_graph_bed_files("prereconstruct.{}.pad1".format(contig), pad=1)
+        sg.write_intron_exon_splice_graph_bed_files("prereconstruct.{}.pad1".format(contig_acc), pad=1)
 
+        pasa_salraa_obj = PASA_SALRAA(sg)
+        pasa_salraa_obj.populate_read_multi_paths(contig_acc, contig_seq_str, bam_file)
         
     
         

@@ -38,7 +38,6 @@ class Splice_graph:
 
         # ------------------
         # instance variables
-        self._genome_fasta_filename = ""
         self._alignments_bam_filename = ""
         
         self._contig_acc = ""
@@ -62,16 +61,15 @@ class Splice_graph:
         return
     
 
-    def build_splice_graph_for_contig(self, contig_acc, genome_fasta_file, alignments_bam_file):
+    def build_splice_graph_for_contig(self, contig_acc, contig_seq_str, alignments_bam_file):
 
 
-        logger.info("creating splice graph for {} leveraging fasta {} and bam {}".format(contig_acc,
-                                                                                         genome_fasta_file,
-                                                                                         alignments_bam_file))
+        logger.info("creating splice graph for {} leveraging bam {}".format(contig_acc,                                                                                         alignments_bam_file))
+        
         self._contig_acc = contig_acc
-        self._genome_fasta_filename = genome_fasta_file
+        self._contig_seq_str = contig_seq_str
         self._alignments_bam_filename = alignments_bam_file
-
+        
         ## do the work:
         
         self._initialize_contig_coverage()
@@ -135,7 +133,7 @@ class Splice_graph:
 
         ## Contig Depth Array Capture
         # get genome contig sequence
-        contig_seq_str = self._retrieve_contig_seq()
+        contig_seq_str = self._contig_seq_str
         contig_len = len(contig_seq_str)
         logging.info("initing coverage array of len: {}".format(contig_len)) 
         if (contig_len > Splice_graph._max_genomic_contig_length):
@@ -208,27 +206,6 @@ class Splice_graph:
         return
 
     
-
-    def _retrieve_contig_seq(self):
-
-        contig_seq_str = subprocess.check_output("samtools faidx {} {}".format(self._genome_fasta_filename,
-                                                                               self._contig_acc),
-                                                 shell=True,
-                                                 encoding="utf-8")
-        
-        contig_seq_str = contig_seq_str.upper()
-        contig_seq_str = contig_seq_str.split("\n")
-        contig_seq_str = contig_seq_str[1:]
-        contig_seq_str = "".join(contig_seq_str)
-                
-        contig_seq_str = re.sub("\s", "", contig_seq_str) # just in case
-        
-        self._contig_seq_str = contig_seq_str
-
-        return(contig_seq_str)
-
-    
-        
     def _get_introns_matching_splicing_consensus(self, alignment_segments):
         
         genome_seq = self._contig_seq_str
