@@ -11,7 +11,8 @@ import networkx as nx
 import intervaltree as itree
 from GenomeFeature import *
 from Bam_alignment_extractor import Bam_alignment_extractor
-import MultiPath;
+from MultiPath import MultiPath;
+from MultiPathCounter import MultiPathCounter;
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +32,8 @@ class PASA_SALRAA:
         pretty_alignments = bam_extractor.get_read_alignments(contig_acc, pretty=True)
         
         grouped_alignments = self._group_alignments_by_read_name(pretty_alignments)
+
+        mp_counter = MultiPathCounter()
         
         for read_name in grouped_alignments:
             #print("{}\t{}".format(read_name, len(grouped_alignments[read_name])))
@@ -38,8 +41,12 @@ class PASA_SALRAA:
             for pretty_alignment in grouped_alignments[read_name]:
                 path = self._map_read_to_graph(pretty_alignment.get_pretty_alignment_segments())
                 paths_list.append(path)
-            print(paths_list)
-        
+                
+            mp = MultiPath(self._splice_graph, paths_list)
+            mp_counter.add(mp)
+
+        print(mp_counter)
+            
         return
     
          
