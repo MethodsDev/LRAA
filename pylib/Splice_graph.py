@@ -59,6 +59,24 @@ class Splice_graph:
         self._read_aln_gap_merge_int = read_aln_gap_merge_int
 
         return
+
+    def get_intron_node_obj(self, intron_lend, intron_rend):
+
+        intron_token = "{}:{}".format(intron_lend, intron_rend)
+
+        if intron_token in self._intron_objs:
+            return self._intron_objs[intron_token]
+
+        return None
+
+    def get_overlapping_exon_segments(self, range_lend, range_rend):
+
+        overlapping_exon_segments = list()
+
+        for overlapping_interval in self._itree_exon_segments[range_lend:range_rend]:
+            overlapping_exon_segments.append(overlapping_interval.data)
+        
+        return overlapping_exon_segments
     
 
     def build_splice_graph_for_contig(self, contig_acc, contig_seq_str, alignments_bam_file):
