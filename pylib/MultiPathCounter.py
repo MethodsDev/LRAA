@@ -10,7 +10,6 @@ class MultiPathCountPair:
     def __init__(self, multipath, count=1):
         self._multipath = multipath
         self._count = count
-
         return
 
     def increment(self, increment=1):
