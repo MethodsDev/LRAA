@@ -3,7 +3,7 @@
 
 import sys, os, re
 from collections import defaultdict
-
+from PASA_SALRAA_Globals import SPACER
 
 class MultiPath:
     
@@ -21,7 +21,7 @@ class MultiPath:
         ## //FIXME: proper implementation needed.  Using placeholder for now.
         multipath = []
         for path in paths_list:
-            multipath += path + ["???"]
+            multipath += path + [SPACER]
 
         return multipath
 

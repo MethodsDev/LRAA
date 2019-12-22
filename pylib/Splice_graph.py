@@ -69,6 +69,15 @@ class Splice_graph:
 
         return None
 
+
+    def get_node_obj_via_id(self, node_id):
+
+        if node_id not in self._node_id_to_node:
+            raise RuntimeError("Error, node_id: {} not recognized in splice graph".format(node_id))
+        
+        return(self._node_id_to_node[node_id])
+    
+    
     def get_overlapping_exon_segments(self, range_lend, range_rend):
 
         overlapping_exon_segments = list()

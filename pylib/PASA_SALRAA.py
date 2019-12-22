@@ -11,8 +11,9 @@ import networkx as nx
 import intervaltree as itree
 from GenomeFeature import *
 from Bam_alignment_extractor import Bam_alignment_extractor
-from MultiPath import MultiPath;
-from MultiPathCounter import MultiPathCounter;
+from MultiPath import MultiPath
+from MultiPathCounter import MultiPathCounter
+from PASA_SALRAA_Globals import SPACER
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +41,7 @@ class PASA_SALRAA:
             paths_list = list()
             for pretty_alignment in grouped_alignments[read_name]:
                 path = self._map_read_to_graph(pretty_alignment.get_pretty_alignment_segments())
+                print("pretty_alignment: {} maps to graph path: {}".format(pretty_alignment, path))
                 paths_list.append(path)
                 
             mp = MultiPath(self._splice_graph, paths_list)
@@ -72,6 +74,8 @@ class PASA_SALRAA:
         for i in range(num_segments):
 
             segment = alignment_segments[i]
+
+            path_part = None
             
             ## determine type of segment
             if i == 0 and num_segments == 1:
@@ -84,17 +88,21 @@ class PASA_SALRAA:
                 # terminal segment
                 path_part = self._get_intron_node_id(alignment_segments[i-1], segment)
                 if path_part:
-                    path_part.append(self._map_segment_to_graph_TERMINAL(segment))
+                    path_part.extend(self._map_segment_to_graph_TERMINAL(segment))
             else:
                 # internal segment
                 path_part = self._get_intron_node_id(alignment_segments[i-1], segment)
                 if path_part:
-                    path_part.append(self._map_segment_to_graph_INTERNAL(segment))
-        
+                    path_part.extend(self._map_segment_to_graph_INTERNAL(segment))
+
+            #print("segment: {}  mapped to {}".format(segment, path_part))
+                    
             if path_part:
-                path.append(path_part)
+                path.extend(path_part)
+                #print("\tpath extended to: {}".format(path))
             else:
-                path.append("???") # spacer
+                if len(path) == 0 or path[-1] != SPACER:
+                    path.append(SPACER) # spacer
             
         return path
     
