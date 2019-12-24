@@ -81,12 +81,19 @@ if __name__ == '__main__':
     ## unit tests
 
     paths_list = [  ["n1", "n2"],
-                          ["n2", "n3"]
-                  ]
-    
-    mp = MultiPath(None, paths_list)
-    print(mp)
-    
+                          ["n2", "n3"]  ]
+    mp = MultiPath._merge_paths_to_multi_path(None, paths_list)
+    print("Path list: {} merged into multipath: {}".format(paths_list, mp))
+    assert(mp == ["n1", "n2", "n3"])
+
+
+    paths_list = [  ["n1", "n2"],
+                          ["n3", "n4"]  ]
+    mp = MultiPath._merge_paths_to_multi_path(None, paths_list)
+    print("Path list: {} merged into multipath: {}".format(paths_list, mp))
+    assert(mp == ['n1', 'n2', '???', 'n3', 'n4'] )
+
+       
     sys.exit(0)
 
     
