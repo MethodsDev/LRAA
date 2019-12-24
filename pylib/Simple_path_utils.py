@@ -130,11 +130,88 @@ def merge_simple_paths(simple_path_A, simple_path_B):
 if __name__ == '__main__':
 
     ## run unit tests:
+
+    # Tests that should return True
+
     path_a = ["n0", "n1", "n2", "n3", "n4", "n5", "n6"]
     path_b =             ["n2", "n3", "n4", "n5", "n6", "n7", "n8"]
-
     test = are_overlapping_and_compatible_NO_gaps_in_overlap(path_a, path_b)
     print("path_a: {}\npath_b: {}\ncompatible_NO_gaps: {}".format(path_a, path_b, test))
+    assert(test is True)
+
+
+    path_a = ["n0", "n1", "n2", "n3", "n4", "n5", "n6"]
+    path_b =             ["n2", "n3", "n4", "n5"]
+    test = are_overlapping_and_compatible_NO_gaps_in_overlap(path_a, path_b)
+    print("path_a: {}\npath_b: {}\ncompatible_NO_gaps: {}".format(path_a, path_b, test))
+    assert(test is True)
+
+    
+    path_a =              ["n2", "n3", "n4", "n5"]
+    path_b = ["n0", "n1", "n2", "n3", "n4", "n5", "n6"]
+    test = are_overlapping_and_compatible_NO_gaps_in_overlap(path_a, path_b)
+    print("path_a: {}\npath_b: {}\ncompatible_NO_gaps: {}".format(path_a, path_b, test))
+    assert(test is True)
+
+
+    path_a =             ["n2", "n3", "n4", "n5", "n6", "n7", "n8"]
+    path_b = ["n0", "n1", "n2", "n3", "n4", "n5", "n6"]
+    test = are_overlapping_and_compatible_NO_gaps_in_overlap(path_a, path_b)
+    print("path_a: {}\npath_b: {}\ncompatible_NO_gaps: {}".format(path_a, path_b, test))
+    assert(test is True)
+
+    
+
+    ################################
+    # Tests that should return False
+
+    path_a =             ["n2", "n10", "n4", "n5", "n6", "n7", "n8"]
+    path_b = ["n0", "n1", "n2", "n3", "n4", "n5", "n6"]
+    test = are_overlapping_and_compatible_NO_gaps_in_overlap(path_a, path_b)
+    print("path_a: {}\npath_b: {}\ncompatible_NO_gaps: {}".format(path_a, path_b, test))
+    assert(test is False)
+    
+        
+    path_a =             ["n2", "X10", "n4", "n5", "n6", "n7", "n8"]
+    path_b = ["n0", "n1", "n2", "n3", "n4", "n5", "n6"]
+    test = are_overlapping_and_compatible_NO_gaps_in_overlap(path_a, path_b)
+    print("path_a: {}\npath_b: {}\ncompatible_NO_gaps: {}".format(path_a, path_b, test))
+    assert(test is False)
+
+    
+    path_a = ["n2", "n10"]
+    path_b =               ["n3", "n4", "n5", "n6"]
+    test = are_overlapping_and_compatible_NO_gaps_in_overlap(path_a, path_b)
+    print("path_a: {}\npath_b: {}\ncompatible_NO_gaps: {}".format(path_a, path_b, test))
+    assert(test is False)
+    
+
+    ###################
+    ## Test merging paths
+
+    path_a = ["n1", "n2", "n3"]
+    path_b =       ["n2", "n3", "n4", "n5"]
+    merged_path = merge_simple_paths(path_a, path_b)
+    print("path_a: {}\npath_b: {}\nmerged_path: {}".format(path_a, path_b, merged_path))
+    assert(merged_path == ["n1", "n2", "n3", "n4", "n5"])
+
+
+
+    path_a = ["n1", "n2", "n3"]
+    path_b =       ["n2", "n3"]
+    merged_path = merge_simple_paths(path_a, path_b)
+    print("path_a: {}\npath_b: {}\nmerged_path: {}".format(path_a, path_b, merged_path))
+    assert(merged_path == ["n1", "n2", "n3"])
+
+
+    path_a =              ["n3", "n4", "n5"]
+    path_b = ["n1", "n2", "n3"]
+    merged_path = merge_simple_paths(path_a, path_b)
+    print("path_a: {}\npath_b: {}\nmerged_path: {}".format(path_a, path_b, merged_path))
+    assert(merged_path == ["n1", "n2", "n3", "n4", "n5"])
+
+
+    
     
     sys.exit(0)
 
