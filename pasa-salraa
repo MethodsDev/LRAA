@@ -66,7 +66,7 @@ def run_pasa_salraa(genome_fasta_filename, bam_file, read_aln_gap_merge):
         sg.write_intron_exon_splice_graph_bed_files("prereconstruct.{}.pad1".format(contig_acc), pad=1)
 
         pasa_salraa_obj = PASA_SALRAA(sg)
-        pasa_salraa_obj.populate_read_multi_paths(contig_acc, contig_seq_str, bam_file)
+        pasa_salraa_obj.build_multipath_graph(contig_acc, contig_seq_str, bam_file)
         
     
         

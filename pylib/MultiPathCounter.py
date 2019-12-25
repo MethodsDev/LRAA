@@ -16,6 +16,9 @@ class MultiPathCountPair:
         self._count += increment
         return
 
+    def get_multipath_and_count(self):
+        return(self._multipath, self._count)
+    
     def __repr__(self):
         ret_text = "{}\t{}".format(str(self._multipath), self._count)
         return ret_text
@@ -40,6 +43,9 @@ class MultiPathCounter:
             self._multipath_counter[multipath_key] = MultiPathCountPair(multipath)
         
         return
+
+    def get_all_MultiPathCountPairs(self):
+        return(self._multipath_counter.values())
 
     
     def __repr__(self):

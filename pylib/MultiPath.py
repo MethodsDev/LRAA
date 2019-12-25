@@ -17,6 +17,20 @@ class MultiPath:
 
         return
 
+
+    def __len__(self):
+        return(len(self._multipath))
+
+
+    def __getitem__(self, i):
+        length = len(self)
+        if i < 0:
+            i += length
+        if 0 <= i < length:
+            return self._multipath[i]
+        
+        raise IndexError('Index out of range: {}'.format(i))
+    
     def _merge_paths_to_multi_path(self, paths_list):
 
 

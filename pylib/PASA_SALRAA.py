@@ -14,6 +14,7 @@ from Bam_alignment_extractor import Bam_alignment_extractor
 from MultiPath import MultiPath
 from MultiPathCounter import MultiPathCounter
 from PASA_SALRAA_Globals import SPACER
+from MultiPathGraph import MultiPathGraph
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +28,17 @@ class PASA_SALRAA:
         return
 
 
-    def populate_read_multi_paths(self, contig_acc, contig_seq, bam_file):
+
+    def build_multipath_graph(self, contig_acc, contig_seq, bam_file):
+
+        mp_counter = self._populate_read_multi_paths(contig_acc, contig_seq, bam_file)
+
+        multipath_graph = MultiPathGraph(mp_counter, self._splice_graph)
+
+        
+        
+
+    def _populate_read_multi_paths(self, contig_acc, contig_seq, bam_file):
 
         bam_extractor = Bam_alignment_extractor(bam_file)
         pretty_alignments = bam_extractor.get_read_alignments(contig_acc, pretty=True)
@@ -52,7 +63,7 @@ class PASA_SALRAA:
 
         print(mp_counter)
             
-        return
+        return mp_counter
     
          
 
