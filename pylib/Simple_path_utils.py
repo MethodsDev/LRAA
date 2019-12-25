@@ -33,8 +33,8 @@ from PASA_SALRAA_Globals import SPACER
 ## or
 #
 # Scenario 5
-## path_A       ==========     (either are idx 0)
-## path_B       ==========
+## path_A       ==========     or   ============   or =====        (either are idx 0)
+## path_B       ==========          ====              ===========
 
 
 
@@ -101,11 +101,11 @@ def merge_simple_paths(simple_path_A, simple_path_B):
                     if extension_idx_A < len(simple_path_A):
                         merged_path.extend(simple_path_A[extension_idx_A: ])
                     return merged_path
-                else: #scenario 5, must be identical
-                    if simple_path_A == simple_path_B:
+                else: #scenario 5, return longer path
+                    if len(simple_path_A) >= len(simple_path_B):
                         return simple_path_A
                     else:
-                        raise RuntimeError("Error, paths are not identical: {} and {}".format(simple_path_A, simple_path_B))
+                        return simple_path_B
             
             else:
                 # idx_A != 0, so idx_B must be == 0
