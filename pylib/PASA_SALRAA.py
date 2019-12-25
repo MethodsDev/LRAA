@@ -41,11 +41,14 @@ class PASA_SALRAA:
             paths_list = list()
             for pretty_alignment in grouped_alignments[read_name]:
                 path = self._map_read_to_graph(pretty_alignment.get_pretty_alignment_segments())
-                print("pretty_alignment: {} maps to graph path: {}".format(pretty_alignment, path))
-                paths_list.append(path)
-                
-            mp = MultiPath(self._splice_graph, paths_list)
-            mp_counter.add(mp)
+                #print("pretty_alignment: {} maps to graph path: {}".format(pretty_alignment, path))
+                if path and path != SPACER:
+                    paths_list.append(path)
+
+            if paths_list:
+                mp = MultiPath(self._splice_graph, paths_list)
+                #print("paths_list: {} -> mp: {}".format(paths_list, mp))
+                mp_counter.add(mp)
 
         print(mp_counter)
             
@@ -103,7 +106,12 @@ class PASA_SALRAA:
             else:
                 if len(path) == 0 or path[-1] != SPACER:
                     path.append(SPACER) # spacer
-            
+
+
+        # trim any terminal spacer
+        if path[-1] == SPACER:
+            path = path[:-1]
+                    
         return path
     
 
