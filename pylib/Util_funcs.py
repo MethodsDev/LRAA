@@ -26,3 +26,16 @@ def retrieve_contig_seq_from_fasta_file(fasta_filename, contig_acc):
 
     return(contig_seq_str)
 
+
+def coordpairs_overlap(coordset_A, coordset_B):
+
+    A_lend, A_rend = coordset_A
+
+    B_lend, B_rend = coordset_B
+
+    if A_lend <= B_rend and A_rend >= B_lend:
+        return True
+    else:
+        return False
+
+    

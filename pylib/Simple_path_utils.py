@@ -38,6 +38,33 @@ from PASA_SALRAA_Globals import SPACER
 
 
 
+def path_A_contains_path_B(simple_path_A, simple_path_B):
+
+    if len(simple_path_B) > len(simple_path_A):
+        return False
+
+    if simple_path_B[0] not in simple_path_A:
+        return False
+    
+    idx_A = simple_path_A.index(simple_path_B[0])
+    if idx_A < 0:
+        return False
+
+    if idx_A + len(simple_path_B) > len(simple_path_A):
+        return False
+
+    idx_B = 0
+    while idx_B < len(simple_path_B):
+        idx_B += 1
+        idx_A += 1
+        if (idx_B < len(simple_path_B) and
+            idx_A < len(simple_path_A) and
+            simple_path_A[idx_A] != simple_path_B[idx_B]):
+            return False
+
+    return True
+
+
 def are_overlapping_and_compatible_NO_gaps_in_overlap(simple_path_A, simple_path_B):
     
     ## find first non-spacer match between two paths.  Ensure remaining parts of paths are identical
@@ -65,13 +92,6 @@ def are_overlapping_and_compatible_NO_gaps_in_overlap(simple_path_A, simple_path
             return True
 
     return False # no matching index between paths
-
-
-
-
-def are_overlapping_and_compatibile_ALLOW_gaps_in_overlap(simple_path_A, simple_path_B):
-    pass
-
 
 
 
@@ -212,7 +232,43 @@ if __name__ == '__main__':
 
 
     
-    
+    ####################
+    ## Test containments
+    path_a = ["n1", "n2", "n3"]
+    path_b =       ["n2"]
+    test = path_A_contains_path_B(path_a, path_b)
+    print("path_a: {} contains path_b: {} = {}".format(path_a, path_b, test))
+    assert(test is True)
+
+
+    path_a = ["n1", "n2", "n3"]
+    path_b = ["n1", "n2", "n3"]
+    test = path_A_contains_path_B(path_a, path_b)
+    print("path_a: {} contains path_b: {} = {}".format(path_a, path_b, test))
+    assert(test is True)
+
+
+    path_a = ["n1", "n2", "n3"]
+    path_b = ["n1", "n2", "n3", "n4"]
+    test = path_A_contains_path_B(path_a, path_b)
+    print("path_a: {} contains path_b: {} = {}".format(path_a, path_b, test))
+    assert(test is False)
+
+    path_a = ["n1", "n2", "n3"]
+    path_b = ["n0", "n1", "n2", "n3", "n4"]
+    test = path_A_contains_path_B(path_a, path_b)
+    print("path_a: {} contains path_b: {} = {}".format(path_a, path_b, test))
+    assert(test is False)
+
+
+    path_a = ["n1", "n2", "n3"]
+    path_b = ["n3", "n4"]
+    test = path_A_contains_path_B(path_a, path_b)
+    print("path_a: {} contains path_b: {} = {}".format(path_a, path_b, test))
+    assert(test is False)
+
+
+        
     sys.exit(0)
 
     
