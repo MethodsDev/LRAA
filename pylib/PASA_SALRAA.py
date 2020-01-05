@@ -15,6 +15,7 @@ from MultiPath import MultiPath
 from MultiPathCounter import MultiPathCounter
 from PASA_SALRAA_Globals import SPACER
 from MultiPathGraph import MultiPathGraph
+from PASA_vertex import PASA_vertex
 
 logger = logging.getLogger(__name__)
 
@@ -25,6 +26,10 @@ class PASA_SALRAA:
 
         self._splice_graph = splice_graph
 
+        self._multipath_graph = None  # set under build_multipath_graph()
+        
+        self._pasa_vertices = None # set under _build_trellis
+        
         return
 
 
@@ -35,7 +40,19 @@ class PASA_SALRAA:
 
         multipath_graph = MultiPathGraph(mp_counter, self._splice_graph)
 
+        self._multipath_graph = multipath_graph
         
+        return
+
+
+    def reconstruct_isoforms(self):
+        self._build_trellis()
+        
+
+        
+    ##################
+    ## Private methods
+    ##################
         
 
     def _populate_read_multi_paths(self, contig_acc, contig_seq, bam_file):
@@ -207,3 +224,30 @@ class PASA_SALRAA:
         return path
 
     
+    def _build_trellis(self):
+
+        mpg = self._multipath_graph
+
+        nodes = mpg.get_ordered_nodes()
+        
+        # init the pasa vertex list
+
+        pasa_vertices = self._pasa_vertices = list()
+        
+        for node in nodes:
+            pasa_vertex = PASA_vertex(node)
+            pasa_vertices.append(pasa_vertex)
+
+        
+        for i in range(1, len(pasa_vertices)):
+            pv_i = pasa_vertices[i]
+
+            for j in range(i-1, -1, -1):
+                pv_j = pasa_vertices[j]
+                
+                if mpg.has_edge(pv_j.get_multipath_graph_node(), pv_i.get_multipath_graph_node()):
+                    pv_i.add_highest_scoring_path_extension(pv_j)
+                    
+
+        return
+
