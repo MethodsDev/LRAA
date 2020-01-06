@@ -6,6 +6,16 @@ from collections import defaultdict
 from PASA_SALRAA_Globals import SPACER
 import Simple_path_utils
 from Util_funcs import coordpairs_overlap
+import logging
+
+logger = logging.getLogger(__name__)
+
+
+##
+## The MultiPath is a list of node IDs that can be interrupted by SPACERs.
+## The MultiPath stores the splice graph so that the nodes corresponding to those IDs can be retrieved as needed.
+##
+
 
 class MultiPath:
     
@@ -14,11 +24,11 @@ class MultiPath:
 
         self._splice_graph = splice_graph
 
-        self._multipath = self._merge_paths_to_multi_path(paths_list)
+        self._simple_path = self._merge_paths_to_simple_multi_path(paths_list)
 
         # determine span
         coords = list()
-        for node_id in self._multipath:
+        for node_id in self._simple_path:
             if node_id != SPACER:
                 coords.extend( self._splice_graph.get_node_obj_via_id(node_id).get_coords())
         coords = sorted(coords)
@@ -29,12 +39,32 @@ class MultiPath:
         return
 
 
-    def get_path(self):
-        return(list(self._multipath)) # send a copy
-    
+    def get_simple_path(self):
+        return(list(self._simple_path)) # send a copy
 
+    def get_splice_graph(self):
+        return self._splice_graph
+    
+    def get_ordered_exons_and_introns(self):
+        simple_path = self.get_simple_path()
+
+        sg = self.get_splice_graph()
+        
+        # spacers become None
+        
+        exons_and_introns = list()
+        for node_id in simple_path:
+            if node_id == SPACER:
+                exons_and_introns.append(None)
+            else:
+                obj = sg.get_node_obj_via_id(node_id)
+                exons_and_introns.append(obj)
+
+        return exons_and_introns
+
+    
     def __len__(self):
-        return(len(self._multipath))
+        return(len(self._simple_path))
 
 
     def __getitem__(self, i):
@@ -42,7 +72,7 @@ class MultiPath:
         if i < 0:
             i += length
         if 0 <= i < length:
-            return self._multipath[i]
+            return self._simple_path[i]
         
         raise IndexError('Index out of range: {}'.format(i))
 
@@ -51,7 +81,7 @@ class MultiPath:
         return(self._lend, self._rend)
         
     
-    def _merge_paths_to_multi_path(self, paths_list):
+    def _merge_paths_to_simple_multi_path(self, paths_list):
 
 
         paths_to_asm = [path for path in paths_list] # copy incoming list
@@ -93,25 +123,27 @@ class MultiPath:
         
                     
         ## build multipath for post-assembly products
-        multipath = []
+        simple_multipath = []
         for i, path in enumerate(assembled_paths):
-            multipath += path
+            simple_multipath += path
             if i != len(assembled_paths) -1:
-                multipath.append(SPACER)
+                simple_multipath.append(SPACER)
 
-        return multipath
+        return simple_multipath
 
 
 
     def is_overlapping_and_compatible(self, other_multipath):
         # overlapping parts are required to be identical
         # compatible means no conflict detected.
+
+        assert(type(other_multipath) == MultiPath)
         
         if not coordpairs_overlap(self.get_coords(), other_multipath.get_coords()):
             return False
 
-        my_path = self.get_path()
-        other_path = other_multipath.get_path()
+        my_path = self.get_simple_path()
+        other_path = other_multipath.get_simple_path()
 
         while(len(my_path) > 0 and len(other_path) > 0):
             my_node_id = my_path[0]
@@ -147,7 +179,7 @@ class MultiPath:
     
 
     def __repr__(self):
-        return(str(self._multipath))
+        return(str(self._simple_path))
     
 
     
@@ -160,14 +192,14 @@ if __name__ == '__main__':
 
     paths_list = [  ["n1", "n2"],
                           ["n2", "n3"]  ]
-    mp = MultiPath._merge_paths_to_multi_path(None, paths_list)
+    mp = MultiPath._merge_paths_to_simple_multi_path(None, paths_list)
     print("Path list: {} merged into multipath: {}".format(paths_list, mp))
     assert(mp == ["n1", "n2", "n3"])
 
 
     paths_list = [  ["n1", "n2"],
                           ["n3", "n4"]  ]
-    mp = MultiPath._merge_paths_to_multi_path(None, paths_list)
+    mp = MultiPath._merge_paths_to_simple_multi_path(None, paths_list)
     print("Path list: {} merged into multipath: {}".format(paths_list, mp))
     assert(mp == ['n1', 'n2', '???', 'n3', 'n4'] )
 

@@ -16,6 +16,8 @@ from MultiPathCounter import MultiPathCounter
 from PASA_SALRAA_Globals import SPACER
 from MultiPathGraph import MultiPathGraph
 from PASA_vertex import PASA_vertex
+from Transcript import Transcript
+import Simple_path_utils
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +35,10 @@ class PASA_SALRAA:
         return
 
 
+    def get_pasa_vertices(self):
+        return list(self._pasa_vertices)
+    
+
 
     def build_multipath_graph(self, contig_acc, contig_seq, bam_file):
 
@@ -44,11 +50,69 @@ class PASA_SALRAA:
         
         return
 
+    
 
     def reconstruct_isoforms(self):
         self._build_trellis()
-        
 
+        MIN_SCORE_RATIO = 0.0001
+        
+        best_transcript_paths = list()
+
+        
+        if logger.getEffectiveLevel() == logging.DEBUG: ## for debugging info only
+            pasa_vertices = self.get_pasa_vertices()
+            for pasa_vertex in pasa_vertices:
+                logger.debug(pasa_vertex.describe_pasa_vertex())
+
+        
+        while True:
+            transcript_path = self._retrieve_best_transcript()
+
+            if transcript_path is None:
+                break
+            
+            logger.debug("Retrieved best transcript path: {}".format(transcript_path))
+            
+            if (transcript_path.get_score() > 0 and
+                (len(best_transcript_paths) == 0 or
+                 transcript_path.get_score() / best_transcript_paths[0].get_initial_score() >= MIN_SCORE_RATIO) ):
+                
+                best_transcript_paths.append(transcript_path)
+                self._decrement_transcript_path_vertices(transcript_path)
+                self._rescore_transcript_paths()
+            else:
+                break
+
+
+        # from the best transcript paths, reconstruct the actual transcripts themselves:
+
+        transcripts = list()
+        
+        for transcript_path in best_transcript_paths:
+
+            transcript_mp = transcript_path.toTranscript()
+            exons_and_introns = transcript_mp.get_ordered_exons_and_introns()
+
+            transcript_exon_segments = list()
+
+            orient = '?'
+            contig_acc = exons_and_introns[0].get_contig_acc()
+            
+            for feature in exons_and_introns:
+                if type(feature) == Exon:
+                    transcript_exon_segments.append(feature.get_coords())
+                elif type(feature) == Intron:
+                    orient = feature.get_orient()
+
+            transcript_exon_segments = Simple_path_utils.merge_adjacent_segments(transcript_exon_segments)
+            transcript_obj = Transcript(contig_acc, transcript_exon_segments, orient)
+                    
+            print(transcript_obj)
+            transcripts.append(transcript_obj)
+            
+        
+        return transcripts
         
     ##################
     ## Private methods
@@ -78,7 +142,7 @@ class PASA_SALRAA:
                 #print("paths_list: {} -> mp: {}".format(paths_list, mp))
                 mp_counter.add(mp)
 
-        print(mp_counter)
+        #print(mp_counter)
             
         return mp_counter
     
@@ -122,9 +186,11 @@ class PASA_SALRAA:
                     path_part.extend(self._map_segment_to_graph_TERMINAL(segment))
             else:
                 # internal segment
+                #   first, get preceding intron
                 path_part = self._get_intron_node_id(alignment_segments[i-1], segment)
-                if path_part:
-                    path_part.extend(self._map_segment_to_graph_INTERNAL(segment))
+                if not path_part:
+                    path_part = [SPACER]
+                path_part.extend(self._map_segment_to_graph_INTERNAL(segment))
 
             #print("segment: {}  mapped to {}".format(segment, path_part))
                     
@@ -137,9 +203,14 @@ class PASA_SALRAA:
 
 
         # trim any terminal spacer
-        if path[-1] == SPACER:
+        while len(path) > 0  and path[-1] == SPACER:
             path = path[:-1]
-                    
+
+        # trim any initial spacer
+        while len(path) > 0 and path[0] == SPACER:
+            path.pop(0)
+            
+        
         return path
     
 
@@ -251,3 +322,46 @@ class PASA_SALRAA:
 
         return
 
+
+    def _retrieve_best_transcript(self):
+
+        pasa_vertices = self.get_pasa_vertices()
+
+        best_scoring_path = None
+        best_score = 0
+        
+        for pasa_vertex in pasa_vertices:
+            
+            scored_paths = pasa_vertex.get_fromPaths()
+            for scored_path in scored_paths:
+                if scored_path.get_score() > best_score:
+                    best_score = scored_path.get_score()
+                    best_scoring_path = scored_path
+
+        return best_scoring_path
+
+
+    def _decrement_transcript_path_vertices(self, transcript_path):
+
+        mpgn_list = transcript_path.get_path_mpgn_list()
+
+        for mpgn in mpgn_list:
+            mpgn.set_count(0)
+
+            for containment_mpgn in mpgn.get_containments():
+                containment_mpgn.set_count(0)
+
+        return
+
+
+    def _rescore_transcript_paths(self):
+
+        pasa_vertices = self.get_pasa_vertices()
+
+        for pasa_vertex in pasa_vertices:
+            pasa_vertex.rescore_fromPaths()
+
+        return
+    
+
+                  

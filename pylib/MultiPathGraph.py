@@ -5,12 +5,17 @@ import MultiPathCounter
 import networkx as nx
 import Simple_path_utils as Simple_path_utils
 
+import logging
+
+logger = logging.getLogger(__name__)
+
+
 class MultiPathGraphNode:
 
     mp_id_counter = 0
     
-    def __init__(self, multiPath, count, lend, rend, mpg):
-        self._multiPath = multiPath
+    def __init__(self, multiPathObj, count, lend, rend, mpg):
+        self._multiPath = multiPathObj
         self._count = count
         self._lend = lend
         self._rend = rend
@@ -23,14 +28,14 @@ class MultiPathGraphNode:
         self._id = "mp{}".format(MultiPathGraphNode.mp_id_counter)
 
 
-    def get_multiPath(self):
+    def get_multiPathObj(self):
         return self._multiPath
 
     def get_multipath_graph(self):
         return self._mpg
 
     def get_simple_path(self):
-        return(self._multiPath.get_path())
+        return(self._multiPath.get_simple_path())
 
     def get_coords(self):
         return(self._lend, self._rend)
@@ -38,7 +43,10 @@ class MultiPathGraphNode:
     def get_count(self):
         return self._count
 
-    
+    def set_count(self, count_val):
+        self._count = count_val
+        return
+        
     def __repr__(self):
         return("mp:{} {}-{} C:{}".format(self.get_simple_path(), self._lend, self._rend, self._count))
     
@@ -80,8 +88,12 @@ class MultiPathGraphNode:
         
         token = "^^".join(sorted((mpgn_A._id, mpgn_B._id)))
         return token
-        
-        
+
+
+    def get_splice_graph(self):
+        return self.get_multipath_graph().get_splice_graph()
+
+    
 class MultiPathGraph:
 
 
@@ -141,7 +153,7 @@ class MultiPathGraph:
                     node_j.add_containment(node_i)
                 elif node_i.compatible(node_j):
                     self._mp_graph.add_edge(node_j, node_i)
-                    print("adding edge: {},{}".format(node_j, node_i))
+                    logger.debug("adding edge: {},{}".format(node_j, node_i))
                 else:
                     # incompatible pairs
                     incompatible_pair_token = MultiPathGraphNode.get_mpgn_pair_token(node_i, node_j)
@@ -165,3 +177,5 @@ class MultiPathGraph:
             return False
 
         
+    def get_splice_graph(self):
+        return self._splice_graph

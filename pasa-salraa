@@ -9,18 +9,14 @@ import subprocess
 sys.path.insert(0, os.path.sep.join([os.path.dirname(os.path.realpath(__file__)), "pylib"]))
 from Splice_graph import Splice_graph
 from PASA_SALRAA import PASA_SALRAA
+from Transcript import Transcript
 import Util_funcs
 
 import logging
 FORMAT = "%(asctime)-15s %(levelname)s %(module)s.%(name)s.%(funcName)s at %(lineno)d :\n\t%(message)s\n"
-global logger
-logger = logging.getLogger()
-logging.basicConfig(filename='pasa-salras.log', format=FORMAT, filemode='w', level=logging.DEBUG)
-# add a new Handler to print all INFO and above messages to stdout
-ch = logging.StreamHandler(sys.stdout)
-ch.setLevel(logging.INFO)
-logger.addHandler(ch)
 
+logger = logging.getLogger()
+logging.basicConfig(format=FORMAT, level=logging.INFO)
 
 READ_ALN_GAP_MERGE = 10
 
@@ -33,13 +29,17 @@ def main():
     parser.add_argument("--bam", type=str, required=True, help="target bam file")
     parser.add_argument("--genome", type=str, required=True, help="target genome file")
 
+    parser.add_argument("--outputfile", type=str, default="pasa-salraa.gtf", help="output filename")
+    
     args = parser.parse_args()
 
     genome_fasta_filename = args.genome
     bam_filename = args.bam
+    output_filename = args.outputfile
 
     run_pasa_salraa(genome_fasta_filename,
                     bam_filename,
+                    output_filename,
                     READ_ALN_GAP_MERGE)
     
     
@@ -48,13 +48,15 @@ def main():
 
 
 
-def run_pasa_salraa(genome_fasta_filename, bam_file, read_aln_gap_merge):
+def run_pasa_salraa(genome_fasta_filename, bam_file, output_filename, read_aln_gap_merge):
 
     # data structures want:
     # ultimately exons and introns
     # build from reads.
     # define coverage intervals and introns as graph components.
 
+    ofh = open(output_filename, 'wt')
+    
     genome_contigs_list = get_genome_contigs_listing(genome_fasta_filename)
     
     for contig_acc in genome_contigs_list:
@@ -67,9 +69,16 @@ def run_pasa_salraa(genome_fasta_filename, bam_file, read_aln_gap_merge):
 
         pasa_salraa_obj = PASA_SALRAA(sg)
         pasa_salraa_obj.build_multipath_graph(contig_acc, contig_seq_str, bam_file)
-        pasa_salraa_obj.reconstruct_isoforms()
-        
-        
+        transcripts = pasa_salraa_obj.reconstruct_isoforms()
+
+        logger.info("writing gtf output for {} containing {} transcripts".format(contig_acc, len(transcripts)))
+        for transcript in transcripts:
+            ofh.write(transcript.to_GTF_format() + "\n")
+
+
+    ofh.close()
+    
+    return
     
 
 def get_genome_contigs_listing(genome_fasta_filename):

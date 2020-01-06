@@ -145,6 +145,27 @@ def merge_simple_paths(simple_path_A, simple_path_B):
 
 
 
+def merge_adjacent_segments(segment_list):
+
+    segment_list = sorted(segment_list, key=lambda x: x[0])
+    
+    ret_segments = list()
+    ret_segments.append(list(segment_list.pop(0)))
+
+    while len(segment_list) > 0:
+        next_seg = list(segment_list.pop(0))
+
+        prev_seg = ret_segments[-1]
+        if next_seg[0] == prev_seg[1] + 1:
+            # merge them
+            assert(next_seg[1] > prev_seg[1])
+            prev_seg[1] = next_seg[1]
+        else:
+            ret_segments.append(next_seg)
+
+    return ret_segments
+
+
 
 
 if __name__ == '__main__':

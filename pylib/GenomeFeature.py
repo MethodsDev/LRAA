@@ -20,7 +20,10 @@ class GenomeFeature:
         self._id = "__id_not_set__"
 
         return
-        
+
+    def get_contig_acc(self):
+        return self._contig_acc
+    
     def get_coords(self):
         return(self._lend, self._rend)
 
@@ -60,6 +63,9 @@ class Intron(GenomeFeature):
     
     def __repr__(self):
         return("Intron: {} {}-{} count:{}".format(self._id, self._lend, self._rend, self._count))
+
+    def get_orient(self):
+        return self._orient
         
 
     # static methods

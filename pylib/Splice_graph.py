@@ -200,7 +200,7 @@ class Splice_graph:
 
                 for intron in introns_list:
                     intron_counter[intron] += 1
-                    intron_lend,intron_rend = intron
+                    intron_lend,intron_rend,splice_orient = intron
                     intron_splice_site_support[intron_lend] += 1
                     intron_splice_site_support[intron_rend] += 1
 
@@ -216,7 +216,7 @@ class Splice_graph:
         for intron_coords, count in intron_counter.items():
             if count >= Splice_graph._min_intron_support:
                 ## check splice support
-                intron_lend,intron_rend = intron_coords
+                intron_lend,intron_rend,intron_orient = intron_coords
                 splice_support_left = intron_splice_site_support[intron_lend]
                 splice_support_right = intron_splice_site_support[intron_rend]
 
@@ -224,7 +224,7 @@ class Splice_graph:
                 max_support = max(splice_support_left, splice_support_right)
 
                 if min_support/max_support >= Splice_graph._min_alt_splice_freq:
-                    intron_obj = Intron(self._contig_acc, intron_lend, intron_rend, "?", count)
+                    intron_obj = Intron(self._contig_acc, intron_lend, intron_rend, intron_orient, count)
                     intron_coords_key = "{}:{}".format(intron_lend, intron_rend)
                     self._intron_objs[intron_coords_key] = intron_obj
             
@@ -248,11 +248,11 @@ class Splice_graph:
 
             intron_lend = seg_left_rend + 1
             intron_rend = seg_right_lend - 1
-            
-            introns_list.append( (intron_lend, intron_rend) )
 
             splice_type = Intron.check_canonical_splicing(intron_lend, intron_rend, genome_seq)
 
+            introns_list.append( (intron_lend, intron_rend, splice_type) )
+            
             if splice_type is None:
                 return
             elif splice_type == '+':
@@ -382,6 +382,7 @@ class Splice_graph:
         for intron in introns_to_delete:
             intron_coords = intron.get_coords()
             intron_key = "{}:{}".format(intron_coords[0], intron_coords[1])
+            logger.debug("removing intron: {} {}".format(intron_key, self._intron_objs[intron_key]))
             del self._intron_objs[intron_key]
             
         return
@@ -601,6 +602,11 @@ class Splice_graph:
                 for intron in introns_to_remove:
                     ofh.write(intron.get_bed_row(pad=1) + "\n")
 
+        # remove introns
+        for intron_to_remove in introns_to_remove:
+            intron_lend,intron_rend = intron_to_remove.get_coords()
+            intron_token = "{}:{}".format(intron_lend,intron_rend)
+            del self._intron_objs[intron_token]
         
         draft_splice_graph.remove_nodes_from(introns_to_remove)
 
