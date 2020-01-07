@@ -19,12 +19,17 @@ class Pretty_alignment:
         self._pysam_alignment = pysam_alignment
         self._pretty_alignment_segments = pretty_alignment_segments
 
+    def __repr__(self):
+        return str(self._pretty_alignment_segments)
+
+        
     def get_pysam_alignment(self):
         return self._pysam_alignment
 
     def get_pretty_alignment_segments(self):
         return self._pretty_alignment_segments
-    
+
+
 
 class Bam_alignment_extractor:
 

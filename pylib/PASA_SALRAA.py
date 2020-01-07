@@ -112,8 +112,7 @@ class PASA_SALRAA:
         transcripts = list()
         
         for transcript_path in best_transcript_paths:
-
-            
+                        
             transcript_mp = transcript_path.toTranscript()
             exons_and_introns = transcript_mp.get_ordered_exons_and_introns()
 
@@ -150,6 +149,8 @@ class PASA_SALRAA:
         grouped_alignments = self._group_alignments_by_read_name(pretty_alignments)
 
         mp_counter = MultiPathCounter()
+
+        read_graph_mappings_ofh = open("__read_graph_mappings.dat", "wt")
         
         for read_name in grouped_alignments:
             #print("{}\t{}".format(read_name, len(grouped_alignments[read_name])))
@@ -160,13 +161,18 @@ class PASA_SALRAA:
                 if path and path != SPACER:
                     paths_list.append(path)
 
+            mp = None
             if paths_list:
                 mp = MultiPath(self._splice_graph, paths_list)
                 #print("paths_list: {} -> mp: {}".format(paths_list, mp))
                 mp_counter.add(mp)
 
+            read_graph_mappings_ofh.write("\t".join([read_name, str(pretty_alignment), str(mp)]) + "\n")
+
+
+        read_graph_mappings_ofh.close()
         #print(mp_counter)
-            
+        
         return mp_counter
     
          
@@ -205,8 +211,9 @@ class PASA_SALRAA:
             elif i == num_segments - 1:
                 # terminal segment
                 path_part = self._get_intron_node_id(alignment_segments[i-1], segment)
-                if path_part:
-                    path_part.extend(self._map_segment_to_graph_TERMINAL(segment))
+                if not path_part:
+                    path_part = [SPACER]
+                path_part.extend(self._map_segment_to_graph_TERMINAL(segment))
             else:
                 # internal segment
                 #   first, get preceding intron

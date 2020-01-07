@@ -107,16 +107,25 @@ class Splice_graph:
         self._populate_exon_coverage_and_extract_introns()  # stores intron objs in self._intron_objs
         
         self._build_draft_splice_graph() # initializes self._splice_graph
-
-        self._prune_lowly_expressed_intron_overlapping_exon_segments()  # removes exon segments, not introns
         
-        self._prune_disconnected_introns()
+        if DEBUG:
+            self.write_intron_exon_splice_graph_bed_files("__prefilter", pad=0)
+            self.describe_graph("__prefilter.graph")
+                
+        self._prune_lowly_expressed_intron_overlapping_exon_segments()  # removes exon segments, not introns
         
         self._merge_neighboring_proximal_unbranched_exon_segments()
         
         self._prune_exon_spurs_at_introns()
 
+        self._prune_disconnected_introns()
+        
         self._finalize_splice_graph()
+
+        if DEBUG:
+            self.write_intron_exon_splice_graph_bed_files("__final_graph", pad=0)
+            self.describe_graph("__final.graph")
+
         
         return self._splice_graph
     
@@ -336,10 +345,6 @@ class Splice_graph:
 
         self._splice_graph = draft_splice_graph
 
-        if DEBUG:
-            self.write_intron_exon_splice_graph_bed_files("__prefilter", pad=0)
-            self.describe_graph("__prefilter.graph")
-            
         return
         
         

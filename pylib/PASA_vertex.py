@@ -100,8 +100,6 @@ class PASA_scored_path:
 
     
 
-    
-
 class PASA_vertex:
 
 
@@ -114,17 +112,22 @@ class PASA_vertex:
 
         # add unextended current path node as initial path
 
-        init_score = multipath_graph_node.get_count()
+        aggregate_counts = multipath_graph_node.get_count()
         for containment_node in multipath_graph_node.get_containments():
-            init_score += containment_node.get_count()
-        
-        initial_scored_path = PASA_scored_path([self.get_mpgn()], init_score)
+            aggregate_counts += containment_node.get_count()
 
+        # score = reads normalized by seq length
+        mpgn_seq_len = multipath_graph_node.get_seq_length()
+        print("mpgn: {}".format(multipath_graph_node))
+        init_score = aggregate_counts / mpgn_seq_len
+        initial_scored_path = PASA_scored_path([self.get_mpgn()], init_score)
+        
         self._fromPaths.append(initial_scored_path)
 
 
         return
 
+    
     def __repr__(self):
         return("PASA_vertex for {}".format(self._multipath_graph_node))
         
