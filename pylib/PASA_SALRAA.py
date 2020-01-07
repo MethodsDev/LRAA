@@ -23,6 +23,8 @@ logger = logging.getLogger(__name__)
 
 class PASA_SALRAA:
 
+    min_transcript_length = 200
+    
 
     def __init__(self, splice_graph):
 
@@ -30,14 +32,7 @@ class PASA_SALRAA:
 
         self._multipath_graph = None  # set under build_multipath_graph()
         
-        self._pasa_vertices = None # set under _build_trellis
-        
         return
-
-
-    def get_pasa_vertices(self):
-        return list(self._pasa_vertices)
-    
 
 
     def build_multipath_graph(self, contig_acc, contig_seq, bam_file):
@@ -53,21 +48,48 @@ class PASA_SALRAA:
     
 
     def reconstruct_isoforms(self):
-        self._build_trellis()
+
+        # define disjoint graph components.
+        mpg = self._multipath_graph
+        mpg_components = mpg.define_disjoint_graph_components()
+
+        all_reconstructed_transcripts = list()
+
+        component_counter = 0
+        for mpg_component in mpg_components:
+            component_counter += 1
+            logger.info("PASA_SALRAA - assembly of component {}".format(component_counter))
+            
+            ## should do this multithreaded, each thread tackling a different component.
+            transcripts = self._reconstruct_isoforms_single_component(mpg_component)
+
+            if transcripts:
+                all_reconstructed_transcripts.extend(transcripts)
+
+        return all_reconstructed_transcripts
+
+
+    
+    ##################
+    ## Private methods
+    ##################
+        
+    
+    def _reconstruct_isoforms_single_component(self, mpg_component):
+        
+        pasa_vertices = self._build_trellis(mpg_component)
 
         MIN_SCORE_RATIO = 0.0001
         
         best_transcript_paths = list()
-
         
         if logger.getEffectiveLevel() == logging.DEBUG: ## for debugging info only
-            pasa_vertices = self.get_pasa_vertices()
             for pasa_vertex in pasa_vertices:
                 logger.debug(pasa_vertex.describe_pasa_vertex())
 
         
         while True:
-            transcript_path = self._retrieve_best_transcript()
+            transcript_path = self._retrieve_best_transcript(pasa_vertices)
 
             if transcript_path is None:
                 break
@@ -79,8 +101,8 @@ class PASA_SALRAA:
                  transcript_path.get_score() / best_transcript_paths[0].get_initial_score() >= MIN_SCORE_RATIO) ):
                 
                 best_transcript_paths.append(transcript_path)
-                self._decrement_transcript_path_vertices(transcript_path)
-                self._rescore_transcript_paths()
+                self._decrement_transcript_path_vertices(transcript_path, pasa_vertices)
+                self._rescore_transcript_paths(pasa_vertices)
             else:
                 break
 
@@ -91,6 +113,7 @@ class PASA_SALRAA:
         
         for transcript_path in best_transcript_paths:
 
+            
             transcript_mp = transcript_path.toTranscript()
             exons_and_introns = transcript_mp.get_ordered_exons_and_introns()
 
@@ -105,6 +128,10 @@ class PASA_SALRAA:
                 elif type(feature) == Intron:
                     orient = feature.get_orient()
 
+            if len(transcript_exon_segments) == 0:
+                logger.warning("bug - shouldn't have exonless transcript features: {}".format(transcript_path)) # //FIXME: bug
+                continue
+            
             transcript_exon_segments = Simple_path_utils.merge_adjacent_segments(transcript_exon_segments)
             transcript_obj = Transcript(contig_acc, transcript_exon_segments, orient)
                     
@@ -113,10 +140,6 @@ class PASA_SALRAA:
             
         
         return transcripts
-        
-    ##################
-    ## Private methods
-    ##################
         
 
     def _populate_read_multi_paths(self, contig_acc, contig_seq, bam_file):
@@ -295,15 +318,15 @@ class PASA_SALRAA:
         return path
 
     
-    def _build_trellis(self):
+    def _build_trellis(self, mpg_component):
 
         mpg = self._multipath_graph
 
-        nodes = mpg.get_ordered_nodes()
+        nodes = sorted(mpg_component, key=lambda x: x._lend)
         
         # init the pasa vertex list
-
-        pasa_vertices = self._pasa_vertices = list()
+        
+        pasa_vertices = list()
         
         for node in nodes:
             pasa_vertex = PASA_vertex(node)
@@ -320,12 +343,10 @@ class PASA_SALRAA:
                     pv_i.add_highest_scoring_path_extension(pv_j)
                     
 
-        return
+        return pasa_vertices
 
 
-    def _retrieve_best_transcript(self):
-
-        pasa_vertices = self.get_pasa_vertices()
+    def _retrieve_best_transcript(self, pasa_vertices):
 
         best_scoring_path = None
         best_score = 0
@@ -341,7 +362,7 @@ class PASA_SALRAA:
         return best_scoring_path
 
 
-    def _decrement_transcript_path_vertices(self, transcript_path):
+    def _decrement_transcript_path_vertices(self, transcript_path, pasa_vertices):
 
         mpgn_list = transcript_path.get_path_mpgn_list()
 
@@ -354,14 +375,10 @@ class PASA_SALRAA:
         return
 
 
-    def _rescore_transcript_paths(self):
-
-        pasa_vertices = self.get_pasa_vertices()
-
+    def _rescore_transcript_paths(self, pasa_vertices):
+        
         for pasa_vertex in pasa_vertices:
             pasa_vertex.rescore_fromPaths()
 
         return
     
-
-                  

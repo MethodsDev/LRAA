@@ -49,8 +49,27 @@ class MultiPathGraphNode:
         
     def __repr__(self):
         return("mp:{} {}-{} C:{}".format(self.get_simple_path(), self._lend, self._rend, self._count))
-    
 
+        
+    def has_successors(self):
+        if len(list(self._mpg.successors(self))) > 0:
+            return True
+        else:
+            return False
+
+    def get_successors(self):
+        return(list(self._mpg.successors(self)))
+
+    def has_predecessors(self):
+        if len(list(self._mpg.predecessors(self))) > 0:
+            return True
+        else:
+            return False
+
+    def get_predecessors(self):
+        return(list(self._mpg.predecessors(self)))
+
+    
     def coords_overlap(self, other_node):
         my_lend, my_rend = self.get_coords()
         other_lend, other_rend = other_node.get_coords()
@@ -161,12 +180,19 @@ class MultiPathGraph:
 
     
     def get_ordered_nodes(self):
+        # these are sorted by rend
         return list(self._mp_graph_nodes_list)
-
 
     
     def has_edge(self, multiPath_before, multiPath_after):
         return self._mp_graph.has_edge(multiPath_before, multiPath_after)
+
+
+    def successors(self, mpgn):
+        return self._mp_graph.successors(mpgn)
+
+    def predecessors(self, mpgn):
+        return self._mp_graph.predecessors(mpgn)
 
     
     def incompatible_mpgn_pair(self, mpgn_A, mpgn_B):
@@ -179,3 +205,43 @@ class MultiPathGraph:
         
     def get_splice_graph(self):
         return self._splice_graph
+
+
+    def define_disjoint_graph_components(self):
+
+        mpgn_list = self.get_ordered_nodes()
+        mpgn_seen = set()
+
+        component_list = list()
+        
+        while len(mpgn_list) > 0:
+
+            queue = list()
+            seed_node = mpgn_list.pop(0)
+
+            if seed_node in mpgn_seen:
+                continue
+
+            # start a new component.
+            component = list()
+            queue.append(seed_node)
+
+            while len(queue) > 0:
+                node = queue.pop(0)
+                if node not in mpgn_seen:
+                    mpgn_seen.add(node)
+                    component.append(node)
+                    # add predecessors and successors to queue
+                    if node.has_predecessors():
+                        queue.extend(node.get_predecessors())
+                    if node.has_successors():
+                        queue.extend(node.get_successors())
+
+            if len(component) > 0:
+                component_list.append(component)
+
+        logger.info("identified {} disjoint graph components".format(len(component_list)))
+
+        return component_list
+
+    
