@@ -1,23 +1,36 @@
 import sys, os, re
 from MultiPath import MultiPath
 from MultiPathGraph import MultiPathGraphNode
-from Pasa_vertex import Pasa_vertex
 
+import math
 import logging
 
 logger = logging.getLogger(__name__)
 
 class PASA_scored_path:
 
-    def __init__(self, path_list_of_multipath_graph_nodes, score):
+    def __init__(self, path_list_of_multipath_graph_nodes):
 
 
         for mpgn in path_list_of_multipath_graph_nodes:
             assert(type(mpgn) == MultiPathGraphNode)
         
-        self._path = path_list_of_multipath_graph_nodes
+        self._mpgn_list_path = path_list_of_multipath_graph_nodes
+        
+        self._multiPath_obj = MultiPath.multiPath_from_mpgn_list(self._mpgn_list_path)
+
+        self._cdna_len = self._multiPath_obj.get_cdna_length()
+
+        span_lend, span_rend = self._multiPath_obj.get_coords()
+        
+        self._contig_span_len = span_rend - span_lend + 1
+        
+        score = self.compute_path_score()
+        
         self._score = score
         self._initial_score = score
+
+        
         
     def __repr__(self):
         return("PASA_scored_path: (score={}, IScore={}) mpgns: {}".format(self.get_score(), self.get_initial_score(), self.get_path_mpgn_list()))
@@ -30,14 +43,14 @@ class PASA_scored_path:
         return self._initial_score
 
     def get_path_mpgn_list(self):
-        return list(self._path)
+        return list(self._mpgn_list_path)
 
         
     def incompatibility_detected(self, extension_mpgn):
 
         mpg = extension_mpgn.get_multipath_graph()
 
-        for mpgn in self._path:
+        for mpgn in self.get_path_mpgn_list():
             if mpg.incompatible_mpgn_pair(mpgn, extension_mpgn):
                 return True
 
@@ -45,20 +58,18 @@ class PASA_scored_path:
 
     def create_scored_path_extension(self, extension_mpgn):
 
-        path_list = self._path + [extension_mpgn]
+        path_list = self.get_path_mpgn_list() + [extension_mpgn]
 
-        score = PASA_scored_path.score_path(path_list)
-        
-        extension_scored_path = PASA_scored_path(path_list, score)
+        extension_scored_path = PASA_scored_path(path_list)
 
         return extension_scored_path
 
 
     def rescore(self):
-        self._score = PASA_scored_path.score_path(self._path)
+        self._score = self.compute_path_score()
         return
-
-
+    
+    
     def toTranscript(self):
 
         mpgn_list = self.get_path_mpgn_list()
@@ -76,27 +87,27 @@ class PASA_scored_path:
         transcript_mp = MultiPath(splice_graph, simple_path_list)
 
         return transcript_mp
-        
-        
-        
 
-    
-    # class utility methods
-    def score_path(mpgn_list):
+        
+    def compute_path_score(self):
+
+        assert(self._cdna_len > 0 and self._contig_span_len > 0)
         
         score = 0
         seen = set()
-        for mpgn in mpgn_list:
+        for mpgn in self.get_path_mpgn_list():
             if mpgn in seen:
-                raise RuntimeError("Error, mpgn {} already detected within path list: {}".format(mpgn, mpgn_list))
+                continue
             
-            score += mpgn.get_count()
+            score += mpgn.get_score()
+            
             seen.add(mpgn)
             for containment in mpgn.get_containments():
                 if containment not in seen:
                     seen.add(containment)
-                    score += containment.get_count()
-                    
-        return score
+                    score += containment.get_score()
 
+        
+        return score
+     
     

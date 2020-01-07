@@ -15,22 +15,15 @@ class PASA_vertex:
         assert(type(multipath_graph_node) == MultiPathGraphNode)
         
         self._multipath_graph_node = multipath_graph_node            
+
+        self._weight = 1.0 # contribution of read content towards scores
+        
         self._fromPaths = list() # hold scored paths.
 
         # add unextended current path node as initial path
-
-        aggregate_counts = multipath_graph_node.get_count()
-        for containment_node in multipath_graph_node.get_containments():
-            aggregate_counts += containment_node.get_count()
-
-        # score = reads normalized by seq length
-        mpgn_seq_len = multipath_graph_node.get_seq_length()
-        print("mpgn: {}".format(multipath_graph_node))
-        init_score = aggregate_counts / mpgn_seq_len
-        initial_scored_path = PASA_scored_path([self.get_mpgn()], init_score)
-        
+        initial_scored_path = PASA_scored_path([self._multipath_graph_node])
         self._fromPaths.append(initial_scored_path)
-
+        
 
         return
 

@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 class MultiPathGraph:
 
 
-    def __init__(self, multiPathCounter, splice_graph):
+    def __init__(self, multiPathCounter, splice_graph, min_mpgn_read_count=1, allow_spacers=False): # //FIXME: enable interface to allow_spacers
 
         assert(type(multiPathCounter) == MultiPathCounter.MultiPathCounter)
         assert(type(splice_graph) == Splice_graph.Splice_graph)
@@ -34,6 +34,12 @@ class MultiPathGraph:
         for mpCountPair in multiPathCountPairs:
             mp, count = mpCountPair.get_multipath_and_count()
 
+            if count < min_mpgn_read_count:
+                continue
+
+            if (not allow_spacers) and SPACER in mp:
+                continue
+            
             first_node_id = mp[0]
             last_node_id = mp[-1]
 
@@ -67,17 +73,20 @@ class MultiPathGraph:
                     break # all earlier node j's will also be non-overlapping
 
                 if node_i.contains_other_node(node_j):
+                    # i contains j
                     node_i.add_containment(node_j)
                 elif node_j.contains_other_node(node_i):
+                    # j contains i
                     node_j.add_containment(node_i)
                 elif node_i.compatible(node_j):
+                    # draw edge between overlapping and compatible nodes.
                     self._mp_graph.add_edge(node_j, node_i)
                     logger.debug("adding edge: {},{}".format(node_j, node_i))
                 else:
                     # incompatible pairs
                     incompatible_pair_token = MultiPathGraphNode.get_mpgn_pair_token(node_i, node_j)
                     self._incompatible_pairs.add(incompatible_pair_token)
-
+                    
     
     def get_ordered_nodes(self):
         # these are sorted by rend
@@ -145,3 +154,54 @@ class MultiPathGraph:
         return component_list
 
     
+    def describe_graph(self, output_filename):
+
+        ofh = open(output_filename, 'wt')
+
+        mpgn_list = self.get_ordered_nodes()
+        for mpgn in mpgn_list:
+            ofh.write(str(mpgn) + "\n")
+
+        ofh.close()
+
+        return
+    
+
+    def write_mp_graph_nodes_to_gtf(self, gtf_output_filename):
+
+        contig_acc = self._splice_graph.get_contig_acc()
+        
+        ofh = open(gtf_output_filename, 'wt')
+
+        mpgn_list = self.get_ordered_nodes()
+        for mpgn in mpgn_list:
+            splice_graph_nodes = mpgn.get_splice_graph_node_objs_for_path()
+
+            mpgn_read_count = mpgn.get_count()
+            
+            mpgn_id = mpgn.get_id()
+            trans_id = "t__count={}__.".format(mpgn_read_count) + mpgn_id
+            gene_id = "g__count={}__".format(mpgn_read_count) + mpgn_id
+
+            for splice_graph_node in splice_graph_nodes:
+                if splice_graph_node is not None and type(splice_graph_node) == Exon:
+
+                    coords = splice_graph_node.get_coords()
+                    
+                    ofh.write("\t".join([contig_acc,
+                                        "MPGN",
+                                        "exon",
+                                         str(coords[0]),
+                                         str(coords[1]),
+                                         ".",
+                                         "?",
+                                         ".",
+                                         "gene_id \"{}\"; transcript_id \"{}\";".format(gene_id, trans_id)]) + "\n")
+                
+
+        
+
+        ofh.close()
+        
+
+        return

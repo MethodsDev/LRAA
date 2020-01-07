@@ -20,6 +20,8 @@ class MultiPathGraphNode:
     def __init__(self, multiPathObj, count, lend, rend, mpg):
         self._multiPath = multiPathObj
         self._count = count
+        self._weight = 1.0 # weight applied to read count, varied in pasa-salraa
+        
         self._lend = lend
         self._rend = rend
 
@@ -33,6 +35,10 @@ class MultiPathGraphNode:
         self._seq_length = self._compute_seq_length()
         
 
+
+    def get_id(self):
+        return self._id
+    
     def get_multiPathObj(self):
         return self._multiPath
 
@@ -52,6 +58,17 @@ class MultiPathGraphNode:
         self._count = count_val
         return
 
+    def get_weight(self):
+        return self._weight
+
+    def set_weight(self, weight):
+        self._weight = weight
+        return
+
+    def get_score(self):
+        # score reflects density of read evidence in this mpgn 
+        return ( (self._count * self._weight) / self._seq_length )
+    
     def get_seq_length(self):
         return self._seq_length
 

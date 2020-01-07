@@ -54,6 +54,10 @@ class Splice_graph:
         return
 
 
+
+    def get_contig_acc(self):
+        return self._contig_acc
+    
     def set_read_aln_gap_merge(self, read_aln_gap_merge_int):
 
         self._read_aln_gap_merge_int = read_aln_gap_merge_int

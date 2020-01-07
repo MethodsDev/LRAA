@@ -1,5 +1,6 @@
 import sys, os, re
 from GenomeFeature import GenomeFeature
+from PASA_scored_path import PASA_scored_path
 
 class Transcript (GenomeFeature):
 
@@ -25,6 +26,8 @@ class Transcript (GenomeFeature):
         self._gene_id = "g.{}".format(self._id)
 
         self._meta = None
+
+        self._scored_path_obj = None #optional - useful if transcript obj was built based on a scored path
         
         return
 
@@ -38,7 +41,12 @@ class Transcript (GenomeFeature):
                                                            self._orient,
                                                            self._exon_segments) )
         
-
+        
+    def set_scored_path_obj(self, scored_path_obj):
+        assert(type(scored_path_obj) == PASA_scored_path)
+        self._scored_path_obj = scored_path_obj
+        
+        
     def set_gene_id(self, gene_id):
         self._gene_id = gene_id
 
@@ -81,6 +89,18 @@ class Transcript (GenomeFeature):
                                    ".",
                                    "gene_id \"{}\"; transcript_id \"{}\";".format(self._gene_id, self._id)]) + "\n"
 
+
+        if self._scored_path_obj:
+            # include construction info as comments.
+            gtf_text += "# derived from scored path obj:\n"
+
+            mpgn_list = self._scored_path_obj.get_path_mpgn_list()
+            for mpgn in mpgn_list:
+                gtf_text += "# " + str(mpgn) + "\n"
+
+            gtf_text += "\n"
+
+        
         return gtf_text
         
         

@@ -18,13 +18,14 @@ from MultiPathGraph import MultiPathGraph
 from PASA_vertex import PASA_vertex
 from Transcript import Transcript
 import Simple_path_utils
+from PASA_scored_path import PASA_scored_path
 
 logger = logging.getLogger(__name__)
 
 class PASA_SALRAA:
 
     min_transcript_length = 200
-    
+    min_mpgn_read_count = 1
 
     def __init__(self, splice_graph):
 
@@ -39,9 +40,13 @@ class PASA_SALRAA:
 
         mp_counter = self._populate_read_multi_paths(contig_acc, contig_seq, bam_file)
 
-        multipath_graph = MultiPathGraph(mp_counter, self._splice_graph)
-
+        multipath_graph = MultiPathGraph(mp_counter, self._splice_graph, PASA_SALRAA.min_mpgn_read_count)
         self._multipath_graph = multipath_graph
+
+        ## debugging info
+        logger.info("writing __multipath_graph.dat")
+        multipath_graph.describe_graph("__multipath_graph.dat")
+        multipath_graph.write_mp_graph_nodes_to_gtf("mpgns.gtf")
         
         return
 
@@ -75,7 +80,7 @@ class PASA_SALRAA:
     ##################
         
     
-    def _reconstruct_isoforms_single_component(self, mpg_component):
+    def _reconstruct_isoforms_single_component(self, mpg_component, single_best_only=True):
         
         pasa_vertices = self._build_trellis(mpg_component)
 
@@ -90,9 +95,11 @@ class PASA_SALRAA:
         
         while True:
             transcript_path = self._retrieve_best_transcript(pasa_vertices)
-
+                        
             if transcript_path is None:
                 break
+
+            assert(type(transcript_path) == PASA_scored_path)
             
             logger.debug("Retrieved best transcript path: {}".format(transcript_path))
             
@@ -101,12 +108,16 @@ class PASA_SALRAA:
                  transcript_path.get_score() / best_transcript_paths[0].get_initial_score() >= MIN_SCORE_RATIO) ):
                 
                 best_transcript_paths.append(transcript_path)
+
+                if single_best_only:
+                    break
+                            
                 self._decrement_transcript_path_vertices(transcript_path, pasa_vertices)
                 self._rescore_transcript_paths(pasa_vertices)
             else:
                 break
 
-
+        
         # from the best transcript paths, reconstruct the actual transcripts themselves:
 
         transcripts = list()
@@ -133,7 +144,8 @@ class PASA_SALRAA:
             
             transcript_exon_segments = Simple_path_utils.merge_adjacent_segments(transcript_exon_segments)
             transcript_obj = Transcript(contig_acc, transcript_exon_segments, orient)
-                    
+            transcript_obj.set_scored_path_obj(transcript_path)
+            
             print(transcript_obj)
             transcripts.append(transcript_obj)
             

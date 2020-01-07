@@ -7,6 +7,7 @@ from PASA_SALRAA_Globals import SPACER
 import Simple_path_utils
 from Util_funcs import coordpairs_overlap
 import logging
+from GenomeFeature import Exon
 
 logger = logging.getLogger(__name__)
 
@@ -79,7 +80,22 @@ class MultiPath:
     
     def get_coords(self):
         return(self._lend, self._rend)
+
+
+    def get_cdna_length(self):
+
+        cdna_len = 0
         
+        exons_and_introns = self.get_ordered_exons_and_introns()
+        for feature in exons_and_introns:
+            if type(feature) == Exon:
+                lend,rend = feature.get_coords()
+                exon_len = rend - lend + 1
+                cdna_len += exon_len
+
+        return cdna_len
+    
+    
     
     def _merge_paths_to_simple_multi_path(self, paths_list):
 
@@ -182,7 +198,30 @@ class MultiPath:
         return(str(self._simple_path))
     
 
+    ################
+    ## Class methods
+    ################
+        
+    def multiPath_from_mpgn_list(mpgn_list):
+
+        assert(len(mpgn_list) > 0)
+        
+        path_list = list()
+
+        sg = mpgn_list[0].get_splice_graph()
+
+        for mpgn in mpgn_list:
+            path_list.append(mpgn.get_simple_path())
+
+        mp_obj = MultiPath(sg, path_list)
+
+        return mp_obj
+
     
+        
+
+
+        
 
 if __name__ == '__main__':
 
