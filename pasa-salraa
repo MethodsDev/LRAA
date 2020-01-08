@@ -13,7 +13,8 @@ from Transcript import Transcript
 import Util_funcs
 
 import logging
-FORMAT = "%(asctime)-15s %(levelname)s %(module)s.%(name)s.%(funcName)s at %(lineno)d :\n\t%(message)s\n"
+#FORMAT = "%(asctime)-15s %(levelname)s %(module)s.%(name)s.%(funcName)s at %(lineno)d :\n\t%(message)s\n"
+FORMAT = "%(asctime)-15s %(levelname)s %(module)s.%(name)s.%(funcName)s:\n\t%(message)s\n"
 
 logger = logging.getLogger()
 logging.basicConfig(format=FORMAT, level=logging.INFO)

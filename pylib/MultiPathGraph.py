@@ -151,6 +151,14 @@ class MultiPathGraph:
 
         logger.info("identified {} disjoint graph components".format(len(component_list)))
 
+        ## assign the component ids
+        component_counter = 0
+        for component in component_list:
+            component_counter += 1
+            #print("component: {}, counter: {}".format(component, component_counter))
+            for mpgn in component:
+                mpgn.set_component_id(component_counter)
+        
         return component_list
 
     
@@ -178,11 +186,12 @@ class MultiPathGraph:
             splice_graph_nodes = mpgn.get_splice_graph_node_objs_for_path()
 
             mpgn_read_count = mpgn.get_count()
+            mpgn_component_id = mpgn.get_component_id()
             
             mpgn_id = mpgn.get_id()
-            trans_id = "t__count={}__.".format(mpgn_read_count) + mpgn_id
-            gene_id = "g__count={}__".format(mpgn_read_count) + mpgn_id
-
+            trans_id = "t__count={}_Comp={}_.".format(mpgn_read_count, mpgn_component_id) + mpgn_id
+            gene_id = "g__count={}_Comp={}_".format(mpgn_read_count, mpgn_component_id) + mpgn_id
+            
             for splice_graph_node in splice_graph_nodes:
                 if splice_graph_node is not None and type(splice_graph_node) == Exon:
 
@@ -205,3 +214,22 @@ class MultiPathGraph:
         
 
         return
+
+
+    def remove_small_components(self, mpg_components, min_transcript_length):
+
+
+        surviving_components = list()
+        
+        for mpgn_list in mpg_components:
+            max_seq_len = 0
+            for mpgn in mpgn_list:
+                max_seq_len += mpgn.get_seq_length()
+            if max_seq_len < min_transcript_length:
+                # component is too small to generate a sufficiently large transcript
+                self._mp_graph.remove_nodes_from(mpgn_list)
+            else:
+                surviving_components.append(mpgn_list)
+
+        return surviving_components
+    

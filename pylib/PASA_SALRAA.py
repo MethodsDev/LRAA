@@ -46,7 +46,7 @@ class PASA_SALRAA:
         ## debugging info
         logger.info("writing __multipath_graph.dat")
         multipath_graph.describe_graph("__multipath_graph.dat")
-        multipath_graph.write_mp_graph_nodes_to_gtf("mpgns.gtf")
+
         
         return
 
@@ -58,6 +58,13 @@ class PASA_SALRAA:
         mpg = self._multipath_graph
         mpg_components = mpg.define_disjoint_graph_components()
 
+        logger.info("{} connected components identified".format(len(mpg_components)))
+        mpg.write_mp_graph_nodes_to_gtf("mpgns.pre.gtf")
+
+        mpg_components = mpg.remove_small_components(mpg_components, PASA_SALRAA.min_transcript_length)
+        logger.info("{} components surviving the min length {} criterion.".format(len(mpg_components), PASA_SALRAA.min_transcript_length))
+        mpg.write_mp_graph_nodes_to_gtf("mpgns.post_length_filter.gtf")
+        
         all_reconstructed_transcripts = list()
 
         component_counter = 0
@@ -146,7 +153,7 @@ class PASA_SALRAA:
             transcript_obj = Transcript(contig_acc, transcript_exon_segments, orient)
             transcript_obj.set_scored_path_obj(transcript_path)
             
-            print(transcript_obj)
+            #print(transcript_obj)
             transcripts.append(transcript_obj)
             
         

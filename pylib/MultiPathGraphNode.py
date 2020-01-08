@@ -33,7 +33,8 @@ class MultiPathGraphNode:
         self._id = "mp{}".format(MultiPathGraphNode.mp_id_counter)
 
         self._seq_length = self._compute_seq_length()
-        
+
+        self._component_id = 0  # will be set to a component ID after components are defined
 
 
     def get_id(self):
@@ -72,7 +73,13 @@ class MultiPathGraphNode:
     def get_seq_length(self):
         return self._seq_length
 
+    def get_component_id(self):
+        return self._component_id
+
+    def set_component_id(self, component_id):
+        self._component_id = component_id
     
+            
     def __repr__(self):
         return("mp:{} {}-{} C:{} len:{}".format(self.get_simple_path(), self._lend, self._rend, self._count, self._seq_length))
 
