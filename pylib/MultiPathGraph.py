@@ -92,6 +92,12 @@ class MultiPathGraph:
         # these are sorted by rend
         return list(self._mp_graph_nodes_list)
 
+    def init_mpgn_reweighting_flags(self):
+        mpgn_nodes = self.get_ordered_nodes()
+        for mpgn in mpgn_nodes:
+            mpgn.set_reweighted_flag(False)
+        return
+    
     
     def has_edge(self, multiPath_before, multiPath_after):
         return self._mp_graph.has_edge(multiPath_before, multiPath_after)

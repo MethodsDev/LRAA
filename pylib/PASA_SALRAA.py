@@ -52,10 +52,11 @@ class PASA_SALRAA:
 
     
 
-    def reconstruct_isoforms(self):
+    def reconstruct_isoforms(self, single_best_only=False):
 
         # define disjoint graph components.
         mpg = self._multipath_graph
+
         mpg_components = mpg.define_disjoint_graph_components()
 
         logger.info("{} connected components identified".format(len(mpg_components)))
@@ -73,7 +74,7 @@ class PASA_SALRAA:
             logger.info("PASA_SALRAA - assembly of component {}".format(component_counter))
             
             ## should do this multithreaded, each thread tackling a different component.
-            transcripts = self._reconstruct_isoforms_single_component(mpg_component)
+            transcripts = self._reconstruct_isoforms_single_component(mpg_component, single_best_only)
 
             if transcripts:
                 all_reconstructed_transcripts.extend(transcripts)
@@ -87,7 +88,7 @@ class PASA_SALRAA:
     ##################
         
     
-    def _reconstruct_isoforms_single_component(self, mpg_component, single_best_only=True):
+    def _reconstruct_isoforms_single_component(self, mpg_component, single_best_only=False):
         
         pasa_vertices = self._build_trellis(mpg_component)
 
@@ -99,8 +100,18 @@ class PASA_SALRAA:
             for pasa_vertex in pasa_vertices:
                 logger.debug(pasa_vertex.describe_pasa_vertex())
 
+        paths_seen = set()
+
+
+        def reinit_weights(mpgn_list):
+            for mpgn in mpgn_list:
+                mpgn.set_reweighted_flag(False)
+            return
         
         while True:
+
+            reinit_weights(mpg_component)
+            
             transcript_path = self._retrieve_best_transcript(pasa_vertices)
                         
             if transcript_path is None:
@@ -109,6 +120,14 @@ class PASA_SALRAA:
             assert(type(transcript_path) == PASA_scored_path)
             
             logger.debug("Retrieved best transcript path: {}".format(transcript_path))
+
+            transcript_path_token = str(transcript_path.get_multiPath_obj())
+            if transcript_path_token in paths_seen:
+                logger.debug("best path {} already reported. Stopping path extractions from component now.".format(transcript_path_token))
+                break
+
+            paths_seen.add(transcript_path_token)
+            
             
             if (transcript_path.get_score() > 0 and
                 (len(best_transcript_paths) == 0 or
@@ -390,14 +409,23 @@ class PASA_SALRAA:
 
     def _decrement_transcript_path_vertices(self, transcript_path, pasa_vertices):
 
+        logger.debug("_decrement_transcript_path_vertices")
+        
+        assert(type(transcript_path) == PASA_scored_path)
+                
         mpgn_list = transcript_path.get_path_mpgn_list()
-
+        multipath_obj = transcript_path.get_multiPath_obj()
+        
         for mpgn in mpgn_list:
-            mpgn.set_count(0)
-
-            for containment_mpgn in mpgn.get_containments():
-                containment_mpgn.set_count(0)
-
+            logger.debug("_decrement: {}".format(mpgn))
+            if mpgn.get_reweighted_flag() is False:
+                mpgn.reevaluate_weighting_via_path_compatibilities(multipath_obj)
+                
+                # squash weights for contained paths
+                for containment_mpgn in mpgn.get_containments():
+                    if containment_mpgn.get_reweighted_flag() is False:
+                        containment_mpgn.set_weight(1e-6)
+        
         return
 
 

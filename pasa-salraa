@@ -31,17 +31,30 @@ def main():
     parser.add_argument("--genome", type=str, required=True, help="target genome file")
 
     parser.add_argument("--outputfile", type=str, default="pasa-salraa.gtf", help="output filename")
+
+    parser.add_argument("--single_best_only", action='store_true', default=False,
+                        help="only report the single highest scoring isoform per component")
+
+    parser.add_argument("--debug", "-d", action='store_true', default=False,
+                        help='debug mode, more verbose')
+    
     
     args = parser.parse_args()
-
+    
     genome_fasta_filename = args.genome
     bam_filename = args.bam
     output_filename = args.outputfile
+    single_best_only = args.single_best_only
 
+    if args.debug:
+        logging.getLogger().setLevel(logging.DEBUG)
+
+        
     run_pasa_salraa(genome_fasta_filename,
                     bam_filename,
                     output_filename,
-                    READ_ALN_GAP_MERGE)
+                    READ_ALN_GAP_MERGE,
+                    single_best_only)
     
     
     sys.exit(0)
@@ -49,7 +62,9 @@ def main():
 
 
 
-def run_pasa_salraa(genome_fasta_filename, bam_file, output_filename, read_aln_gap_merge):
+def run_pasa_salraa(genome_fasta_filename, bam_file, output_filename,
+                    read_aln_gap_merge,
+                    single_best_only):
 
     # data structures want:
     # ultimately exons and introns
@@ -70,7 +85,7 @@ def run_pasa_salraa(genome_fasta_filename, bam_file, output_filename, read_aln_g
 
         pasa_salraa_obj = PASA_SALRAA(sg)
         pasa_salraa_obj.build_multipath_graph(contig_acc, contig_seq_str, bam_file)
-        transcripts = pasa_salraa_obj.reconstruct_isoforms()
+        transcripts = pasa_salraa_obj.reconstruct_isoforms(single_best_only)
 
         logger.info("writing gtf output for {} containing {} transcripts".format(contig_acc, len(transcripts)))
         for transcript in transcripts:

@@ -45,7 +45,11 @@ class PASA_scored_path:
     def get_path_mpgn_list(self):
         return list(self._mpgn_list_path)
 
-        
+    
+    def get_multiPath_obj(self):
+        return self._multiPath_obj
+    
+    
     def incompatibility_detected(self, extension_mpgn):
 
         mpg = extension_mpgn.get_multipath_graph()

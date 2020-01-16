@@ -21,6 +21,7 @@ class MultiPathGraphNode:
         self._multiPath = multiPathObj
         self._count = count
         self._weight = 1.0 # weight applied to read count, varied in pasa-salraa
+        self._prev_weight = 1.0 # retain previous weight setting
         
         self._lend = lend
         self._rend = rend
@@ -36,6 +37,7 @@ class MultiPathGraphNode:
 
         self._component_id = 0  # will be set to a component ID after components are defined
 
+        self._reweighted_flag = False # should be initialized to False before each reconstruction round.
 
     def get_id(self):
         return self._id
@@ -49,6 +51,14 @@ class MultiPathGraphNode:
     def get_simple_path(self):
         return(self._multiPath.get_simple_path())
 
+    def set_reweighted_flag(self, flag_setting):
+        self._reweighted_flag = flag_setting
+        return
+
+    def get_reweighted_flag(self):
+        return self._reweighted_flag
+            
+        
     def get_coords(self):
         return(self._lend, self._rend)
 
@@ -63,12 +73,51 @@ class MultiPathGraphNode:
         return self._weight
 
     def set_weight(self, weight):
+        if self.get_reweighted_flag() is True:
+            raise RuntimeError("Error, cant set weight on mpgn when reweighted flag is already set")
+
+        self._prev_weight = self._weight
+        
         self._weight = weight
+        self.set_reweighted_flag(True)
+
+        logger.debug("changed mpgn weight from {} to {}".format(self._prev_weight, self._weight))
+        #sys.stderr.write("changed mpgn weight from {} to {}".format(self._prev_weight, self._weight))
+        
         return
 
-    def get_score(self):
+
+    def get_prev_weight(self):
+        return self._prev_weight
+    
+    
+    def get_score(self, use_prev_weight=False):
         # score reflects density of read evidence in this mpgn 
-        return ( (self._count * self._weight) / self._seq_length )
+
+        if use_prev_weight:
+            return ( (self._count * self._prev_weight) / self._seq_length )
+        else:
+            return ( (self._count * self._weight) / self._seq_length )
+
+    def get_score_EXCLUDE_containments(self, use_prev_weight=False):
+        return self.get_score(use_prev_weight)
+        
+    def get_score_INCLUDE_containments(self, use_prev_weight=False):
+        seen = set()
+        score = 0
+
+        all_relevant_nodes = [self]
+        contained_nodes = self.get_containments()
+        if contained_nodes:
+            all_relevant_nodes.extend(contained_nodes)
+
+        for node in all_relevant_nodes:
+            if node not in seen:
+                seen.add(node)
+                score += node.get_score_EXCLUDE_containments(use_prev_weight)
+
+        return score
+        
     
     def get_seq_length(self):
         return self._seq_length
@@ -173,4 +222,33 @@ class MultiPathGraphNode:
                 seq_length += exon_len
 
         return seq_length
+        
+    def reevaluate_weighting_via_path_compatibilities(self, transcript_multiPath):
+
+        logger.debug("reevaluating weights for {}".format(self))
+        #sys.stderr.write("reevaluating weights for {}".format(self))
+        
+        assert(type(transcript_multiPath) == MultiPath.MultiPath)
+        
+        transcript_simple_path = transcript_multiPath.get_simple_path()
+        
+        compatible_score = self.get_score_INCLUDE_containments(use_prev_weight=True)
+        incompatible_score = 0
+
+        connected_mpgns = self.get_predecessors() + self.get_successors()
+
+        for node in connected_mpgns:
+            node_simple_path = node.get_simple_path()
+            if Simple_path_utils.path_A_contains_path_B(transcript_simple_path, node_simple_path):
+                compatible_score += node.get_score_INCLUDE_containments(use_prev_weight=True)
+            else:
+                incompatible_score += node.get_score_INCLUDE_containments(use_prev_weight=True)
+
+        pseudocount = 1e-6
+        fraction_conflict = (incompatible_score + pseudocount) / (compatible_score + incompatible_score + pseudocount)
+
+        self.set_weight(self.get_weight() * fraction_conflict)
+
+        return
+        
         
