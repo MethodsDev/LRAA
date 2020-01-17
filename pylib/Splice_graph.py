@@ -29,6 +29,7 @@ class Splice_graph:
 
     # noise filtering params
     _min_alt_splice_freq = 0.05
+    _min_alt_unspliced_freq = 0.20
     _max_intron_length_for_exon_segment_filtering = 10000
     _min_intron_support = 2
     _min_terminal_splice_exon_anchor_length = 15
@@ -552,7 +553,7 @@ class Splice_graph:
 
         exons_to_purge = set()
             
-        min_intron_cov_for_filtering = 1 / Splice_graph._min_alt_splice_freq + 1
+        min_intron_cov_for_filtering = 1 / Splice_graph._min_alt_unspliced_freq + 1
         
         for intron in intron_objs:
 
@@ -571,7 +572,7 @@ class Splice_graph:
 
                 overlapping_exon_seg = overlapping_exon_seg_iv.data
                 
-                if float(overlapping_exon_seg.get_read_support()) / float(intron.get_read_support()) < Splice_graph._min_alt_splice_freq:
+                if float(overlapping_exon_seg.get_read_support()) / float(intron.get_read_support()) < Splice_graph._min_alt_unspliced_freq:
                     exons_to_purge.add(overlapping_exon_seg)
 
 
