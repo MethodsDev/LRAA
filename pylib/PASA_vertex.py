@@ -87,8 +87,10 @@ class PASA_vertex:
 
         from_paths = sorted(from_paths, key=lambda x: x._score, reverse=True)
 
+        from_path_counter = 0
         for path in from_paths:
-            pv_text += "\t" + str(path) + "\n"
+            from_path_counter += 1
+            pv_text += "\t[fromPath:{}] ".format(from_path_counter) + str(path) + "\n"
 
         return pv_text
     

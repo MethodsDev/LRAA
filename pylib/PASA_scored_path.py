@@ -92,6 +92,7 @@ class PASA_scored_path:
 
         return transcript_mp
 
+    
         
     def compute_path_score(self):
 
@@ -99,19 +100,21 @@ class PASA_scored_path:
         
         score = 0
         seen = set()
-        for mpgn in self.get_path_mpgn_list():
-            if mpgn in seen:
-                continue
-            
-            score += mpgn.get_score()
+
+
+        # ordered list, containments only incorporated into score accoridng to left-most containment node.
+        mpgn_list = self.get_path_mpgn_list()
+        mpgn_list = sorted(mpgn_list, key=lambda x: x._lend)
+
+        for mpgn in mpgn_list:
+            if mpgn not in seen:
+                score += mpgn.get_score_INCLUDE_containments(use_prev_weight=False, mpgn_ignore=seen)
             
             seen.add(mpgn)
             for containment in mpgn.get_containments():
                 if containment not in seen:
                     seen.add(containment)
-                    score += containment.get_score()
-
         
         return score
-     
+    
     

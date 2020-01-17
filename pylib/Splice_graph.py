@@ -117,6 +117,7 @@ class Splice_graph:
             self.write_intron_exon_splice_graph_bed_files("__prefilter", pad=0)
             self.describe_graph("__prefilter.graph")
                 
+
         self._prune_lowly_expressed_intron_overlapping_exon_segments()  # removes exon segments, not introns
         
         self._merge_neighboring_proximal_unbranched_exon_segments()

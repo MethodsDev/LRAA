@@ -91,21 +91,19 @@ class MultiPathGraphNode:
         return self._prev_weight
     
     
-    def get_score(self, use_prev_weight=False):
-        # score reflects density of read evidence in this mpgn 
-
-        if use_prev_weight:
-            return ( (self._count * self._prev_weight) / self._seq_length )
-        else:
-            return ( (self._count * self._weight) / self._seq_length )
-
     def get_score_EXCLUDE_containments(self, use_prev_weight=False):
-        return self.get_score(use_prev_weight)
+        weight = self._prev_weight if use_prev_weight else self._weight
+        score = self._count * weight / self._seq_length
+        return score
+    
+    def get_score_INCLUDE_containments(self, use_prev_weight=False, mpgn_ignore=set()):
         
-    def get_score_INCLUDE_containments(self, use_prev_weight=False):
-        seen = set()
-        score = 0
+        seen = set(mpgn_ignore)
 
+        total_counts = 0
+
+        weight = self._prev_weight if use_prev_weight else self._weight
+        
         all_relevant_nodes = [self]
         contained_nodes = self.get_containments()
         if contained_nodes:
@@ -113,9 +111,10 @@ class MultiPathGraphNode:
 
         for node in all_relevant_nodes:
             if node not in seen:
-                seen.add(node)
-                score += node.get_score_EXCLUDE_containments(use_prev_weight)
+                total_counts += node._count
 
+        score = total_counts * weight / self._seq_length
+                
         return score
         
     
@@ -130,8 +129,12 @@ class MultiPathGraphNode:
     
             
     def __repr__(self):
-        return("mp:{} {}-{} C:{} len:{}".format(self.get_simple_path(), self._lend, self._rend, self._count, self._seq_length))
-
+        return("<mp:{} {}-{} C:{} ScoreExcCont:{:.4f} ScoreInclCon:{:.4f} len:{}>".format(self.get_simple_path(),
+                                                                                          self._lend, self._rend, self._count,
+                                                                    self.get_score_EXCLUDE_containments(use_prev_weight=False),
+                                                                    self.get_score_INCLUDE_containments(use_prev_weight=False),
+                                                                    self._seq_length))
+        
         
     def has_successors(self):
         if len(list(self._mpg.successors(self))) > 0:
