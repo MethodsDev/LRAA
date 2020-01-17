@@ -7,6 +7,7 @@ import Simple_path_utils as Simple_path_utils
 from PASA_SALRAA_Globals import SPACER
 from GenomeFeature import Intron, Exon
 from MultiPathGraphNode import MultiPathGraphNode
+from collections import defaultdict
 
 import logging
 
@@ -122,7 +123,7 @@ class MultiPathGraph:
         return self._splice_graph
 
 
-    def define_disjoint_graph_components(self):
+    def define_disjoint_graph_components_via_graph_traversal(self):
 
         mpgn_list = self.get_ordered_nodes()
         mpgn_seen = set()
@@ -151,7 +152,9 @@ class MultiPathGraph:
                         queue.extend(node.get_predecessors())
                     if node.has_successors():
                         queue.extend(node.get_successors())
-
+                    if node.has_containments():
+                        queue.extend(node.get_containments())
+            
             if len(component) > 0:
                 component_list.append(component)
 
@@ -167,6 +170,70 @@ class MultiPathGraph:
         
         return component_list
 
+
+    def define_disjoint_graph_components_via_shared_splice_graph_vertex(self):
+
+        all_splice_graph_nodes = set()
+        splice_graph_node_to_mpgns = defaultdict(set)
+
+        # populate splice graph node to mpgn data structures
+        mpgn_list = self.get_ordered_nodes()
+        for mpgn in mpgn_list:
+            splice_graph_nodes = mpgn.get_splice_graph_node_objs_for_path()
+            for splice_graph_node in splice_graph_nodes:
+                all_splice_graph_nodes.add(splice_graph_node)
+                splice_graph_node_to_mpgns[splice_graph_node].add(mpgn)
+
+
+        # build disjoint components
+        splice_graph_nodes_visited = set()
+
+        component_list = list()
+        all_splice_graph_nodes = list(all_splice_graph_nodes) # convert earlier set to list
+        while len(all_splice_graph_nodes) > 0:
+
+            queue = list()
+            seed_splice_graph_node = all_splice_graph_nodes.pop()
+
+            if seed_splice_graph_node in splice_graph_nodes_visited:
+                continue
+
+            # start a new component
+            component = list()
+            queue.append(seed_splice_graph_node)
+
+            while len(queue) > 0:
+                splice_graph_node = queue.pop(0)
+                mpgns = list(splice_graph_node_to_mpgns[splice_graph_node])
+                splice_graph_nodes_visited.add(splice_graph_node)
+                for mpgn in mpgns:
+                    if mpgn not in component:
+                        component.append(mpgn)
+                        
+                    mpgn_splice_graph_nodes = mpgn.get_splice_graph_node_objs_for_path()
+                    for splice_graph_node in mpgn_splice_graph_nodes:
+                        if ( (splice_graph_node not in splice_graph_nodes_visited)
+                            and
+                            (splice_graph_node not in queue) ):
+                            queue.append(splice_graph_node)
+
+
+            component_list.append(component)
+
+        logger.info("identified {} disjoint graph components".format(len(component_list)))
+
+        ## assign the component ids
+        component_counter = 0
+        for component in component_list:
+            component_counter += 1
+            #print("component: {}, counter: {}".format(component, component_counter))
+            for mpgn in component:
+                mpgn.set_component_id(component_counter)
+
+            
+        return component_list
+                            
+    
     
     def describe_graph(self, output_filename):
 

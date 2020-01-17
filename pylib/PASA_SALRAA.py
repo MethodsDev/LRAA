@@ -57,7 +57,7 @@ class PASA_SALRAA:
         # define disjoint graph components.
         mpg = self._multipath_graph
 
-        mpg_components = mpg.define_disjoint_graph_components()
+        mpg_components = mpg.define_disjoint_graph_components_via_shared_splice_graph_vertex()
 
         logger.info("{} connected components identified".format(len(mpg_components)))
         mpg.write_mp_graph_nodes_to_gtf("mpgns.pre.gtf")
@@ -412,14 +412,22 @@ class PASA_SALRAA:
         logger.debug("_decrement_transcript_path_vertices")
         
         assert(type(transcript_path) == PASA_scored_path)
-                
-        mpgn_list = transcript_path.get_path_mpgn_list()
-        multipath_obj = transcript_path.get_multiPath_obj()
+
+        # examine all pasa vertices that are contained and compatible with the transcript_path 
+        mpgn_list = list()
+        
+        transcript_path_multipath_obj = transcript_path.get_multiPath_obj()
+
+        for pasa_vertex in pasa_vertices:
+            mpgn = pasa_vertex.get_multipath_graph_node()
+            other_multipath_obj = mpgn.get_multiPathObj()
+            if transcript_path_multipath_obj.is_overlapping_contained_and_compatible(other_multipath_obj):
+                mpgn_list.append(mpgn)
         
         for mpgn in mpgn_list:
             logger.debug("_decrement: {}".format(mpgn))
             if mpgn.get_reweighted_flag() is False:
-                mpgn.reevaluate_weighting_via_path_compatibilities(multipath_obj)
+                mpgn.reevaluate_weighting_via_path_compatibilities(transcript_path_multipath_obj)
                 
                 # squash weights for contained paths
                 for containment_mpgn in mpgn.get_containments():

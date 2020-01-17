@@ -165,7 +165,14 @@ class MultiPathGraphNode:
     def add_containment(self, other_node):
         self._containments.add(other_node)
 
+
+    def has_containments(self):
+        if len(self._containments) > 0:
+            return True
+        else:
+            return False
     
+        
     def get_containments(self):
         return(list(self._containments))
 
