@@ -95,16 +95,10 @@ class PASA_SALRAA:
     
     def _reconstruct_isoforms_single_component(self, mpg_component, component_counter, single_best_only=False):
         
-        pasa_vertices = self._build_trellis(mpg_component)
-
         MIN_SCORE_RATIO = 0.0001
         
         best_transcript_paths = list()
         
-        if logger.getEffectiveLevel() == logging.DEBUG: ## for debugging info only
-            for pasa_vertex in pasa_vertices:
-                logger.debug(pasa_vertex.describe_pasa_vertex())
-
         paths_seen = set()
 
 
@@ -113,9 +107,7 @@ class PASA_SALRAA:
                 mpgn.set_reweighted_flag(False)
             return
 
-
-
-
+        
         round_iter = 0        
         while True:
 
@@ -123,9 +115,15 @@ class PASA_SALRAA:
             
             reinit_weights(mpg_component)
 
-            
-            if logger.getEffectiveLevel() == logging.DEBUG:
+            pasa_vertices = self._build_trellis(mpg_component)
+
+            if logger.getEffectiveLevel() == logging.DEBUG: ## for debugging info only
+                if round_iter == 1:
+                    for pasa_vertex in pasa_vertices:
+                        logger.debug(pasa_vertex.describe_pasa_vertex())
+                
                 self._write_all_scored_paths_to_file(component_counter, round_iter, pasa_vertices)
+
                 
             
             transcript_path = self._retrieve_best_transcript(pasa_vertices)
