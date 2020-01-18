@@ -14,6 +14,8 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+MIN_WEIGHT = 0.01
+
 class MultiPathGraphNode:
 
     mp_id_counter = 0
@@ -266,7 +268,11 @@ class MultiPathGraphNode:
         
         current_weight = self.get_weight()
 
-        self.set_weight(current_weight - (fraction_compatible * current_weight))
+        adjusted_weight = current_weight - (fraction_compatible * current_weight)
+
+        adjusted_weight = max(MIN_WEIGHT, adjusted_weight) # to avoid going too low.
+        
+        self.set_weight(adjusted_weight)
         
         return
         
