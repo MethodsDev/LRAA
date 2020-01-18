@@ -153,7 +153,7 @@ class MultiPath:
 
         my_lend, my_rend = self.get_coords()
         other_lend, other_rend = other_multipath.get_coords()
-        if (my_lend <= other_lend and my_rend > other_rend):
+        if (my_lend <= other_lend and my_rend >= other_rend):
             return self.is_overlapping_and_compatible(other_multipath)
         else:
             return False

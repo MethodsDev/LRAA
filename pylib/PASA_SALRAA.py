@@ -418,22 +418,25 @@ class PASA_SALRAA:
         
         transcript_path_multipath_obj = transcript_path.get_multiPath_obj()
 
+        mpgns_not_compatible = list()
+        
         for pasa_vertex in pasa_vertices:
             mpgn = pasa_vertex.get_multipath_graph_node()
             other_multipath_obj = mpgn.get_multiPathObj()
             if transcript_path_multipath_obj.is_overlapping_contained_and_compatible(other_multipath_obj):
                 mpgn_list.append(mpgn)
+            else:
+                mpgns_not_compatible.append(mpgn)
+                
+        logger.debug("mpgns found compatible with transcript path: {} include {}".format(transcript_path_multipath_obj, mpgn_list))
+        logger.debug("mpgns found INcomptable are: {}".format(mpgns_not_compatible))
         
         for mpgn in mpgn_list:
             logger.debug("_decrement: {}".format(mpgn))
             if mpgn.get_reweighted_flag() is False:
                 mpgn.reevaluate_weighting_via_path_compatibilities(transcript_path_multipath_obj)
                 
-                # squash weights for contained paths
-                for containment_mpgn in mpgn.get_containments():
-                    if containment_mpgn.get_reweighted_flag() is False:
-                        containment_mpgn.set_weight(1e-3)
-        
+                        
         return
 
 

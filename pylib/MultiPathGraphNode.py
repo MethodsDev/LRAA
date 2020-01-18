@@ -7,6 +7,7 @@ import networkx as nx
 import Simple_path_utils as Simple_path_utils
 from PASA_SALRAA_Globals import SPACER
 from GenomeFeature import Intron, Exon
+import math
 
 import logging
 
@@ -93,7 +94,7 @@ class MultiPathGraphNode:
     
     def get_score_EXCLUDE_containments(self, use_prev_weight=False):
         weight = self._prev_weight if use_prev_weight else self._weight
-        score = self._count * weight / self._seq_length
+        score = self._count * weight / self._seq_length  # normalize read count by feature length
         return score
     
     def get_score_INCLUDE_containments(self, use_prev_weight=False, mpgn_ignore=set()):
@@ -102,8 +103,6 @@ class MultiPathGraphNode:
 
         total_counts = 0
 
-        weight = self._prev_weight if use_prev_weight else self._weight
-        
         all_relevant_nodes = [self]
         contained_nodes = self.get_containments()
         if contained_nodes:
@@ -112,9 +111,10 @@ class MultiPathGraphNode:
         for node in all_relevant_nodes:
             assert(type(node) == MultiPathGraphNode)
             if node not in seen:
-                total_counts += node._count
-                    
-        score = total_counts * weight / self._seq_length
+                weight = node._prev_weight if use_prev_weight else node._weight
+                total_counts += node._count * weight
+        
+        score = total_counts / self._seq_length # normalize read count by feature length
                 
         return score
         
@@ -229,11 +229,14 @@ class MultiPathGraphNode:
 
         seq_length = 0
         for sg_node in sg_nodes:
-            if sg_node is not None and type(sg_node) == Exon:
+            if sg_node is not None:
                 lend, rend = sg_node.get_coords()
-                exon_len = rend - lend + 1
-                seq_length += exon_len
-
+                feature_len = rend - lend + 1
+                if type(sg_node) == Exon:
+                    seq_length += feature_len
+                #elif type(sg_node) == Intron:
+                #    seq_length += min(feature_len, 10000)  #//FIXME: determine max allowable length based on intron length distribution.
+        
         return seq_length
         
     def reevaluate_weighting_via_path_compatibilities(self, transcript_multiPath):
@@ -257,11 +260,14 @@ class MultiPathGraphNode:
             else:
                 incompatible_score += node.get_score_INCLUDE_containments(use_prev_weight=True)
 
-        pseudocount = 1.0
-        fraction_conflict = (incompatible_score + pseudocount) / (compatible_score + incompatible_score + pseudocount)
+        pseudocount = 1e-3 
+        
+        fraction_compatible = (compatible_score + pseudocount) / (compatible_score + incompatible_score + pseudocount)
+        
+        current_weight = self.get_weight()
 
-        self.set_weight(self.get_weight() * fraction_conflict)
-
+        self.set_weight(current_weight - (fraction_compatible * current_weight))
+        
         return
         
         
