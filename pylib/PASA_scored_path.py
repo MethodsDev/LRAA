@@ -33,7 +33,7 @@ class PASA_scored_path:
         
         
     def __repr__(self):
-        return("PASA_scored_path: (score={}, IScore={}) mpgns: {}".format(self.get_score(), self.get_initial_score(), self.get_path_mpgn_list()))
+        return("PASA_scored_path: (score={:.5f}, IScore={:.5f}) mpgns: {}".format(self.get_score(), self.get_initial_score(), self.get_path_mpgn_list()))
     
         
     def get_score(self):
@@ -106,15 +106,23 @@ class PASA_scored_path:
         mpgn_list = self.get_path_mpgn_list()
         mpgn_list = sorted(mpgn_list, key=lambda x: x._lend)
 
+        audit_txt = "Computing path score for: {}\n".format(self._multiPath_obj)
+        
         for mpgn in mpgn_list:
             if mpgn not in seen:
-                score += mpgn.get_score_INCLUDE_containments(use_prev_weight=False, mpgn_ignore=seen)
-            
+                score_increment = mpgn.get_score_INCLUDE_containments(use_prev_weight=False, mpgn_ignore=seen)
+                score += score_increment
+                audit_txt += "\tscore subtotal: {:.5f}, increment {:.5f}, mpgn: {}\n".format(score, score_increment, mpgn)
+                
             seen.add(mpgn)
             for containment in mpgn.get_containments():
                 if containment not in seen:
                     seen.add(containment)
-        
+                    audit_txt += "\t\tcontainment: {}\n".format(containment)
+
+                    
+        logger.debug(audit_txt)
+                            
         return score
     
     

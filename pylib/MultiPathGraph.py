@@ -242,6 +242,9 @@ class MultiPathGraph:
         mpgn_list = self.get_ordered_nodes()
         for mpgn in mpgn_list:
             ofh.write(str(mpgn) + "\n")
+            for containment in mpgn.get_containments():
+                ofh.write("\t" + str(containment) + "\n")
+            ofh.write("\n")
 
         ofh.close()
 

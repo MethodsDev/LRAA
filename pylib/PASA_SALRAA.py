@@ -432,7 +432,7 @@ class PASA_SALRAA:
                 # squash weights for contained paths
                 for containment_mpgn in mpgn.get_containments():
                     if containment_mpgn.get_reweighted_flag() is False:
-                        containment_mpgn.set_weight(1e-6)
+                        containment_mpgn.set_weight(1e-3)
         
         return
 

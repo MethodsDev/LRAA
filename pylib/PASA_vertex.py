@@ -90,7 +90,7 @@ class PASA_vertex:
         from_path_counter = 0
         for path in from_paths:
             from_path_counter += 1
-            pv_text += "\t[fromPath:{}] ".format(from_path_counter) + str(path) + "\n"
+            pv_text += "\n\t[fromPath:{}] ".format(from_path_counter) + str(path) + "\n"
 
         return pv_text
     

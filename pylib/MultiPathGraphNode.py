@@ -110,9 +110,10 @@ class MultiPathGraphNode:
             all_relevant_nodes.extend(contained_nodes)
 
         for node in all_relevant_nodes:
+            assert(type(node) == MultiPathGraphNode)
             if node not in seen:
                 total_counts += node._count
-
+                    
         score = total_counts * weight / self._seq_length
                 
         return score
@@ -129,12 +130,14 @@ class MultiPathGraphNode:
     
             
     def __repr__(self):
-        return("<mp:{} {}-{} C:{} ScoreExcCont:{:.4f} ScoreInclCon:{:.4f} len:{}>".format(self.get_simple_path(),
-                                                                                          self._lend, self._rend, self._count,
-                                                                    self.get_score_EXCLUDE_containments(use_prev_weight=False),
-                                                                    self.get_score_INCLUDE_containments(use_prev_weight=False),
-                                                                    self._seq_length))
-        
+        return("<mp:{} {}-{} Count:{} W:{:0.8f} Containments:{}, ScoreExcCont:{:.4f} ScoreInclCon:{:.4f} len:{}>".format(
+            self.get_simple_path(),
+            self._lend, self._rend, self._count, self._weight,
+            len(self.get_containments()),
+            self.get_score_EXCLUDE_containments(use_prev_weight=False),
+            self.get_score_INCLUDE_containments(use_prev_weight=False),
+            self._seq_length))
+    
         
     def has_successors(self):
         if len(list(self._mpg.successors(self))) > 0:
@@ -254,7 +257,7 @@ class MultiPathGraphNode:
             else:
                 incompatible_score += node.get_score_INCLUDE_containments(use_prev_weight=True)
 
-        pseudocount = 1e-6
+        pseudocount = 1.0
         fraction_conflict = (incompatible_score + pseudocount) / (compatible_score + incompatible_score + pseudocount)
 
         self.set_weight(self.get_weight() * fraction_conflict)
