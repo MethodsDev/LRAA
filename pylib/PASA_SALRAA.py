@@ -19,8 +19,12 @@ from PASA_vertex import PASA_vertex
 from Transcript import Transcript
 import Simple_path_utils
 from PASA_scored_path import PASA_scored_path
+from shutil import rmtree
 
 logger = logging.getLogger(__name__)
+
+
+DEBUG_FILES_FLAG = False
 
 class PASA_SALRAA:
 
@@ -68,13 +72,14 @@ class PASA_SALRAA:
         
         all_reconstructed_transcripts = list()
 
+                
         component_counter = 0
         for mpg_component in mpg_components:
             component_counter += 1
             logger.info("PASA_SALRAA - assembly of component {}".format(component_counter))
             
             ## should do this multithreaded, each thread tackling a different component.
-            transcripts = self._reconstruct_isoforms_single_component(mpg_component, single_best_only)
+            transcripts = self._reconstruct_isoforms_single_component(mpg_component, component_counter, single_best_only)
 
             if transcripts:
                 all_reconstructed_transcripts.extend(transcripts)
@@ -88,7 +93,7 @@ class PASA_SALRAA:
     ##################
         
     
-    def _reconstruct_isoforms_single_component(self, mpg_component, single_best_only=False):
+    def _reconstruct_isoforms_single_component(self, mpg_component, component_counter, single_best_only=False):
         
         pasa_vertices = self._build_trellis(mpg_component)
 
@@ -107,10 +112,21 @@ class PASA_SALRAA:
             for mpgn in mpgn_list:
                 mpgn.set_reweighted_flag(False)
             return
-        
+
+
+
+
+        round_iter = 0        
         while True:
 
+            round_iter += 1
+            
             reinit_weights(mpg_component)
+
+            
+            if logger.getEffectiveLevel() == logging.DEBUG:
+                self._write_all_scored_paths_to_file(component_counter, round_iter, pasa_vertices)
+                
             
             transcript_path = self._retrieve_best_transcript(pasa_vertices)
                         
@@ -149,31 +165,13 @@ class PASA_SALRAA:
         transcripts = list()
         
         for transcript_path in best_transcript_paths:
-                        
-            transcript_mp = transcript_path.toTranscript()
-            exons_and_introns = transcript_mp.get_ordered_exons_and_introns()
-
-            transcript_exon_segments = list()
-
-            orient = '?'
-            contig_acc = exons_and_introns[0].get_contig_acc()
+            assert(type(transcript_path) == PASA_scored_path)
             
-            for feature in exons_and_introns:
-                if type(feature) == Exon:
-                    transcript_exon_segments.append(feature.get_coords())
-                elif type(feature) == Intron:
-                    orient = feature.get_orient()
-
-            if len(transcript_exon_segments) == 0:
-                logger.warning("bug - shouldn't have exonless transcript features: {}".format(transcript_path)) # //FIXME: bug
-                continue
-            
-            transcript_exon_segments = Simple_path_utils.merge_adjacent_segments(transcript_exon_segments)
-            transcript_obj = Transcript(contig_acc, transcript_exon_segments, orient)
-            transcript_obj.set_scored_path_obj(transcript_path)
+            transcript_obj = transcript_path.toTranscript()
             
             #print(transcript_obj)
-            transcripts.append(transcript_obj)
+            if transcript_obj is not None:
+                transcripts.append(transcript_obj)
             
         
         return transcripts
@@ -447,3 +445,33 @@ class PASA_SALRAA:
 
         return
     
+    def _write_all_scored_paths_to_file(self, component_counter, round_iter, pasa_vertices):
+
+        global DEBUG_FILES_FLAG
+        
+        outdirname = "__all_scored_paths"
+        if DEBUG_FILES_FLAG is False:
+            if os.path.exists(outdirname):
+                rmtree(outdirname)
+                
+            os.makedirs(outdirname)
+            DEBUG_FILES_FLAG = True
+
+        outputfilename = "{}/scored_paths.R{}.gtf".format(outdirname, round_iter)
+        
+        mode = 'at' if os.path.exists(outputfilename) else 'wt'
+        ofh = open(outputfilename, mode)
+
+        for pasa_vertex in pasa_vertices:
+            from_paths = pasa_vertex.get_fromPaths()
+            for from_path in from_paths:
+                trans_obj = from_path.toTranscript()
+                trans_obj.add_meta('score', from_path.get_score())
+                gtf = trans_obj.to_GTF_format()
+                ofh.write(gtf + "\n")
+
+        ofh.close()
+
+        return
+    
+        

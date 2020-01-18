@@ -1,6 +1,9 @@
 import sys, os, re
 from MultiPath import MultiPath
 from MultiPathGraph import MultiPathGraphNode
+from GenomeFeature import *
+import Simple_path_utils
+from Transcript import Transcript
 
 import math
 import logging
@@ -90,7 +93,28 @@ class PASA_scored_path:
         
         transcript_mp = MultiPath(splice_graph, simple_path_list)
 
-        return transcript_mp
+        exons_and_introns = transcript_mp.get_ordered_exons_and_introns()
+
+        transcript_exon_segments = list()
+
+        orient = '?'
+        contig_acc = exons_and_introns[0].get_contig_acc()
+
+        for feature in exons_and_introns:
+            if type(feature) == Exon:
+                transcript_exon_segments.append(feature.get_coords())
+            elif type(feature) == Intron:
+                orient = feature.get_orient()
+
+        if len(transcript_exon_segments) == 0:
+            logger.warning("bug - shouldn't have exonless transcript features: {}".format(transcript_path)) # //FIXME: bug
+            return None
+
+        transcript_exon_segments = Simple_path_utils.merge_adjacent_segments(transcript_exon_segments)
+        transcript_obj = Transcript(contig_acc, transcript_exon_segments, orient)
+        transcript_obj.set_scored_path_obj(self)
+        
+        return transcript_obj
 
     
         
