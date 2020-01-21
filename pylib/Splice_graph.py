@@ -34,6 +34,8 @@ class Splice_graph:
     _min_intron_support = 2
     _min_terminal_splice_exon_anchor_length = 15
     _min_read_aln_per_id = 98
+
+    _remove_unspliced_introns = True
     
     def __init__(self):
 
@@ -118,14 +120,17 @@ class Splice_graph:
             self.describe_graph("__prefilter.graph")
                 
 
-        self._prune_lowly_expressed_intron_overlapping_exon_segments()  # removes exon segments, not introns
+        self._prune_lowly_expressed_intron_overlapping_exon_segments()  # removes exon segments, not introns, also removes unspliced introns if Splice_graph._remove_unspliced_introns flag is set.
         
         self._merge_neighboring_proximal_unbranched_exon_segments()
         
         self._prune_exon_spurs_at_introns()
 
-        self._prune_disconnected_introns()
+        if Splice_graph._remove_unspliced_introns:
+            self._prune_unspliced_introns()
         
+        self._prune_disconnected_introns()
+                
         self._finalize_splice_graph()
 
         if DEBUG:
@@ -541,9 +546,6 @@ class Splice_graph:
             else:
                 raise RuntimeError("Error, not identifying node: {} as Exon or Intron type - instead {} ".format(node, type(node)))
 
-        #intron_objs = sorted(intron_objs, key=lambda x: x._lend)
-        #exon_segment_objs = sorted(exon_segment_objs, lambda x: x._lend)
-
         # build interval tree for exon segments.
 
         exon_itree = itree.IntervalTree()
@@ -575,8 +577,8 @@ class Splice_graph:
                 
                 if float(overlapping_exon_seg.get_read_support()) / float(intron.get_read_support()) < Splice_graph._min_alt_unspliced_freq:
                     exons_to_purge.add(overlapping_exon_seg)
-
-
+                    
+                
         logger.info("-removing {} lowly expressed exon segments based on intron overlap".format(len(exons_to_purge)))
         if exons_to_purge:
             draft_splice_graph.remove_nodes_from(exons_to_purge)
@@ -785,4 +787,82 @@ class Splice_graph:
                 lend, rend = node.get_coords()
                 self._itree_exon_segments[lend:rend+1] = node
             
+        return
+
+
+    def _is_unspliced_exon_segment(self, exon, intron):
+
+
+        intron_bias_correction = 2 # give it a bonus given that its harder to align spliced reads properly than unspliced reads, and so there's likely a bias against the introns in comparison.
+        
+        
+        if intron.get_read_support() * intron_bias_correction < exon.get_read_support():
+            # exon is more supported.
+            return False
+
+            
+        intron_lend, intron_rend = intron.get_coords()
+        exon_lend, exon_rend = exon.get_coords()
+
+        
+        if exon_lend == intron_lend and exon_rend == intron_rend:
+            return True
+
+        # prune singleton exon segments falling in more highly expressed introns:
+        if (not self._node_has_predecessors(exon)) and (not self._node_has_successors(exon)):
+            return True
+
+                
+
+        return False
+
+
+
+    def _prune_unspliced_introns(self):
+
+        draft_splice_graph = self._splice_graph
+        
+        intron_objs = list()
+        exon_segment_objs = list()
+
+        for node in draft_splice_graph:
+            if type(node) == Intron:
+                intron_objs.append(node)
+            elif type(node) == Exon:
+                exon_segment_objs.append(node)
+            else:
+                raise RuntimeError("Error, not identifying node: {} as Exon or Intron type - instead {} ".format(node, type(node)))
+
+        # build interval tree for exon segments.
+
+        exon_itree = itree.IntervalTree()
+        for exon_seg in exon_segment_objs:
+            exon_lend,exon_rend = exon_seg.get_coords()
+            exon_itree[exon_lend:exon_rend+1] = exon_seg
+        
+
+        exons_to_purge = set()
+
+        ## should we restrict to certain introns here? min coverage?
+        
+        for intron in intron_objs:
+            intron_lend,intron_rend = intron.get_coords()
+            overlapping_exon_segs = exon_itree[intron_lend:intron_rend+1]
+
+            for overlapping_exon_seg in overlapping_exon_segs:
+                exon_seg = overlapping_exon_seg.data
+                if self._is_unspliced_exon_segment(exon=exon_seg, intron=intron):
+                    exons_to_purge.add(exon_seg)
+
+        logger.info("-removing {} likley unspliced exon segments based on intron overlap".format(len(exons_to_purge)))
+        if exons_to_purge:
+            draft_splice_graph.remove_nodes_from(exons_to_purge)
+
+        if DEBUG:
+            exons_to_purge = list(exons_to_purge)
+            exons_to_purge = sorted(exons_to_purge, key=lambda x: x._lend)
+            with open("__exon_segments_to_purge.bed", 'a') as ofh: # file should be already created based on earlier low expressed exon segments overlapping introns removal step
+                for exon in exons_to_purge:
+                    ofh.write(exon.get_bed_row(pad=1) + "\n")
+
         return
