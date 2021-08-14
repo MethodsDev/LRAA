@@ -18,13 +18,12 @@ alignments.1-50k.bam
 alignments.1-50k.bam.bai
 alignments.bam
 alignments.bam.bai
-files.list
 minigenome.fa
 minigenome.fa.fai
 minigenome.gtf
 runMe.sh
 runMe.small.sh
-
+cleanme.pl
 
 
 
