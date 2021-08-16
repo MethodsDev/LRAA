@@ -71,6 +71,13 @@ class Intron(GenomeFeature):
     # static methods
     def check_canonical_splicing(intron_lend, intron_rend, contig_seq):
 
+        contig_seq_len = len(contig_seq)
+        #print(f"intron-lend: {intron_lend}, intron-rend: {intron_rend}, contig_seq_len: {contig_seq_len}")
+
+        if (intron_lend > contig_seq_len + 2) or (intron_rend > contig_seq_len + 2):
+            # out of bounds
+            return None
+        
         dinuc_left = contig_seq[intron_lend - 1] + contig_seq[intron_lend - 1 + 1]
         dinuc_right = contig_seq[intron_rend - 1 -1] + contig_seq[intron_rend -1]
         dinuc_combo = dinuc_left + dinuc_right
