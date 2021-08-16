@@ -76,6 +76,9 @@ def run_pasa_salraa(genome_fasta_filename, bam_file, output_filename,
     genome_contigs_list = get_genome_contigs_listing(genome_fasta_filename)
     
     for contig_acc in genome_contigs_list:
+
+        logger.info(f"-processing contig: {contig_acc}")
+        
         sg = Splice_graph()
         sg.set_read_aln_gap_merge(read_aln_gap_merge)
         contig_seq_str = Util_funcs.retrieve_contig_seq_from_fasta_file(contig_acc, genome_fasta_filename)

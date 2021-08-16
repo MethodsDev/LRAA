@@ -45,6 +45,7 @@ class Splice_graph:
         
         self._contig_acc = ""
         self._contig_seq_str = ""
+        self._contig_len = 0
         
         self._contig_base_cov = list()
         
@@ -102,6 +103,7 @@ class Splice_graph:
         
         self._contig_acc = contig_acc
         self._contig_seq_str = contig_seq_str
+        self._contig_seq_len = len(contig_seq_str)
         self._alignments_bam_filename = alignments_bam_file
         
         ## do the work:
@@ -181,7 +183,7 @@ class Splice_graph:
         ## Contig Depth Array Capture
         # get genome contig sequence
         contig_seq_str = self._contig_seq_str
-        contig_len = len(contig_seq_str)
+        contig_len = self._contig_seq_len
         logging.info("initing coverage array of len: {}".format(contig_len)) 
         if (contig_len > Splice_graph._max_genomic_contig_length):
             raise RuntimeError("genomic contig length {} exceeds maximum allowed {}".format(contig_len, Splice_graph._max_genomic_contig_length))
@@ -228,6 +230,9 @@ class Splice_graph:
             # add to coverage
             for segment in alignment_segments:
                 for i in range(segment[0], segment[1] + 1):
+                    if i > self._contig_seq_len:
+                        break
+                    
                     self._contig_base_cov[i] += 1
 
         logger.info("-total read alignments used: {}".format(total_read_alignments_used))
