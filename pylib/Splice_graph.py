@@ -116,6 +116,9 @@ class Splice_graph:
         self._populate_exon_coverage_and_extract_introns()  # stores intron objs in self._intron_objs
         
         self._build_draft_splice_graph() # initializes self._splice_graph
+
+        if self.is_empty():
+            return None
         
         if DEBUG:
             self.write_intron_exon_splice_graph_bed_files("__prefilter", pad=0)
@@ -871,3 +874,9 @@ class Splice_graph:
                     ofh.write(exon.get_bed_row(pad=1) + "\n")
 
         return
+
+
+    def is_empty(self):
+        return len(self._splice_graph) == 0
+
+        

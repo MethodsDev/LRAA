@@ -84,6 +84,10 @@ def run_pasa_salraa(genome_fasta_filename, bam_file, output_filename,
         contig_seq_str = Util_funcs.retrieve_contig_seq_from_fasta_file(contig_acc, genome_fasta_filename)
         sg.build_splice_graph_for_contig(contig_acc, contig_seq_str, bam_file)
 
+        if sg.is_empty():
+            logger.info(f"-no splice graph created for contig: {contig_acc}.... skipping.")
+            continue
+            
         sg.write_intron_exon_splice_graph_bed_files("prereconstruct.{}.pad1".format(contig_acc), pad=1)
 
         pasa_salraa_obj = PASA_SALRAA(sg)
