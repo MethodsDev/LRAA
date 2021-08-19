@@ -11,6 +11,7 @@ from Splice_graph import Splice_graph
 from PASA_SALRAA import PASA_SALRAA
 from Transcript import Transcript
 import Util_funcs
+import PASA_SALRAA_Globals
 
 import logging
 #FORMAT = "%(asctime)-15s %(levelname)s %(module)s.%(name)s.%(funcName)s at %(lineno)d :\n\t%(message)s\n"
@@ -35,6 +36,9 @@ def main():
     parser.add_argument("--single_best_only", action='store_true', default=False,
                         help="only report the single highest scoring isoform per component")
 
+    parser.add_argument("--min_per_id", type=int, default=98,
+                        help="minimum percent identity for a read alignment to be incorporated into the splice graph")
+    
     parser.add_argument("--debug", "-d", action='store_true', default=False,
                         help='debug mode, more verbose')
     
@@ -45,16 +49,19 @@ def main():
     bam_filename = args.bam
     output_filename = args.outputfile
     single_best_only = args.single_best_only
-
+    min_per_id = args.min_per_id
+    
+    
     if args.debug:
         logging.getLogger().setLevel(logging.DEBUG)
-
+        PASA_SALRAA_Globals.DEBUG = True
         
     run_pasa_salraa(genome_fasta_filename,
                     bam_filename,
                     output_filename,
                     READ_ALN_GAP_MERGE,
-                    single_best_only)
+                    single_best_only,
+                    min_per_id)
     
     
     sys.exit(0)
@@ -64,7 +71,8 @@ def main():
 
 def run_pasa_salraa(genome_fasta_filename, bam_file, output_filename,
                     read_aln_gap_merge,
-                    single_best_only):
+                    single_best_only,
+                    min_per_id):
 
     # data structures want:
     # ultimately exons and introns
@@ -80,6 +88,7 @@ def run_pasa_salraa(genome_fasta_filename, bam_file, output_filename,
         logger.info(f"-processing contig: {contig_acc}")
         
         sg = Splice_graph()
+        sg.set_min_per_id(min_per_id)
         sg.set_read_aln_gap_merge(read_aln_gap_merge)
         contig_seq_str = Util_funcs.retrieve_contig_seq_from_fasta_file(contig_acc, genome_fasta_filename)
         sg.build_splice_graph_for_contig(contig_acc, contig_seq_str, bam_file)

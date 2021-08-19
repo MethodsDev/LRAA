@@ -77,6 +77,7 @@ class Bam_alignment_extractor:
                 mismatch_count = int(read.get_tag("nM"))
             if mismatch_count is not None:
                 per_id = 100 - (mismatch_count/aligned_base_count)*100
+                #logger.info(f"-read per_id: {per_id}")
                 if per_id < self._min_read_aln_per_id:
                     discarded_read_counter["low_perID"] += 1
                     continue
@@ -84,7 +85,7 @@ class Bam_alignment_extractor:
             read_alignments.append(read)
 
 
-        logger.info("reads discarded: {}".format(discarded_read_counter))
+        logger.info("reads kept: {} and discarded: {}".format(len(read_alignments), discarded_read_counter))
         
         if pretty:
             return self.get_pretty_alignments(read_alignments)
@@ -145,3 +146,8 @@ class Bam_alignment_extractor:
             
         return alignment_segments
     
+
+    def set_min_per_id(self, min_per_id):
+        self._min_read_aln_per_id = min_per_id
+
+        

@@ -179,9 +179,11 @@ class PASA_SALRAA:
 
         bam_extractor = Bam_alignment_extractor(bam_file)
         pretty_alignments = bam_extractor.get_read_alignments(contig_acc, pretty=True)
-        
+
         grouped_alignments = self._group_alignments_by_read_name(pretty_alignments)
 
+        logger.info("-got {} pretty alignments grouped into {} alignment groups.".format(len(pretty_alignments), len(grouped_alignments)))
+        
         mp_counter = MultiPathCounter()
 
         read_graph_mappings_ofh = open("__read_graph_mappings.dat", "wt")

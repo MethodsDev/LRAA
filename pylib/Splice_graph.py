@@ -11,10 +11,9 @@ import networkx as nx
 import intervaltree as itree
 from GenomeFeature import *
 from Bam_alignment_extractor import Bam_alignment_extractor
+import PASA_SALRAA_Globals
 
 logger = logging.getLogger(__name__)
-
-DEBUG=True
 
 
 class Splice_graph:
@@ -31,7 +30,7 @@ class Splice_graph:
     _min_alt_splice_freq = 0.05
     _min_alt_unspliced_freq = 0.20
     _max_intron_length_for_exon_segment_filtering = 10000
-    _min_intron_support = 2
+    _min_intron_support = 1
     _min_terminal_splice_exon_anchor_length = 15
     _min_read_aln_per_id = 98
 
@@ -120,7 +119,7 @@ class Splice_graph:
         if self.is_empty():
             return None
         
-        if DEBUG:
+        if PASA_SALRAA_Globals.DEBUG:
             self.write_intron_exon_splice_graph_bed_files("__prefilter", pad=0)
             self.describe_graph("__prefilter.graph")
                 
@@ -138,7 +137,7 @@ class Splice_graph:
                 
         self._finalize_splice_graph()
 
-        if DEBUG:
+        if PASA_SALRAA_Globals.DEBUG:
             self.write_intron_exon_splice_graph_bed_files("__final_graph", pad=0)
             self.describe_graph("__final.graph")
 
@@ -207,7 +206,8 @@ class Splice_graph:
         intron_splice_site_support = defaultdict(int)
         
         bam_extractor = Bam_alignment_extractor(self._alignments_bam_filename)
-
+        bam_extractor.set_min_per_id(self._min_read_aln_per_id)
+        
         pretty_alignments = bam_extractor.get_read_alignments(self._contig_acc, pretty=True)
 
         total_read_alignments_used = 0
@@ -428,7 +428,7 @@ class Splice_graph:
         introns_to_delete = set()
 
         ofh = None
-        if DEBUG:
+        if PASA_SALRAA_Globals.DEBUG:
             ofh = open("__splice_neighbor_cov_ratios.dat", 'w')
         
         for intron in self._intron_objs.values():
@@ -445,7 +445,7 @@ class Splice_graph:
             
             ratio_C_D = (C_mean_cov + pseudocount) / (D_mean_cov + pseudocount)
 
-            if DEBUG:
+            if PASA_SALRAA_Globals.DEBUG:
                 ofh.write("{}".format(lend) +
                           "\tI:{}".format(intron_abundance) +
                           "\tA:{:.3f}".format(A_mean_cov) +
@@ -523,7 +523,7 @@ class Splice_graph:
             exon_segments.append([exon_seg_start, len(self._contig_base_cov)])
 
 
-        if DEBUG:
+        if PASA_SALRAA_Globals.DEBUG:
             # write exon list to file
             with open("__exon_regions.init.bed", 'w') as ofh:
                 for segment in exon_segments:
@@ -591,7 +591,7 @@ class Splice_graph:
         if exons_to_purge:
             draft_splice_graph.remove_nodes_from(exons_to_purge)
 
-        if DEBUG:
+        if PASA_SALRAA_Globals.DEBUG:
             exons_to_purge = list(exons_to_purge)
             exons_to_purge = sorted(exons_to_purge, key=lambda x: x._lend)
             with open("__exon_segments_to_purge.bed", 'w') as ofh:
@@ -618,7 +618,7 @@ class Splice_graph:
 
         logger.info("-pruning {} now disconnected introns".format(len(introns_to_remove)))
 
-        if DEBUG:
+        if PASA_SALRAA_Globals.DEBUG:
             with open("__pruned_disconnected_introns.bed", 'w') as ofh:
                 for intron in introns_to_remove:
                     ofh.write(intron.get_bed_row(pad=1) + "\n")
@@ -866,7 +866,7 @@ class Splice_graph:
         if exons_to_purge:
             draft_splice_graph.remove_nodes_from(exons_to_purge)
 
-        if DEBUG:
+        if PASA_SALRAA_Globals.DEBUG:
             exons_to_purge = list(exons_to_purge)
             exons_to_purge = sorted(exons_to_purge, key=lambda x: x._lend)
             with open("__exon_segments_to_purge.bed", 'a') as ofh: # file should be already created based on earlier low expressed exon segments overlapping introns removal step
@@ -880,3 +880,7 @@ class Splice_graph:
         return len(self._splice_graph) == 0
 
         
+    def set_min_per_id(self, min_per_id):
+        self._min_read_aln_per_id = min_per_id
+
+    
