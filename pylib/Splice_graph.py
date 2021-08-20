@@ -91,7 +91,7 @@ class Splice_graph:
 
         for overlapping_interval in self._itree_exon_segments[range_lend:range_rend]:
             overlapping_exon_segments.append(overlapping_interval.data)
-        
+
         return overlapping_exon_segments
     
 
@@ -712,6 +712,9 @@ class Splice_graph:
     
     def _merge_neighboring_proximal_unbranched_exon_segments(self):
 
+
+        merged_node_ids = list()
+        
         exon_segment_objs, intron_objs = self._get_exon_and_intron_nodes()
         
         prev_node = exon_segment_objs[0]
@@ -732,11 +735,17 @@ class Splice_graph:
                     self._splice_graph.add_edge(prev_node, next_node_successor)
 
                 # remove next node
+                merged_node_ids.append(next_node.get_id())
                 self._splice_graph.remove_node(next_node)
             else:
                 prev_node = next_node
                 
-    
+        if PASA_SALRAA_Globals.DEBUG:
+            with open("__merged_exons.list", "wt") as ofh:
+                print("\n".join(merged_node_ids), file=ofh)
+
+        
+                
     def _prune_exon_spurs_at_introns(self):
 
         exon_segment_objs, intron_objs = self._get_exon_and_intron_nodes()
@@ -748,22 +757,54 @@ class Splice_graph:
         #                R_spur              L_spur
 
 
+        ## //TODO: incorporate read coverage checks 
+        
         def is_R_spur(exon_node):
+
+            has_intron_successor = False
+            for successor in self._splice_graph.successors(exon_node):
+                if type(successor) == Intron:
+                    has_intron_successor = True
+
+
+            has_intron_predecessor = False
+            has_alt_intron = False
+            
+            
             for predecessor in self._splice_graph.predecessors(exon_node):
-                if type(predecessor) == Exon:
+                if type(predecessor) == Intron:
+                    has_intron_predecessor = True
+                
+                elif type(predecessor) == Exon:
                     for successor in self._splice_graph.successors(predecessor):
                         if type(successor) == Intron:
-                            return True
-            return False
+                            has_alt_intron = True
+
+            return (not has_intron_successor) and (not has_intron_predecessor) and has_alt_intron
 
             
         def is_L_spur(exon_node):
+
+            has_intron_predecessor = False
+
+            for predecessor in self._splice_graph.predecessors(exon_node):
+                if type(predecessor) == Intron:
+                    has_intron_predecessor = True
+            
+
+            has_intron_successor = False
+            has_alt_intron = False
+
             for successor in self._splice_graph.successors(exon_node):
-                if type(successor) == Exon:
+                if type(successor) == Intron:
+                    has_intron_successor = True
+                
+                elif type(successor) == Exon:
                     for predecessor in self._splice_graph.predecessors(successor):
                         if type(predecessor) == Intron:
-                            return True
-            return False
+                            has_alt_intron = True
+
+            return (not has_intron_predecessor) and (not has_intron_successor) and has_alt_intron
         
 
         exons_to_prune = list()
@@ -780,6 +821,12 @@ class Splice_graph:
         
         if exons_to_prune:
             logger.info("-removing {} exon spurs".format(len(exons_to_prune)))
+
+            if PASA_SALRAA_Globals.DEBUG:
+                with open("__pruned_exon_spurs.list", "wt") as ofh:
+                    for exon in exons_to_prune:
+                        print(exon.get_id(), file=ofh)
+
             self._splice_graph.remove_nodes_from(exons_to_prune)
 
         return
