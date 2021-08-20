@@ -368,9 +368,6 @@ class PASA_SALRAA:
 
                 path.append(exon_segment.get_id())
 
-        if segment[0] == 72277 and segment[1] == 72398:
-            print("overlappingg exon segments for 72277-72398: {}  but incoming was: {}".format(path, overlapping_segments))
-                
         return path
 
 
