@@ -249,14 +249,20 @@ class PASA_SALRAA:
                 path_part = self._get_intron_node_id(alignment_segments[i-1], segment)
                 if not path_part:
                     path_part = [SPACER]
-                path_part.extend(self._map_segment_to_graph_TERMINAL(segment))
+                terminal_segment = self._map_segment_to_graph_TERMINAL(segment)
+                if not terminal_segment:
+                    terminal_segment = [SPACER]
+                path_part.extend(terminal_segment)
             else:
                 # internal segment
                 #   first, get preceding intron
                 path_part = self._get_intron_node_id(alignment_segments[i-1], segment)
                 if not path_part:
                     path_part = [SPACER]
-                path_part.extend(self._map_segment_to_graph_INTERNAL(segment))
+                internal_segment = self._map_segment_to_graph_INTERNAL(segment)
+                if not internal_segment:
+                    internal_segment = [SPACER]
+                path_part.extend(internal_segment)
 
             #print("segment: {}  mapped to {}".format(segment, path_part))
                     
@@ -276,7 +282,11 @@ class PASA_SALRAA:
         while len(path) > 0 and path[0] == SPACER:
             path.pop(0)
             
-        
+
+        if SPACER in path:
+            path = self._try_easy_fill_spacers(path)
+            
+            
         return path
     
 
@@ -353,13 +363,54 @@ class PASA_SALRAA:
             # check for overlap and not extending beyond feature rend
             if (segment[0] < exon_segment._rend and
                 segment[1] > exon_segment._lend and
-                segment[0] >= exon_segment._lend and
-                segment[1] <= exon_segment._rend):
+                segment[0] <= exon_segment._lend and
+                exon_segment._rend <= segment[1]):
 
                 path.append(exon_segment.get_id())
 
+        if segment[0] == 72277 and segment[1] == 72398:
+            print("overlappingg exon segments for 72277-72398: {}  but incoming was: {}".format(path, overlapping_segments))
+                
         return path
 
+
+    def _try_easy_fill_spacers(self, path):
+
+
+        new_path = path.copy()
+        
+        for i in range(len(path)):
+            if path[i] == SPACER:
+                if i == 0 or i == len(path)-1:
+                    # cant be terminal
+                    continue
+                
+                prev_node = path[i-1]
+                next_node = path[i+1]
+
+                if prev_node == SPACER or next_node == SPACER:
+                    continue
+                
+                prev_node_obj = self._splice_graph.get_node_obj_via_id(prev_node)
+                next_node_obj = self._splice_graph.get_node_obj_via_id(next_node)
+
+                # require exons on both sides of spacer
+                if not ( type(prev_node_obj) == Exon and type(next_node_obj) == Exon):
+                    continue
+                
+                intron_lend = prev_node_obj._rend + 1
+                intron_rend = next_node_obj._lend - 1
+
+                intron_obj = self._splice_graph.get_intron_node_obj(intron_lend, intron_rend)
+                if intron_obj:
+                    intron_id = intron_obj.get_id()
+                    new_path[i] = intron_id # replace spacer
+
+        
+        return new_path
+                
+
+    
     
     def _build_trellis(self, mpg_component):
 
