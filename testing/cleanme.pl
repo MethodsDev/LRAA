@@ -24,7 +24,7 @@ minigenome.gtf
 runMe.sh
 runMe.small.sh
 cleanme.pl
-
+illum_w_pbio.chr17.bam
 
 
 );
