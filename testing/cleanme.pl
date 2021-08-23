@@ -13,7 +13,7 @@ chdir $FindBin::Bin or die "error, cannot cd to $FindBin::Bin";
 
 my @files_to_keep = qw (
 
-
+Makefile
 alignments.1-50k.bam
 alignments.1-50k.bam.bai
 alignments.bam
@@ -21,8 +21,6 @@ alignments.bam.bai
 minigenome.fa
 minigenome.fa.fai
 minigenome.gtf
-runMe.sh
-runMe.small.sh
 cleanme.pl
 illum_w_pbio.chr17.bam
 illum_w_pbio.chr17.bam.bai
