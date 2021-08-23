@@ -25,7 +25,9 @@ runMe.sh
 runMe.small.sh
 cleanme.pl
 illum_w_pbio.chr17.bam
-
+illum_w_pbio.chr17.bam.bai
+illum_w_pbio.chr17.fa
+illum_w_pbio.chr17.fa.fai
 
 );
 
