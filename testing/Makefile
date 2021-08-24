@@ -8,10 +8,8 @@ run_large:
 	../pasa-salraa --bam alignments.bam --genome minigenome.fa
 
 
-illum_n_pbio:
-	../pasa-salraa  --bam illum_w_pbio.chr17.bam --genome illum_w_pbio.chr17.fa
-
-
+run_illum_n_pbio:
+	cd illum_n_pbio/ && ../../pasa-salraa  --bam illum_n_pacbio.bam --genome illum_n_pacbio.genome.fa
 
 
 clean:
