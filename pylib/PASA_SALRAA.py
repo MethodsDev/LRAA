@@ -20,6 +20,10 @@ from Transcript import Transcript
 import Simple_path_utils
 from PASA_scored_path import PASA_scored_path
 from shutil import rmtree
+import time
+from multiprocessing import Process, Queue
+import traceback
+from MultiProcessManager import MultiProcessManager
 
 logger = logging.getLogger(__name__)
 
@@ -31,11 +35,13 @@ class PASA_SALRAA:
     min_transcript_length = 200
     min_mpgn_read_count = 1
 
-    def __init__(self, splice_graph):
+    def __init__(self, splice_graph, num_parallel_processes=1):
 
         self._splice_graph = splice_graph
 
         self._multipath_graph = None  # set under build_multipath_graph()
+
+        self._num_parallel_processes = num_parallel_processes
         
         return
 
@@ -72,18 +78,29 @@ class PASA_SALRAA:
         
         all_reconstructed_transcripts = list()
 
-                
+        q = Queue()
+        
+        mpm = MultiProcessManager(self._num_parallel_processes, q)
+        
         component_counter = 0
         for mpg_component in mpg_components:
             component_counter += 1
             logger.info("PASA_SALRAA - assembly of component {}".format(component_counter))
             
-            ## should do this multithreaded, each thread tackling a different component.
-            transcripts = self._reconstruct_isoforms_single_component(mpg_component, component_counter, single_best_only)
+            p = Process(target=self._reconstruct_isoforms_single_component,
+                        args=(q, mpg_component, component_counter, single_best_only) )
 
-            if transcripts:
-                all_reconstructed_transcripts.extend(transcripts)
+            mpm.launch_process(p)
 
+        num_failures = mpm.wait_for_remaining_processes()
+
+        logger.info(mpm.summarize_status())
+        
+        if num_failures:
+            raise RuntimeError("Error, {} component failures encountered".format(num_failures))
+
+        all_reconstructed_transcripts = mpm.retrieve_queue_contents()
+                    
         return all_reconstructed_transcripts
 
 
@@ -93,12 +110,13 @@ class PASA_SALRAA:
     ##################
         
     
-    def _reconstruct_isoforms_single_component(self, mpg_component, component_counter, single_best_only=False):
-        
+    def _reconstruct_isoforms_single_component(self, q, mpg_component, component_counter, single_best_only=False):
+
+
         MIN_SCORE_RATIO = 0.0001
-        
+
         best_transcript_paths = list()
-        
+
         paths_seen = set()
 
 
@@ -107,12 +125,12 @@ class PASA_SALRAA:
                 mpgn.set_reweighted_flag(False)
             return
 
-        
+
         round_iter = 0        
         while True:
 
             round_iter += 1
-            
+
             reinit_weights(mpg_component)
 
             pasa_vertices = self._build_trellis(mpg_component)
@@ -121,18 +139,18 @@ class PASA_SALRAA:
                 if round_iter == 1:
                     for pasa_vertex in pasa_vertices:
                         logger.debug(pasa_vertex.describe_pasa_vertex())
-                
+
                 self._write_all_scored_paths_to_file(component_counter, round_iter, pasa_vertices)
 
-                
-            
+
+
             transcript_path = self._retrieve_best_transcript(pasa_vertices)
-                        
+
             if transcript_path is None:
                 break
 
             assert(type(transcript_path) == PASA_scored_path)
-            
+
             logger.debug("Retrieved best transcript path: {}".format(transcript_path))
 
             transcript_path_token = str(transcript_path.get_multiPath_obj())
@@ -141,38 +159,41 @@ class PASA_SALRAA:
                 break
 
             paths_seen.add(transcript_path_token)
-            
-            
+
+
             if (transcript_path.get_score() > 0 and
                 (len(best_transcript_paths) == 0 or
                  transcript_path.get_score() / best_transcript_paths[0].get_initial_score() >= MIN_SCORE_RATIO) ):
-                
+
                 best_transcript_paths.append(transcript_path)
 
                 if single_best_only:
                     break
-                            
+
                 self._decrement_transcript_path_vertices(transcript_path, pasa_vertices)
                 self._rescore_transcript_paths(pasa_vertices)
             else:
                 break
 
-        
+
         # from the best transcript paths, reconstruct the actual transcripts themselves:
 
-        transcripts = list()
-        
+
+        transcripts = list() 
+
+
         for transcript_path in best_transcript_paths:
             assert(type(transcript_path) == PASA_scored_path)
-            
+
             transcript_obj = transcript_path.toTranscript()
-            
+
             #print(transcript_obj)
             if transcript_obj is not None:
                 transcripts.append(transcript_obj)
-            
+
+        q.put(transcripts)
         
-        return transcripts
+
         
 
     def _populate_read_multi_paths(self, contig_acc, contig_seq, bam_file):
@@ -523,3 +544,6 @@ class PASA_SALRAA:
         return
     
         
+def ladeda(q, stuff):
+    q.put("yowzer!")
+    

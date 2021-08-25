@@ -38,6 +38,9 @@ def main():
 
     parser.add_argument("--min_per_id", type=int, default=98,
                         help="minimum percent identity for a read alignment to be incorporated into the splice graph")
+
+    parser.add_argument("--CPU", type=int, default=1,
+                        help="number of cores for multithreading")
     
     parser.add_argument("--debug", "-d", action='store_true', default=False,
                         help='debug mode, more verbose')
@@ -50,6 +53,7 @@ def main():
     output_filename = args.outputfile
     single_best_only = args.single_best_only
     min_per_id = args.min_per_id
+    CPU = args.CPU
     
     
     if args.debug:
@@ -61,7 +65,8 @@ def main():
                     output_filename,
                     READ_ALN_GAP_MERGE,
                     single_best_only,
-                    min_per_id)
+                    min_per_id,
+                    CPU)
     
     
     sys.exit(0)
@@ -72,7 +77,8 @@ def main():
 def run_pasa_salraa(genome_fasta_filename, bam_file, output_filename,
                     read_aln_gap_merge,
                     single_best_only,
-                    min_per_id):
+                    min_per_id,
+                    CPU):
 
     # data structures want:
     # ultimately exons and introns
@@ -98,8 +104,8 @@ def run_pasa_salraa(genome_fasta_filename, bam_file, output_filename,
             continue
             
         sg.write_intron_exon_splice_graph_bed_files("prereconstruct.{}.pad1".format(contig_acc), pad=1)
-
-        pasa_salraa_obj = PASA_SALRAA(sg)
+        
+        pasa_salraa_obj = PASA_SALRAA(sg, CPU)
         pasa_salraa_obj.build_multipath_graph(contig_acc, contig_seq_str, bam_file)
         transcripts = pasa_salraa_obj.reconstruct_isoforms(single_best_only)
 
