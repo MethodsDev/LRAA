@@ -99,8 +99,13 @@ class PASA_SALRAA:
         if num_failures:
             raise RuntimeError("Error, {} component failures encountered".format(num_failures))
 
-        all_reconstructed_transcripts = mpm.retrieve_queue_contents()
-                    
+        all_reconstructed_transcripts = list()
+
+        queue_contents = mpm.retrieve_queue_contents()
+        for entry in queue_contents:
+            all_reconstructed_transcripts.extend(entry)
+                            
+                
         return all_reconstructed_transcripts
 
 
