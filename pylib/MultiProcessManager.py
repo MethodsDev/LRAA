@@ -7,9 +7,9 @@ import logging
 
 
 logger = logging.getLogger(__name__)
-#logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.DEBUG)
 
-SLEEPTIME = 0.1
+SLEEPTIME = 0.01
 
 class MultiProcessManager:
 
