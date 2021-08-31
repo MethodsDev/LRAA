@@ -74,7 +74,7 @@ class Intron(GenomeFeature):
         contig_seq_len = len(contig_seq)
         #print(f"intron-lend: {intron_lend}, intron-rend: {intron_rend}, contig_seq_len: {contig_seq_len}")
 
-        if (intron_lend > contig_seq_len + 2) or (intron_rend > contig_seq_len + 2):
+        if (intron_lend >= contig_seq_len - 2) or (intron_rend >= contig_seq_len - 2):
             # out of bounds
             return None
         
