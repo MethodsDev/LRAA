@@ -290,7 +290,7 @@ class PASA_SALRAA:
                     internal_segment = [SPACER]
                 path_part.extend(internal_segment)
 
-            #print("segment: {}  mapped to {}".format(segment, path_part))
+            print("segment: {}  mapped to {}".format(segment, path_part))
                     
             if path_part:
                 path.extend(path_part)
@@ -386,11 +386,12 @@ class PASA_SALRAA:
         overlapping_segments = sorted(overlapping_segments, key=lambda x: x._lend)
         
         for exon_segment in overlapping_segments:
-            # check for overlap and not extending beyond feature rend
+            # check for overlap only  (prev: and not extending beyond feature rend)
             if (segment[0] < exon_segment._rend and
-                segment[1] > exon_segment._lend and
-                segment[0] <= exon_segment._lend and
-                exon_segment._rend <= segment[1]):
+                segment[1] > exon_segment._lend):
+                #and
+                #segment[0] <= exon_segment._lend and
+                #exon_segment._rend <= segment[1]):
 
                 path.append(exon_segment.get_id())
 
