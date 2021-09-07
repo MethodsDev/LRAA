@@ -36,8 +36,11 @@ class MultiProcessManager:
 
     def wait_for_open_slot(self):
         logger.debug("-waiting for open slot")
-        
+
+        counter = 0
         while self.num_running >= self.num_parallel_processes:
+            logger.debug("\twaiting for open slot round({})".format(counter))
+            counter += 1
             self._screen_running_processes()
             time.sleep(SLEEPTIME)
 
@@ -45,12 +48,17 @@ class MultiProcessManager:
 
         logger.debug("-screening running processes")
 
-        if self.queue is not None:
+        if self.queue is not None and not self.queue.empty():
+            logger.debug("\t-reaping queue")
             while not self.queue.empty():
+                logger.debug("\t\t-try reaping entry from queue")
                 entry = self.queue.get()
+                logger.debug("\t\t-reaped entry")
                 self.captured_queue_contents.append(entry)
                 
-                
+            logger.debug("\t\t-done reaping queue")
+
+        
         completed_processes = list()
             
         for i, process in enumerate(self.process_list):
@@ -61,20 +69,26 @@ class MultiProcessManager:
                 completed_processes.append(i)
 
         if completed_processes:
+            logger.debug("\t-processing {} completed processes.".format(len(completed_processes)))
             completed_processes.reverse()
             for completed_process_idx in completed_processes:
-                self.num_running -= 1
+                
                 process = self.process_list[completed_process_idx]
+                logger.debug("\t\t\t<joining process {}>".format(completed_process_idx))
                 process.join()
+                logger.debug("\t\t\t<joined process {} having exit code {}>".format(completed_process_idx, process.exitcode))
                 if process.exitcode == 0:
                     self.num_successes += 1
                 else:
                     self.num_errors += 1
                     logger.debug("-captured a failed process")
-                    
-                del self.process_list[completed_process_idx]
 
-            
+                del self.process_list[completed_process_idx]
+                self.num_running -= 1
+
+                
+        logger.debug("\t-done screening running processes.")
+        
                 
     def wait_for_remaining_processes(self):
 

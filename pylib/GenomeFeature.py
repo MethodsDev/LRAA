@@ -82,6 +82,8 @@ class Intron(GenomeFeature):
         dinuc_right = contig_seq[intron_rend - 1 -1] + contig_seq[intron_rend -1]
         dinuc_combo = dinuc_left + dinuc_right
 
+        #print("INTRON: {}-{}:{}".format(intron_lend, intron_rend, dinuc_combo))
+        
         if dinuc_combo in Intron.splice_dinucs_top_strand:
             return '+'
         elif dinuc_combo in Intron.splice_dinucs_bottom_strand:

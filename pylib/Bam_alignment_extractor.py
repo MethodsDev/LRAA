@@ -80,6 +80,8 @@ class Bam_alignment_extractor:
                 #logger.info(f"-read per_id: {per_id}")
                 if per_id < self._min_read_aln_per_id:
                     discarded_read_counter["low_perID"] += 1
+                    #print(read)
+                    #print("Cigar_stats: " + str(cigar_stats))
                     continue
 
             read_alignments.append(read)

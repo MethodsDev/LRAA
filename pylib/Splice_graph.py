@@ -209,20 +209,19 @@ class Splice_graph:
         bam_extractor.set_min_per_id(self._min_read_aln_per_id)
         
         pretty_alignments = bam_extractor.get_read_alignments(self._contig_acc, pretty=True)
-
+        logger.info("-got {} pretty alignments.".format(len(pretty_alignments)))
+        
         total_read_alignments_used = 0
         
         for pretty_alignment in pretty_alignments:
 
             alignment_segments = pretty_alignment.get_pretty_alignment_segments()
-            #print(alignment_segments)
+            #print("Pretty alignment segments: " + str(alignment_segments))
             
             if len(alignment_segments) > 1:
                 # ensure proper consensus splice sites.
                 introns_list = self._get_introns_matching_splicing_consensus(alignment_segments)
-                if introns_list is None:
-                    continue
-
+                #print("introns list: " + str(introns_list))
                 for intron in introns_list:
                     intron_counter[intron] += 1
                     intron_lend,intron_rend,splice_orient = intron
@@ -279,10 +278,12 @@ class Splice_graph:
 
             splice_type = Intron.check_canonical_splicing(intron_lend, intron_rend, genome_seq)
 
-            introns_list.append( (intron_lend, intron_rend, splice_type) )
-            
+            if splice_type is not None:
+                introns_list.append( (intron_lend, intron_rend, splice_type) )
+
+        """
             if splice_type is None:
-                return
+                continue
             elif splice_type == '+':
                 top_strand_agreement_count += 1
             elif splice_type == '-':
@@ -299,7 +300,9 @@ class Splice_graph:
             return introns_list
         else:
             raise RuntimeError("splicing analysis error... shouldn't happen")
+       """
 
+        return introns_list
 
     
     def _build_draft_splice_graph(self):
