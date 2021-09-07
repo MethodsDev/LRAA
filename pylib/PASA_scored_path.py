@@ -95,6 +95,10 @@ class PASA_scored_path:
 
         exons_and_introns = transcript_mp.get_ordered_exons_and_introns()
 
+        #print("exons and introns: ")
+        #for exon_or_intron in exons_and_introns:
+        #    print("\t" + str(exon_or_intron))
+        
         transcript_exon_segments = list()
 
         orient = '?'
@@ -111,6 +115,9 @@ class PASA_scored_path:
             return None
 
         transcript_exon_segments = Simple_path_utils.merge_adjacent_segments(transcript_exon_segments)
+
+        #print("merged segments: " + str(transcript_exon_segments))
+
         transcript_obj = Transcript(contig_acc, transcript_exon_segments, orient)
         transcript_obj.set_scored_path_obj(self)
         

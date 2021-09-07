@@ -139,14 +139,7 @@ class MultiPathGraphNode:
         for containment in containments:
             text += "\n\t" + str(containment)
 
-        print(text)
-
-        print(str(self.get_score_EXCLUDE_containments(use_prev_weight=False)))
-        
-        return text
-
         """
-
         
         return("<mp:{} {}-{} Count:{} W:{:0.8f} Containments:{}, ScoreExcCont:{:.4f} ScoreInclCon:{:.4f} len:{}>".format(
             self.get_simple_path(),
@@ -155,10 +148,11 @@ class MultiPathGraphNode:
             self.get_score_EXCLUDE_containments(use_prev_weight=False),
             self.get_score_INCLUDE_containments(use_prev_weight=False),
             self._seq_length))
-        
 
-        
-            
+        """
+        print(text)
+        return text
+        """
 
         
     def has_successors(self):
