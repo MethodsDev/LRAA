@@ -160,9 +160,15 @@ def merge_adjacent_segments(segment_list):
             # merge them
             assert(next_seg[1] > prev_seg[1])
             prev_seg[1] = next_seg[1]
-        else:
+        elif prev_seg[1] == next_seg[1] and prev_seg[0] <= next_seg[0]:
+            # identical or contained feature - skip it.
+            pass
+        elif next_seg[0] > prev_seg[1]:
             ret_segments.append(next_seg)
+        else:
+            raise RuntimeError("Error, not sure hwo to merge adjacent segments: {} and {}".format(prev_seg, next_seg))
 
+    
     return ret_segments
 
 
