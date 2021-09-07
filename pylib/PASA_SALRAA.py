@@ -290,7 +290,7 @@ class PASA_SALRAA:
                     internal_segment = [SPACER]
                 path_part.extend(internal_segment)
 
-            print("segment: {}  mapped to {}".format(segment, path_part))
+            #print("segment: {}  mapped to {}".format(segment, path_part))
                     
             if path_part:
                 path.extend(path_part)

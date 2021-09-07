@@ -133,13 +133,14 @@ class MultiPathGraphNode:
             
     def __repr__(self):
 
+        """
         containments = self.get_containments()
         text = "\t".join(str(x) for x in [self.get_simple_path(), self._lend, self._rend, self._count, self._weight, "len:{}".format(self._seq_length)])
         for containment in containments:
             text += "\n\t" + str(containment)
 
-        ## DEBUGGING
-        """ 
+        """
+        
         return("<mp:{} {}-{} Count:{} W:{:0.8f} Containments:{}, ScoreExcCont:{:.4f} ScoreInclCon:{:.4f} len:{}>".format(
             self.get_simple_path(),
             self._lend, self._rend, self._count, self._weight,
@@ -147,6 +148,7 @@ class MultiPathGraphNode:
             self.get_score_EXCLUDE_containments(use_prev_weight=False),
             self.get_score_INCLUDE_containments(use_prev_weight=False),
             self._seq_length))
+
         """
 
         print(text)
@@ -154,7 +156,9 @@ class MultiPathGraphNode:
         print(str(self.get_score_EXCLUDE_containments(use_prev_weight=False)))
         
         return text
-            
+        """
+
+        
 
         
     def has_successors(self):
