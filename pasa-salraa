@@ -12,6 +12,7 @@ from PASA_SALRAA import PASA_SALRAA
 from Transcript import Transcript
 import Util_funcs
 import PASA_SALRAA_Globals
+import MultiProcessManager as mpm
 
 import logging
 #FORMAT = "%(asctime)-15s %(levelname)s %(module)s.%(name)s.%(funcName)s at %(lineno)d :\n\t%(message)s\n"
@@ -44,7 +45,8 @@ def main():
     
     parser.add_argument("--debug", "-d", action='store_true', default=False,
                         help='debug mode, more verbose')
-    
+
+    parser.add_argument("--mpm_monitor", action='store_true', default=False)
     
     args = parser.parse_args()
     
@@ -54,7 +56,10 @@ def main():
     single_best_only = args.single_best_only
     min_per_id = args.min_per_id
     CPU = args.CPU
-    
+
+    if args.mpm_monitor:
+        mpm.set_debug()
+
     
     if args.debug:
         logging.getLogger().setLevel(logging.DEBUG)

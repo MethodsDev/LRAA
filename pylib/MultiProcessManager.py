@@ -7,7 +7,6 @@ import logging
 
 
 logger = logging.getLogger(__name__)
-#logger.setLevel(logging.DEBUG)
 
 SLEEPTIME = 0.1
 
@@ -97,8 +96,12 @@ class MultiProcessManager:
 
     def retrieve_queue_contents(self):
         return self.captured_queue_contents
-        
 
+
+def set_debug():
+    logger.setLevel(logging.DEBUG)
+
+        
 
 def test_mpm(num_parallel_processes=8, num_total_processes=100):
 
