@@ -119,7 +119,8 @@ class PASA_scored_path:
         #print("merged segments: " + str(transcript_exon_segments))
 
         transcript_obj = Transcript(contig_acc, transcript_exon_segments, orient)
-        transcript_obj.set_scored_path_obj(self)
+
+        #transcript_obj.set_scored_path_obj(self)  # commenting out / lightening up object
         
         return transcript_obj
 
