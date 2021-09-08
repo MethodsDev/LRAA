@@ -37,7 +37,7 @@ def main():
     parser.add_argument("--single_best_only", action='store_true', default=False,
                         help="only report the single highest scoring isoform per component")
 
-    parser.add_argument("--min_per_id", type=int, default=98,
+    parser.add_argument("--min_per_id", type=int, default=80,
                         help="minimum percent identity for a read alignment to be incorporated into the splice graph")
 
     parser.add_argument("--CPU", type=int, default=1,
