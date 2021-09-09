@@ -8,6 +8,8 @@ import Simple_path_utils
 from Util_funcs import coordpairs_overlap
 import logging
 from GenomeFeature import Exon
+#from unittest.mock import Mock
+from Splice_graph import Splice_graph
 
 logger = logging.getLogger(__name__)
 
@@ -172,21 +174,29 @@ class MultiPath:
         my_path = self.get_simple_path()
         other_path = other_multipath.get_simple_path()
 
+        # begin in spacer mode because they are unlikely to be aligned.
+        my_path_spacer_mode = True
+        other_path_spacer_mode = True
+        
         while(len(my_path) > 0 and len(other_path) > 0):
             my_node_id = my_path[0]
             if my_node_id == SPACER:
                 my_path.pop(0)
+                my_path_spacer_mode = True
                 continue
             
             other_node_id = other_path[0]
             if other_node_id == SPACER:
                 other_path.pop(0)
+                other_path_spacer_mode = True
                 continue
 
             if my_node_id == other_node_id:
                 # great! advance and continue
                 my_path.pop(0)
                 other_path.pop(0)
+                my_path_spacer_mode = False
+                other_path_spacer_mode = False
                 continue
             
             my_node_obj = self._splice_graph.get_node_obj_via_id(my_node_id)
@@ -196,12 +206,18 @@ class MultiPath:
                 # uh oh, they overlap but they're not the same.
                 return False
 
-            # advance the side that's before the other
-            if my_node_obj.get_coords()[0] < other_node_obj.get_coords()[0]:
-                my_path.pop(0)
             else:
-                other_path.pop(0)
-
+                if not (my_path_spacer_mode or other_path_spacer_mode):
+                    return False
+                            
+                # advance the side that's before the other
+                if other_path_spacer_mode and my_node_obj.get_coords()[0] < other_node_obj.get_coords()[0]:
+                    my_path.pop(0)
+                elif my_path_spacer_mode and my_node_obj.get_coords()[0] > other_node_obj.get_coords()[0]:
+                    other_path.pop(0)
+                else:
+                    return False
+        
         return True # no conflicts detected
     
 
@@ -231,29 +247,59 @@ class MultiPath:
     
         
 
+def test_overlapping_n_compatible():
 
-        
+    sg = Splice_graph()
 
-if __name__ == '__main__':
-
+    #   E1:100-200   E2:300-400      E3:500-600          E4:700-800  
+    #    [-----]     [--------]      [---------]         [--------]
+    #             
     
+    e1 = Exon("contig", 100, 200, 1)
+    e1_ID = e1.get_id()
+    sg._node_id_to_node[ e1_ID ] = e1
+
+    e2 = Exon("contig", 300, 400, 1)
+    e2_ID = e2.get_id()
+    sg._node_id_to_node[ e2_ID ] = e2
+
+    e3 = Exon("contig", 500, 600, 1)
+    e3_ID = e3.get_id()
+    sg._node_id_to_node[ e3_ID ] = e3
+
+    e4 = Exon("contig", 700, 800, 1)
+    e4_ID = e4.get_id()
+    sg._node_id_to_node[ e4_ID ] = e4
+
+    mp1 = MultiPath(sg, [ [e1_ID, e2_ID, e3_ID] ] )
+    mp2 = MultiPath(sg, [ [e2_ID, e3_ID, e4_ID] ])
+
+    assert(mp1.is_overlapping_and_compatible(mp2) == True)
+    assert(mp2.is_overlapping_and_compatible(mp1) == True)
     
-    ## unit tests
+    mp3 = MultiPath(sg, [ [e1_ID, e2_ID, e4_ID] ])
+    assert(mp1.is_overlapping_and_compatible(mp3) == False)
+    assert(mp3.is_overlapping_and_compatible(mp1) == False)
+
+    assert(mp3.is_overlapping_and_compatible(mp2) == False)
+    assert(mp2.is_overlapping_and_compatible(mp3) == False)
+                    
+
+
+def test_merge_paths_to_simple_multi_path():
 
     paths_list = [  ["n1", "n2"],
                           ["n2", "n3"]  ]
     mp = MultiPath._merge_paths_to_simple_multi_path(None, paths_list)
-    print("Path list: {} merged into multipath: {}".format(paths_list, mp))
     assert(mp == ["n1", "n2", "n3"])
 
 
     paths_list = [  ["n1", "n2"],
                           ["n3", "n4"]  ]
     mp = MultiPath._merge_paths_to_simple_multi_path(None, paths_list)
-    print("Path list: {} merged into multipath: {}".format(paths_list, mp))
     assert(mp == ['n1', 'n2', '???', 'n3', 'n4'] )
 
        
-    sys.exit(0)
+
 
     
