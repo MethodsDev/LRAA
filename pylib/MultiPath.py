@@ -251,8 +251,8 @@ def test_overlapping_n_compatible():
 
     sg = Splice_graph()
 
-    #   E1:100-200   E2:300-400      E3:500-600          E4:700-800  
-    #    [-----]     [--------]      [---------]         [--------]
+    #   E1:100-200   E2:300-400      E3:500-600          E4:700-800    E5:900-1000
+    #    [-----]     [--------]      [---------]         [--------]    [---------]
     #             
     
     e1 = Exon("contig", 100, 200, 1)
@@ -271,21 +271,49 @@ def test_overlapping_n_compatible():
     e4_ID = e4.get_id()
     sg._node_id_to_node[ e4_ID ] = e4
 
+    e5 = Exon("contig", 900, 1000, 1)
+    e5_ID = e5.get_id()
+    sg._node_id_to_node[ e5_ID ] = e5
+
+    
     mp1 = MultiPath(sg, [ [e1_ID, e2_ID, e3_ID] ] )
     mp2 = MultiPath(sg, [ [e2_ID, e3_ID, e4_ID] ])
 
+    # test compatible paths - no spacers
     assert(mp1.is_overlapping_and_compatible(mp2) == True)
     assert(mp2.is_overlapping_and_compatible(mp1) == True)
-    
+
+    # test incompatible paths - no spacers
     mp3 = MultiPath(sg, [ [e1_ID, e2_ID, e4_ID] ])
     assert(mp1.is_overlapping_and_compatible(mp3) == False)
     assert(mp3.is_overlapping_and_compatible(mp1) == False)
 
     assert(mp3.is_overlapping_and_compatible(mp2) == False)
     assert(mp2.is_overlapping_and_compatible(mp3) == False)
-                    
+
+    # test compatible paths with spacers
+    mp_sp1 = MultiPath(sg, [ [e1_ID, SPACER, e4_ID] ] ) 
+    mp_sp2 = MultiPath(sg, [ [e1_ID, SPACER, e3_ID, e4_ID] ] ) 
+    assert(mp_sp1.is_overlapping_and_compatible(mp_sp2) == True)
+
+    mp_sp3 = MultiPath(sg, [ [e1_ID, SPACER, e3_ID] ] ) 
+    assert(mp_sp1.is_overlapping_and_compatible(mp_sp3) == True)
+
+    # test incompatible paths with spacers
+    mp4 = MultiPath(sg, [ [e2_ID, e3_ID, e5_ID] ])
+    assert(mp_sp2.is_overlapping_and_compatible(mp4) == False)
+
+    # test multiple spacers
+    mp_sp4 = MultiPath(sg, [ [e1_ID, SPACER, e2_ID, e3_ID, e4_ID, e5_ID] ])
+    mp_sp5 = MultiPath(sg, [ [e1_ID, e2_ID, e3_ID, e4_ID, SPACER, e5_ID] ])
+    assert(mp_sp4.is_overlapping_and_compatible(mp_sp5) == True)
+                       
+    # test incompatible multipel spacers
+    mp_sp6 = MultiPath(sg, [ [e1_ID, e2_ID, e5_ID] ])
+    assert(mp_sp6.is_overlapping_and_compatible(mp_sp4) == False)
 
 
+    
 def test_merge_paths_to_simple_multi_path():
 
     paths_list = [  ["n1", "n2"],
