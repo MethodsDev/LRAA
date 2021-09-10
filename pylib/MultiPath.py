@@ -225,10 +225,8 @@ class MultiPath:
         return(str(self._simple_path))
     
 
-    ################
-    ## Class methods
-    ################
-        
+    
+    @staticmethod
     def multiPath_from_mpgn_list(mpgn_list):
 
         assert(len(mpgn_list) > 0)
