@@ -4,6 +4,9 @@
 import sys, os, re
 from collections import defaultdict
 from PASA_SALRAA_Globals import SPACER
+from Splice_graph import Splice_graph
+from GenomeFeature import Exon
+
 
 # Namespace: Simple_path_utils
 # includes basic functions for evaluating relationships between simple paths in the graph.
@@ -174,10 +177,97 @@ def merge_adjacent_segments(segment_list):
 
 
 
-if __name__ == '__main__':
+def _convert_path_to_nodes_with_coords_list(sg:Splice_graph, simple_path:list) -> list:
 
-    ## run unit tests:
+    node_ids_with_coords_list = list()
+    found_spacer = False
+    for i, node_id in enumerate(simple_path):
+        if node_id != SPACER:
+            lend, rend = sg.get_node_obj_via_id(node_id).get_coords()
+            node_id_w_coords = [node_id, lend, rend]
+            node_ids_with_coords = node_id_w_coords
+            node_ids_with_coords_list.append(node_ids_with_coords)
+        else:
+            found_spacer = True
+            node_ids_with_coords_list.append([SPACER, -1, -1])
 
+
+    if found_spacer:
+        # adjust spacer coordinates to neighboring bounds of nodes.
+        for i, node_info_list in enumerate(node_ids_with_coords_list):
+            if node_info_list[0] == SPACER:
+                node_info_list[1] = node_ids_with_coords_list[i-1][2] + 1
+                node_info_list[2] = node_ids_with_coords_list[i+1][1] -1
+
+    return node_ids_with_coords_list
+
+
+
+def _split_spacers_with_coords(simple_path_w_coords:list) -> list:
+
+    adj_list = list()
+
+    for node_coordset in simple_path_w_coords:
+        node_id, lend, rend = node_coordset
+        if node_id == SPACER:
+            adj_list.append([SPACER, lend, lend])
+            adj_list.append([SPACER, rend, rend])
+        else:
+            adj_list.append(node_coordset)
+
+    return adj_list
+
+
+
+
+def merge_simple_paths_containing_spacers(sg:Splice_graph, simple_path_A:list, simple_path_B:list) -> list:
+
+    """
+    Remove redundancies and adjust SPACER coordinates
+    """
+
+    
+    A_list = _convert_path_to_nodes_with_coords_list(sg, simple_path_A)
+    A_list = _split_spacers_with_coords(A_list)
+    
+    B_list = _convert_path_to_nodes_with_coords_list(sg, simple_path_B)
+    B_list = _split_spacers_with_coords(B_list)
+
+    
+    merged_list = A_list + B_list
+    merged_list = sorted(merged_list, key=lambda x: (x[1], x[2]) )
+
+    adj_merged_list = list()
+    adj_merged_list.append(merged_list.pop(0))
+    
+    for entry in merged_list:
+        prev_entry = adj_merged_list[-1]
+        prev_node_id, prev_lend, prev_rend = prev_entry
+
+        curr_node_id, curr_lend, curr_rend = entry
+
+        if prev_node_id == curr_node_id:
+            if curr_node_id == SPACER:
+                if curr_rend > prev_rend:
+                    prev_entry[2] = curr_rend
+            else:
+                assert(prev_lend == curr_lend and prev_rend == curr_rend)
+
+        else:
+            adj_merged_list.append(entry)
+
+    
+    return adj_merged_list
+
+
+
+###############
+# unit tests ##
+###############
+
+
+def test_are_overlapping_and_compatible_NO_gaps_in_overlap():
+    
     # Tests that should return True
 
     path_a = ["n0", "n1", "n2", "n3", "n4", "n5", "n6"]
@@ -233,6 +323,9 @@ if __name__ == '__main__':
     assert(test is False)
     
 
+
+def test_merge_simple_paths():
+    
     ###################
     ## Test merging paths
 
@@ -258,6 +351,7 @@ if __name__ == '__main__':
     assert(merged_path == ["n1", "n2", "n3", "n4", "n5"])
 
 
+def test_path_A_contains_path_B():
     
     ####################
     ## Test containments
@@ -295,7 +389,44 @@ if __name__ == '__main__':
     assert(test is False)
 
 
-        
-    sys.exit(0)
+
+def test_merge_simple_paths_containing_spacers():
+
+    sg = Splice_graph()
+    e1 = Exon("contig", 100, 200, 1)
+    e1_ID = e1.get_id()
+    sg._node_id_to_node[ e1_ID ] = e1
+
+    e2 = Exon("contig", 300, 400, 1)
+    e2_ID = e2.get_id()
+    sg._node_id_to_node[ e2_ID ] = e2
+
+    e3 = Exon("contig", 500, 600, 1)
+    e3_ID = e3.get_id()
+    sg._node_id_to_node[ e3_ID ] = e3
+
+    e4 = Exon("contig", 700, 800, 1)
+    e4_ID = e4.get_id()
+    sg._node_id_to_node[ e4_ID ] = e4
+
+    e5 = Exon("contig", 900, 1000, 1)
+    e5_ID = e5.get_id()
+    sg._node_id_to_node[ e5_ID ] = e5
+    
+
+    sp1 = [e1_ID, e2_ID, SPACER, e3_ID]
+    sp2 = [e1_ID, SPACER, e2_ID, SPACER, e3_ID, SPACER, e5_ID]
+
+    conv_sp1 = _convert_path_to_nodes_with_coords_list(sg, sp1)
+    conv_sp2 = _convert_path_to_nodes_with_coords_list(sg, sp2)
+
+    #print(str(conv_sp1))
+    #print(str(conv_sp2))
+
+    # mewrge them:
+    merged = merge_simple_paths_containing_spacers(sg, sp1, sp2)
+    print(str(merged))
+
+    assert (merged == [['E:1', 100, 200], ['???', 201, 299], ['E:2', 300, 400], ['???', 401, 499], ['E:3', 500, 600], ['???', 601, 899], ['E:5', 900, 1000]] )
 
     
