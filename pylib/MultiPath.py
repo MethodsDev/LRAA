@@ -45,7 +45,9 @@ class MultiPath:
 
 
     def get_simple_path(self):
-        return(list(self._simple_path)) # send a copy
+        simple_path = self._simple_path.copy() # send a copy
+        simple_path = Simple_path_utils.trim_terminal_spacers(simple_path)
+        return(simple_path)
 
     def get_splice_graph(self):
         return self._splice_graph

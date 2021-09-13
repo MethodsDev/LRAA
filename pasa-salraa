@@ -47,6 +47,8 @@ def main():
                         help='debug mode, more verbose')
 
     parser.add_argument("--mpm_monitor", action='store_true', default=False)
+
+    parser.add_argument("--no_allow_spacers", action='store_true', default=False)
     
     args = parser.parse_args()
     
@@ -64,6 +66,9 @@ def main():
     if args.debug:
         logging.getLogger().setLevel(logging.DEBUG)
         PASA_SALRAA_Globals.DEBUG = True
+
+
+    allow_spacers = not args.no_allow_spacers
         
     run_pasa_salraa(genome_fasta_filename,
                     bam_filename,
@@ -71,7 +76,8 @@ def main():
                     READ_ALN_GAP_MERGE,
                     single_best_only,
                     min_per_id,
-                    CPU)
+                    CPU,
+                    allow_spacers)
     
     
     sys.exit(0)
@@ -83,7 +89,8 @@ def run_pasa_salraa(genome_fasta_filename, bam_file, output_filename,
                     read_aln_gap_merge,
                     single_best_only,
                     min_per_id,
-                    CPU):
+                    CPU,
+                    allow_spacers):
 
     # data structures want:
     # ultimately exons and introns
@@ -111,7 +118,7 @@ def run_pasa_salraa(genome_fasta_filename, bam_file, output_filename,
         sg.write_intron_exon_splice_graph_bed_files("prereconstruct.{}.pad1".format(contig_acc), pad=1)
         
         pasa_salraa_obj = PASA_SALRAA(sg, CPU)
-        pasa_salraa_obj.build_multipath_graph(contig_acc, contig_seq_str, bam_file)
+        pasa_salraa_obj.build_multipath_graph(contig_acc, contig_seq_str, bam_file, allow_spacers)
         transcripts = pasa_salraa_obj.reconstruct_isoforms(single_best_only)
 
         logger.info("writing gtf output for {} containing {} transcripts".format(contig_acc, len(transcripts)))

@@ -271,6 +271,9 @@ def simple_paths_overlap(sg:Splice_graph, simple_path_A:list, simple_path_B:list
 
     # only checks bounding coordinates for overlaps
     
+    simple_path_A = trim_terminal_spacers(simple_path_A.copy())
+    simple_path_B = trim_terminal_spacers(simple_path_B.copy())
+
     path_A_lend = sg.get_node_obj_via_id(simple_path_A[0]).get_coords()[0]
     path_A_rend = sg.get_node_obj_via_id(simple_path_A[-1]).get_coords()[1]
 
@@ -278,6 +281,19 @@ def simple_paths_overlap(sg:Splice_graph, simple_path_A:list, simple_path_B:list
     path_B_rend = sg.get_node_obj_via_id(simple_path_B[-1]).get_coords()[1]
 
     return path_A_lend < path_B_rend and path_A_rend > path_B_lend
+
+
+def trim_terminal_spacers(simple_path:list) -> list:
+
+    if simple_path[0] == SPACER:
+        simple_path.pop(0)
+
+    if simple_path[-1] == SPACER:
+        simple_path.pop()
+
+    return simple_path
+
+    
 
 
 
@@ -529,3 +545,18 @@ def test_merge_simple_paths_containing_spacers():
     assert (merged == ['E:1', '???', 'E:2', '???', 'E:3', '???', 'E:5'] )
 
     
+
+def test_trim_terminal_spacers():
+
+    simple_path_A = [SPACER, "a", "b", "c"]
+
+    assert(trim_terminal_spacers(simple_path_A) == ["a", "b", "c"] )
+
+    simple_path_B = ["a", "b", "c", SPACER]
+
+    assert(trim_terminal_spacers(simple_path_B) == ["a", "b", "c"] )
+
+    simple_path_C = [SPACER, "a", "b", "c", SPACER]
+
+    assert(trim_terminal_spacers(simple_path_C) == ["a", "b", "c"] )
+

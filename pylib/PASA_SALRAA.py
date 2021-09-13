@@ -46,11 +46,11 @@ class PASA_SALRAA:
         return
 
 
-    def build_multipath_graph(self, contig_acc, contig_seq, bam_file):
+    def build_multipath_graph(self, contig_acc, contig_seq, bam_file, allow_spacers=False):
 
         mp_counter = self._populate_read_multi_paths(contig_acc, contig_seq, bam_file)
 
-        multipath_graph = MultiPathGraph(mp_counter, self._splice_graph, PASA_SALRAA.min_mpgn_read_count)
+        multipath_graph = MultiPathGraph(mp_counter, self._splice_graph, PASA_SALRAA.min_mpgn_read_count, allow_spacers)
         self._multipath_graph = multipath_graph
 
         ## debugging info
