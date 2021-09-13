@@ -112,3 +112,7 @@ class Exon(GenomeFeature):
         return("Exon: {} {}-{} mean_cov:{}".format(self._id, self._lend, self._rend, self._mean_coverage))
 
 
+    @classmethod
+    def reset_counter(cls):
+        cls.exon_id_counter = 0
+

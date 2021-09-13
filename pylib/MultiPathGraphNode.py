@@ -200,11 +200,12 @@ class MultiPathGraphNode:
 
     
     def contains_other_node(self, other_node):
-        if Simple_path_utils.path_A_contains_path_B(self.get_simple_path(), other_node.get_simple_path()):
+        #if Simple_path_utils.path_A_contains_path_B(self.get_simple_path(), other_node.get_simple_path()):
+        if Simple_path_utils.simple_path_A_contains_and_compatible_with_simple_path_B(self.get_splice_graph(), self.get_simple_path(), other_node.get_simple_path()):
             return True
         else:
             return False
-
+    
     def compatible(self, other_node):
         if self._multiPath.is_overlapping_and_compatible(other_node._multiPath):
             return True

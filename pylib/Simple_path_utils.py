@@ -6,7 +6,7 @@ from collections import defaultdict
 from PASA_SALRAA_Globals import SPACER
 from Splice_graph import Splice_graph
 from GenomeFeature import Exon
-
+from Util_funcs import coordpairs_overlap
 
 # Namespace: Simple_path_utils
 # includes basic functions for evaluating relationships between simple paths in the graph.
@@ -256,8 +256,106 @@ def merge_simple_paths_containing_spacers(sg:Splice_graph, simple_path_A:list, s
         else:
             adj_merged_list.append(entry)
 
+
+    # need simple path to return
+    simple_path_ret = list()
+    for entry in adj_merged_list:
+        simple_path_ret.append(entry[0])
+
+            
+    return simple_path_ret
+
+
+
+def simple_paths_overlap(sg:Splice_graph, simple_path_A:list, simple_path_B:list) -> bool:
+
+    # only checks bounding coordinates for overlaps
     
-    return adj_merged_list
+    path_A_lend = sg.get_node_obj_via_id(simple_path_A[0]).get_coords()[0]
+    path_A_rend = sg.get_node_obj_via_id(simple_path_A[-1]).get_coords()[1]
+
+    path_B_lend = sg.get_node_obj_via_id(simple_path_B[0]).get_coords()[0]
+    path_B_rend = sg.get_node_obj_via_id(simple_path_B[-1]).get_coords()[1]
+
+    return path_A_lend < path_B_rend and path_A_rend > path_B_lend
+
+
+
+def simple_path_A_within_bounds_of_simple_path_B(sg:Splice_graph, simple_path_A:list, simple_path_B:list) -> bool:
+
+    # only checks bounding coordinates for overlaps
+    
+    path_A_lend = sg.get_node_obj_via_id(simple_path_A[0]).get_coords()[0]
+    path_A_rend = sg.get_node_obj_via_id(simple_path_A[-1]).get_coords()[1]
+
+    path_B_lend = sg.get_node_obj_via_id(simple_path_B[0]).get_coords()[0]
+    path_B_rend = sg.get_node_obj_via_id(simple_path_B[-1]).get_coords()[1]
+
+    return path_A_lend >= path_B_lend and path_A_rend <= path_B_rend
+    
+
+
+def simple_path_A_contains_and_compatible_with_simple_path_B(sg:Splice_graph, simple_path_A:list, simple_path_B:list) -> bool: 
+
+    return simple_path_A_within_bounds_of_simple_path_B(sg, simple_path_B, simple_path_A) and simple_paths_overlap_and_compatible_spacer_aware(sg, simple_path_A, simple_path_B)
+
+
+def simple_paths_overlap_and_compatible_spacer_aware(sg:Splice_graph, simple_path_A:list, simple_path_B:list) -> bool:
+
+    if not simple_paths_overlap(sg, simple_path_A, simple_path_B):
+        return False
+
+
+    # begin in spacer mode because they are unlikely to be aligned.
+    my_path_spacer_mode = True
+    other_path_spacer_mode = True
+
+    my_path = simple_path_A.copy()
+    other_path = simple_path_B.copy()
+    
+    while(len(my_path) > 0 and len(other_path) > 0):
+        my_node_id = my_path[0]
+        if my_node_id == SPACER:
+            my_path.pop(0)
+            my_path_spacer_mode = True
+            continue
+
+        other_node_id = other_path[0]
+        if other_node_id == SPACER:
+            other_path.pop(0)
+            other_path_spacer_mode = True
+            continue
+
+        if my_node_id == other_node_id:
+            # great! advance and continue
+            my_path.pop(0)
+            other_path.pop(0)
+            my_path_spacer_mode = False
+            other_path_spacer_mode = False
+            continue
+
+        my_node_obj = sg.get_node_obj_via_id(my_node_id)
+        other_node_obj = sg.get_node_obj_via_id(other_node_id)
+
+        if coordpairs_overlap(my_node_obj.get_coords(), other_node_obj.get_coords()):
+            # uh oh, they overlap but they're not the same.
+            return False
+
+        else:
+            if not (my_path_spacer_mode or other_path_spacer_mode):
+                return False
+
+            # advance the side that's before the other
+            if other_path_spacer_mode and my_node_obj.get_coords()[0] < other_node_obj.get_coords()[0]:
+                my_path.pop(0)
+            elif my_path_spacer_mode and my_node_obj.get_coords()[0] > other_node_obj.get_coords()[0]:
+                other_path.pop(0)
+            else:
+                return False
+
+    return True # no conflicts detected
+
+
 
 
 
@@ -427,6 +525,7 @@ def test_merge_simple_paths_containing_spacers():
     merged = merge_simple_paths_containing_spacers(sg, sp1, sp2)
     print(str(merged))
 
-    assert (merged == [['E:1', 100, 200], ['???', 201, 299], ['E:2', 300, 400], ['???', 401, 499], ['E:3', 500, 600], ['???', 601, 899], ['E:5', 900, 1000]] )
+    #assert (merged == [['E:1', 100, 200], ['???', 201, 299], ['E:2', 300, 400], ['???', 401, 499], ['E:3', 500, 600], ['???', 601, 899], ['E:5', 900, 1000]] )
+    assert (merged == ['E:1', '???', 'E:2', '???', 'E:3', '???', 'E:5'] )
 
     
