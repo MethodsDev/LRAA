@@ -8,6 +8,7 @@ import string
 import pysam
 from collections import defaultdict
 from Pretty_alignment import Pretty_alignment
+import PASA_SALRAA_Globals
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +26,7 @@ class Bam_alignment_extractor:
 
         self._read_aln_gap_merge_int = 10 ## internal alignment gap merging
         self._min_terminal_splice_exon_anchor_length = 15
-        self._min_read_aln_per_id = 98
+
 
         self._alignments_bam_filename = alignments_bam_filename
 
@@ -41,7 +42,7 @@ class Bam_alignment_extractor:
         return
     
     
-    def get_read_alignments(self, contig_acc, pretty=False):        
+    def get_read_alignments(self, contig_acc, pretty=False, min_per_id = 98):        
 
         discarded_read_counter = defaultdict(int)
 
@@ -78,7 +79,8 @@ class Bam_alignment_extractor:
             if mismatch_count is not None:
                 per_id = 100 - (mismatch_count/aligned_base_count)*100
                 #logger.info(f"-read per_id: {per_id}")
-                if per_id < self._min_read_aln_per_id:
+                if per_id < min_per_id:
+                    logger.debug("read {} has insufficient per_id {}".format(read.query_name, per_id))
                     discarded_read_counter["low_perID"] += 1
                     #print(read)
                     #print("Cigar_stats: " + str(cigar_stats))
@@ -149,7 +151,5 @@ class Bam_alignment_extractor:
         return alignment_segments
     
 
-    def set_min_per_id(self, min_per_id):
-        self._min_read_aln_per_id = min_per_id
 
         

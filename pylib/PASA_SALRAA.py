@@ -204,8 +204,8 @@ class PASA_SALRAA:
     def _populate_read_multi_paths(self, contig_acc, contig_seq, bam_file):
 
         bam_extractor = Bam_alignment_extractor(bam_file)
-        pretty_alignments = bam_extractor.get_read_alignments(contig_acc, pretty=True)
-
+        pretty_alignments = bam_extractor.get_read_alignments(contig_acc, pretty=True, min_per_id = self.get_splice_graph().get_min_per_id())
+        
         grouped_alignments = self._group_alignments_by_read_name(pretty_alignments)
 
         logger.info("-got {} pretty alignments grouped into {} alignment groups.".format(len(pretty_alignments), len(grouped_alignments)))
@@ -552,7 +552,8 @@ class PASA_SALRAA:
 
         return
     
-        
-def ladeda(q, stuff):
-    q.put("yowzer!")
-    
+
+    def get_splice_graph(self):
+        return self._splice_graph
+
+
