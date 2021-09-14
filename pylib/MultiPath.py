@@ -143,7 +143,11 @@ class MultiPath:
                     seed_asm = assembled_paths[-1] = Simple_path_utils.merge_simple_paths_containing_spacers(sg, seed_asm, other_path)
                     merged_flag = True
                 elif Simple_path_utils.simple_paths_overlap(sg, seed_asm, other_path):
-                    logger.warning("-warning: multipath subpaths overlap but contain spacers or are incompatible")
+                    #logger.warning("-warning: multipath subpaths overlap but contain spacers or are incompatible")
+                    #logger.warning("A: {}\nB:{}".format(seed_asm, other_path))
+                    # use the longer one.
+                    seed_asm = assembled_paths[-1] = seed_asm if len(seed_asm) > len(other_path) else other_path
+                    # //FIXME: should use better criteria than this above.
                     
                 else:
                     unmerged_paths.append(other_path)
@@ -166,6 +170,9 @@ class MultiPath:
             if i != len(assembled_paths) -1:
                 simple_multipath.append(SPACER)
 
+
+        simple_multipath = Simple_path_utils.trim_terminal_spacers(simple_multipath)
+                
         return simple_multipath
 
 

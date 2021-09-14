@@ -285,15 +285,16 @@ def simple_paths_overlap(sg:Splice_graph, simple_path_A:list, simple_path_B:list
 
 def trim_terminal_spacers(simple_path:list) -> list:
 
-    if simple_path[0] == SPACER:
-        simple_path.pop(0)
 
-    if simple_path[-1] == SPACER:
+    # trim any terminal spacer
+    while len(simple_path) > 0  and simple_path[-1] == SPACER:
         simple_path.pop()
-
-    return simple_path
-
+        
+    # trim any initial spacer
+    while len(simple_path) > 0 and simple_path[0] == SPACER:
+        simple_path.pop(0)
     
+    return simple_path
 
 
 

@@ -40,6 +40,8 @@ class MultiPathGraph:
 
             if (not allow_spacers) and SPACER in mp:
                 continue
+
+            #print("mp: {}, count {}".format(mp, count))
             
             first_node_id = mp[0]
             last_node_id = mp[-1]

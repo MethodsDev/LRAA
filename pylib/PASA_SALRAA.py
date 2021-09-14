@@ -219,8 +219,11 @@ class PASA_SALRAA:
             paths_list = list()
             for pretty_alignment in grouped_alignments[read_name]:
                 path = self._map_read_to_graph(pretty_alignment.get_pretty_alignment_segments())
+                                    
                 #print("pretty_alignment: {} maps to graph path: {}".format(pretty_alignment, path))
                 if path and path != SPACER:
+                    assert(path[0] != SPACER)
+                    assert(path[-1] != SPACER)
                     paths_list.append(path)
 
             mp = None
@@ -302,8 +305,8 @@ class PASA_SALRAA:
 
         # trim any terminal spacer
         while len(path) > 0  and path[-1] == SPACER:
-            path = path[:-1]
-
+            path.pop()
+        
         # trim any initial spacer
         while len(path) > 0 and path[0] == SPACER:
             path.pop(0)
