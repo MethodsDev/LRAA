@@ -179,6 +179,8 @@ def merge_adjacent_segments(segment_list):
 
 def _convert_path_to_nodes_with_coords_list(sg:Splice_graph, simple_path:list) -> list:
 
+    simple_path = trim_terminal_spacers(simple_path.copy())
+    
     node_ids_with_coords_list = list()
     found_spacer = False
     for i, node_id in enumerate(simple_path):
@@ -194,6 +196,7 @@ def _convert_path_to_nodes_with_coords_list(sg:Splice_graph, simple_path:list) -
 
     if found_spacer:
         # adjust spacer coordinates to neighboring bounds of nodes.
+        #print(node_ids_with_coords_list)
         for i, node_info_list in enumerate(node_ids_with_coords_list):
             if node_info_list[0] == SPACER:
                 node_info_list[1] = node_ids_with_coords_list[i-1][2] + 1

@@ -220,7 +220,7 @@ class PASA_SALRAA:
             for pretty_alignment in grouped_alignments[read_name]:
                 path = self._map_read_to_graph(pretty_alignment.get_pretty_alignment_segments())
                                     
-                #print("pretty_alignment: {} maps to graph path: {}".format(pretty_alignment, path))
+                logger.debug("pretty_alignment: {} maps to graph path: {}".format(pretty_alignment, path))
                 if path and path != SPACER:
                     assert(path[0] != SPACER)
                     assert(path[-1] != SPACER)
@@ -229,7 +229,7 @@ class PASA_SALRAA:
             mp = None
             if paths_list:
                 mp = MultiPath(self._splice_graph, paths_list)
-                #print("paths_list: {} -> mp: {}".format(paths_list, mp))
+                logger.debug("paths_list: {} -> mp: {}".format(paths_list, mp))
                 mp_counter.add(mp)
 
             read_graph_mappings_ofh.write("\t".join([read_name, str(pretty_alignment), str(mp)]) + "\n")
@@ -279,9 +279,9 @@ class PASA_SALRAA:
                 if not path_part:
                     path_part = [SPACER]
                 terminal_segment = self._map_segment_to_graph_TERMINAL(segment)
-                if not terminal_segment:
+                if not terminal_segment and path_part != [SPACER]:
                     terminal_segment = [SPACER]
-                path_part.extend(terminal_segment)
+                    path_part.extend(terminal_segment)
             else:
                 # internal segment
                 #   first, get preceding intron
@@ -289,11 +289,11 @@ class PASA_SALRAA:
                 if not path_part:
                     path_part = [SPACER]
                 internal_segment = self._map_segment_to_graph_INTERNAL(segment)
-                if not internal_segment:
+                if not internal_segment and path_part != [SPACER]:
                     internal_segment = [SPACER]
                 path_part.extend(internal_segment)
 
-            #print("segment: {}  mapped to {}".format(segment, path_part))
+            logger.debug("segment: {}  mapped to {}".format(segment, path_part))
                     
             if path_part:
                 path.extend(path_part)
@@ -313,6 +313,7 @@ class PASA_SALRAA:
             
 
         if SPACER in path:
+            path = self._remove_stutters(path)
             path = self._try_easy_fill_spacers(path)
             
             
@@ -400,6 +401,32 @@ class PASA_SALRAA:
 
         return path
 
+
+    def _remove_stutters(self, path):
+
+        new_path = list()
+        
+        for i, node_id in enumerate(path):
+            if node_id != SPACER:
+                if len(new_path) == 0:
+                    new_path.append(node_id)
+                elif new_path[-1] != SPACER:
+                    if new_path[-1] != node_id:
+                        new_path.append(node_id)
+                elif new_path[-1] == SPACER and len(new_path) > 1 and new_path[-2] != node_id:
+                    new_path.append(node_id)
+            # it is a spacer
+            elif len(new_path) > 0:
+                if new_path[-1] != SPACER:
+                    new_path.append(SPACER)
+
+        new_path = Simple_path_utils.trim_terminal_spacers(new_path)
+                    
+        logger.debug("{} -> {}".format(path, new_path))
+
+        return(new_path)
+    
+        
 
     def _try_easy_fill_spacers(self, path):
 
