@@ -27,7 +27,7 @@ class Splice_graph:
     _max_genomic_contig_length = 1e10
 
     # noise filtering params
-    _min_alt_splice_freq = 0.05
+    _min_alt_splice_freq = 0.01
     _min_alt_unspliced_freq = 0.20
     _max_intron_length_for_exon_segment_filtering = 10000
     _min_intron_support = 1
@@ -401,8 +401,9 @@ class Splice_graph:
             for alt_intron in intron_list:
                 alt_intron_abundance = alt_intron.get_read_support()
                 alt_intron_relative_freq = alt_intron_abundance / most_supported_intron_abundance
-                #print("alt intron: {}".format(alt_intron) + " has rel freq: {}".format(alt_intron_relative_freq))
+
                 if (alt_intron_relative_freq < Splice_graph._min_alt_splice_freq):
+                    logger.debug("alt intron: {}".format(alt_intron) + " has rel freq: {}".format(alt_intron_relative_freq))
                     introns_to_delete.add(alt_intron)
 
         logger.info("removing {} low frequency introns with shared {} coord".format(len(introns_to_delete), left_or_right))
