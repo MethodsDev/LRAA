@@ -281,6 +281,7 @@ class PASA_SALRAA:
                 terminal_segment = self._map_segment_to_graph_TERMINAL(segment)
                 if not terminal_segment and path_part != [SPACER]:
                     terminal_segment = [SPACER]
+                if terminal_segment:
                     path_part.extend(terminal_segment)
             else:
                 # internal segment
@@ -291,7 +292,8 @@ class PASA_SALRAA:
                 internal_segment = self._map_segment_to_graph_INTERNAL(segment)
                 if not internal_segment and path_part != [SPACER]:
                     internal_segment = [SPACER]
-                path_part.extend(internal_segment)
+                if internal_segment:
+                    path_part.extend(internal_segment)
 
             logger.debug("segment: {}  mapped to {}".format(segment, path_part))
                     
