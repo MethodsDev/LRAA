@@ -317,11 +317,77 @@ def simple_path_A_within_bounds_of_simple_path_B(sg:Splice_graph, simple_path_A:
 
 def simple_path_A_contains_and_compatible_with_simple_path_B(sg:Splice_graph, simple_path_A:list, simple_path_B:list) -> bool: 
 
-    return simple_path_A_within_bounds_of_simple_path_B(sg, simple_path_B, simple_path_A) and simple_paths_overlap_and_compatible_spacer_aware(sg, simple_path_A, simple_path_B)
+    return simple_path_A_within_bounds_of_simple_path_B(sg, simple_path_B, simple_path_A) and simple_paths_overlap_and_compatible_spacefree_region_path_A(sg, simple_path_A, simple_path_B)
 
 
-def simple_paths_overlap_and_compatible_spacer_aware(sg:Splice_graph, simple_path_A:list, simple_path_B:list) -> bool:
 
+def simple_paths_overlap_and_compatible_spacefree_region_path_A(sg:Splice_graph, simple_path_A:list, simple_path_B:list) -> bool:
+
+    ## perform compatibility analysis, require no spaces in path A region of overlap, but ok if in path B
+
+    if not simple_paths_overlap(sg, simple_path_A, simple_path_B):
+        return False
+
+    # begin in spacer mode because they are unlikely to be aligned.
+    my_path_spacer_mode = True
+    other_path_spacer_mode = True
+
+    my_path = simple_path_A.copy()
+    other_path = simple_path_B.copy()
+
+    alignment_started = False
+    
+    while(len(my_path) > 0 and len(other_path) > 0):
+        my_node_id = my_path[0]
+        if my_node_id == SPACER:
+            my_path.pop(0)
+            my_path_spacer_mode = True
+            if alignment_started:
+                return False
+            continue
+
+        other_node_id = other_path[0]
+        if other_node_id == SPACER:
+            other_path.pop(0)
+            other_path_spacer_mode = True
+            continue
+
+        if my_node_id == other_node_id:
+            # great! advance and continue
+            my_path.pop(0)
+            other_path.pop(0)
+            my_path_spacer_mode = False
+            other_path_spacer_mode = False
+            alignment_started = True
+            continue
+
+        my_node_obj = sg.get_node_obj_via_id(my_node_id)
+        other_node_obj = sg.get_node_obj_via_id(other_node_id)
+
+        if coordpairs_overlap(my_node_obj.get_coords(), other_node_obj.get_coords()):
+            # uh oh, they overlap but they're not the same.
+            return False
+
+        else:
+            if not (my_path_spacer_mode or other_path_spacer_mode):
+                return False
+
+            # advance the side that's before the other
+            if other_path_spacer_mode and my_node_obj.get_coords()[0] < other_node_obj.get_coords()[0]:
+                my_path.pop(0)
+            elif my_path_spacer_mode and my_node_obj.get_coords()[0] > other_node_obj.get_coords()[0]:
+                other_path.pop(0)
+            else:
+                return False
+
+    return True # no conflicts detected
+    
+
+
+def simple_paths_overlap_and_compatible_spacer_aware_both_paths(sg:Splice_graph, simple_path_A:list, simple_path_B:list) -> bool:
+
+    ## perform compatibility analysis allowing spacers to appear in both paths and within overlapping regions of paths
+    
     if not simple_paths_overlap(sg, simple_path_A, simple_path_B):
         return False
 
@@ -508,9 +574,136 @@ def test_path_A_contains_path_B():
 
 
 
+def  __get_dummy_splice_graph():
+    
+    sg = Splice_graph()
+
+    Exon.reset_counter()
+    
+    
+    #   E1:100-200   E2:300-400      E3:500-600          E4:700-800    E5:900-1000
+    #    [-----]     [--------]      [---------]         [--------]    [---------]
+    #             
+    
+    e1 = Exon("contig", 100, 200, 1)
+    e1_ID = e1.get_id()
+    sg._node_id_to_node[ e1_ID ] = e1
+    
+    
+    e2 = Exon("contig", 300, 400, 1)
+    e2_ID = e2.get_id()
+    sg._node_id_to_node[ e2_ID ] = e2
+
+    e3 = Exon("contig", 500, 600, 1)
+    e3_ID = e3.get_id()
+    sg._node_id_to_node[ e3_ID ] = e3
+
+    e4 = Exon("contig", 700, 800, 1)
+    e4_ID = e4.get_id()
+    sg._node_id_to_node[ e4_ID ] = e4
+
+    e5 = Exon("contig", 900, 1000, 1)
+    e5_ID = e5.get_id()
+    sg._node_id_to_node[ e5_ID ] = e5
+
+    #print(str(sg._node_id_to_node))
+        
+    return sg
+
+def test_overlapping_n_compatible_spacers_aware_both_paths():
+
+    sg = __get_dummy_splice_graph()
+
+    p1 = ['E:1', 'E:2', 'E:3']
+    p2 = ['E:2', 'E:3', 'E:4'] 
+    
+    # test compatible paths - no spacers
+    assert(simple_paths_overlap_and_compatible_spacer_aware_both_paths(sg, p1, p2)  == True)
+    assert(simple_paths_overlap_and_compatible_spacer_aware_both_paths(sg, p2, p1) == True)
+
+    # test incompatible paths - no spacers
+    p3 = ['E:1', 'E:2', 'E:4']
+    assert(simple_paths_overlap_and_compatible_spacer_aware_both_paths(sg, p1, p3) == False)
+    assert(simple_paths_overlap_and_compatible_spacer_aware_both_paths(sg, p3, p1) == False)
+    
+    # test compatible paths with spacers
+    sp1 = ['E:1', SPACER, 'E:4'] 
+    sp2 = ['E:1', SPACER, 'E:3', 'E:4'] 
+    assert(simple_paths_overlap_and_compatible_spacer_aware_both_paths(sg, sp1, sp2) == True)
+
+    sp3 = ['E:1', SPACER, 'E:3']
+    assert(simple_paths_overlap_and_compatible_spacer_aware_both_paths(sg, sp1, sp3) == True)
+
+    # test incompatible paths with spacers
+    p4 = ['E:2', 'E:3', 'E:5']
+    assert(simple_paths_overlap_and_compatible_spacer_aware_both_paths(sg, sp2, p4) == False)
+    
+    # test multiple spacers
+    sp4 = ['E:1', SPACER, 'E:2', 'E:3', 'E:4', 'E:5']
+    sp5 = ['E:1', 'E:2', 'E:3', 'E:4', SPACER, 'E:5']
+    assert(simple_paths_overlap_and_compatible_spacer_aware_both_paths(sg, sp4, sp5) == True)
+    
+    # test incompatible multipel spacers
+    p5 = ['E:1', 'E:2', 'E:5']
+    assert(simple_paths_overlap_and_compatible_spacer_aware_both_paths(sg, p5, sp4) == False)
+
+
+
+def test_simple_paths_overlap_and_compatible_spacefree_region_path_A():
+    
+    sg = __get_dummy_splice_graph()
+
+    p1 = ['E:1', 'E:2', 'E:3']
+    p2 = ['E:2', 'E:3', 'E:4'] 
+    
+    # test compatible paths - no spacers
+    assert(simple_paths_overlap_and_compatible_spacefree_region_path_A(sg, p1, p2)  == True)
+    assert(simple_paths_overlap_and_compatible_spacefree_region_path_A(sg, p2, p1) == True)
+
+    # test incompatible paths - no spacers
+    p3 = ['E:1', 'E:2', 'E:4']
+    assert(simple_paths_overlap_and_compatible_spacefree_region_path_A(sg, p1, p3) == False)
+    assert(simple_paths_overlap_and_compatible_spacefree_region_path_A(sg, p3, p1) == False)
+    
+    # test compatible paths with spacers
+    sp1 = ['E:1', SPACER, 'E:4'] 
+    sp2 = ['E:1', SPACER, 'E:3', 'E:4'] 
+    assert(simple_paths_overlap_and_compatible_spacefree_region_path_A(sg, sp1, sp2) == False) ## 
+
+    sp3 = ['E:1', SPACER, 'E:3']
+    assert(simple_paths_overlap_and_compatible_spacefree_region_path_A(sg, sp1, sp3) == False) ##
+
+    # test incompatible paths with spacers
+    p4 = ['E:2', 'E:3', 'E:5']
+    assert(simple_paths_overlap_and_compatible_spacefree_region_path_A(sg, sp2, p4) == False)
+    
+    # test multiple spacers
+    sp4 = ['E:1', SPACER, 'E:2', 'E:3', 'E:4', 'E:5']
+    sp5 = ['E:1', 'E:2', 'E:3', 'E:4', SPACER, 'E:5']
+    assert(simple_paths_overlap_and_compatible_spacefree_region_path_A(sg, sp4, sp5) == False) ##
+    
+    # test incompatible multiple spacers
+    p5 = ['E:1', 'E:2', 'E:5']
+    assert(simple_paths_overlap_and_compatible_spacefree_region_path_A(sg, p5, sp4) == False)
+
+
+    # test additional specialized cases
+    
+    assert(simple_paths_overlap_and_compatible_spacefree_region_path_A(sg, sp5, p1) == True)
+
+    sp6 = ['E:2', 'E:3', 'E:4', SPACER, 'E:5']
+    assert(simple_paths_overlap_and_compatible_spacefree_region_path_A(sg, sp6, p1) == True)
+
+    p6 = ['E:3', 'E:4', 'E:5']
+    assert(simple_paths_overlap_and_compatible_spacefree_region_path_A(sg, p6, sp6) == True)
+    assert(simple_paths_overlap_and_compatible_spacefree_region_path_A(sg, sp6, p6) == False)
+
+    
 def test_merge_simple_paths_containing_spacers():
 
     sg = Splice_graph()
+    Exon.reset_counter()
+    
     e1 = Exon("contig", 100, 200, 1)
     e1_ID = e1.get_id()
     sg._node_id_to_node[ e1_ID ] = e1
@@ -548,6 +741,9 @@ def test_merge_simple_paths_containing_spacers():
     #assert (merged == [['E:1', 100, 200], ['???', 201, 299], ['E:2', 300, 400], ['???', 401, 499], ['E:3', 500, 600], ['???', 601, 899], ['E:5', 900, 1000]] )
     assert (merged == ['E:1', '???', 'E:2', '???', 'E:3', '???', 'E:5'] )
 
+
+
+    
     
 
 def test_trim_terminal_spacers():

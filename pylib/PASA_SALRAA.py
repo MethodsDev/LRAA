@@ -195,6 +195,7 @@ class PASA_SALRAA:
             #print(transcript_obj)
             if transcript_obj is not None:
                 transcripts.append(transcript_obj)
+                logger.debug("-assembled: {}".format(str(transcript_obj)))
 
         q.put(transcripts)
         
@@ -423,9 +424,10 @@ class PASA_SALRAA:
                     new_path.append(SPACER)
 
         new_path = Simple_path_utils.trim_terminal_spacers(new_path)
-                    
-        logger.debug("{} -> {}".format(path, new_path))
 
+        if new_path != path:
+            logger.debug("{} -> {}".format(path, new_path))
+        
         return(new_path)
     
         

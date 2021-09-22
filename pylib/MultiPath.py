@@ -139,7 +139,7 @@ class MultiPath:
                     seed_asm = assembled_paths[-1] = merged_asm
                     merged_flag = True
                     
-                elif Simple_path_utils.simple_paths_overlap_and_compatible_spacer_aware(sg, seed_asm, other_path):
+                elif Simple_path_utils.simple_paths_overlap_and_compatible_spacer_aware_both_paths(sg, seed_asm, other_path):
                     seed_asm = assembled_paths[-1] = Simple_path_utils.merge_simple_paths_containing_spacers(sg, seed_asm, other_path)
                     merged_flag = True
                 elif Simple_path_utils.simple_paths_overlap(sg, seed_asm, other_path):
@@ -202,7 +202,7 @@ class MultiPath:
         my_path = self.get_simple_path()
         other_path = other_multipath.get_simple_path()
 
-        return Simple_path_utils.simple_paths_overlap_and_compatible_spacer_aware(self.get_splice_graph(), my_path, other_path)
+        return Simple_path_utils.simple_paths_overlap_and_compatible_spacefree_region_path_A(self.get_splice_graph(), my_path, other_path)
 
     
 
@@ -290,10 +290,10 @@ def test_overlapping_n_compatible():
     # test compatible paths with spacers
     mp_sp1 = MultiPath(sg, [ ['E:1', SPACER, 'E:4'] ] ) 
     mp_sp2 = MultiPath(sg, [ ['E:1', SPACER, 'E:3', 'E:4'] ] ) 
-    assert(mp_sp1.is_overlapping_and_compatible(mp_sp2) == True)
-
+    assert(mp_sp1.is_overlapping_and_compatible(mp_sp2) == False)
+    
     mp_sp3 = MultiPath(sg, [ ['E:1', SPACER, 'E:3'] ] ) 
-    assert(mp_sp1.is_overlapping_and_compatible(mp_sp3) == True)
+    assert(mp_sp1.is_overlapping_and_compatible(mp_sp3) == False)
 
     # test incompatible paths with spacers
     mp4 = MultiPath(sg, [ ['E:2', 'E:3', 'E:5'] ])
@@ -302,7 +302,7 @@ def test_overlapping_n_compatible():
     # test multiple spacers
     mp_sp4 = MultiPath(sg, [ ['E:1', SPACER, 'E:2', 'E:3', 'E:4', 'E:5'] ])
     mp_sp5 = MultiPath(sg, [ ['E:1', 'E:2', 'E:3', 'E:4', SPACER, 'E:5'] ])
-    assert(mp_sp4.is_overlapping_and_compatible(mp_sp5) == True)
+    assert(mp_sp4.is_overlapping_and_compatible(mp_sp5) == False)
     
     # test incompatible multipel spacers
     mp_sp6 = MultiPath(sg, [ ['E:1', 'E:2', 'E:5'] ])
