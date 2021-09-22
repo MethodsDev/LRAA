@@ -14,6 +14,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+NORMALIZE_SCORES_BY_SEQ_LENGTH = False
 MIN_WEIGHT = 0.01
 
 class MultiPathGraphNode:
@@ -96,7 +97,10 @@ class MultiPathGraphNode:
     
     def get_score_EXCLUDE_containments(self, use_prev_weight=False):
         weight = self._prev_weight if use_prev_weight else self._weight
-        score = self._count * weight / self._seq_length  # normalize read count by feature length
+        score = self._count * weight
+        if NORMALIZE_SCORES_BY_SEQ_LENGTH:
+            score = score / self._seq_length  # normalize read count by feature length
+
         return score
     
     def get_score_INCLUDE_containments(self, use_prev_weight=False, mpgn_ignore=set()):
@@ -116,7 +120,10 @@ class MultiPathGraphNode:
                 weight = node._prev_weight if use_prev_weight else node._weight
                 total_counts += node._count * weight
         
-        score = total_counts / self._seq_length  # normalize read count by feature length
+        score = total_counts
+
+        if NORMALIZE_SCORES_BY_SEQ_LENGTH:
+            score = score / self._seq_length  # normalize read count by feature length
                 
         return score
         
@@ -192,7 +199,7 @@ class MultiPathGraphNode:
         if len(self._containments) > 0:
             return True
         else:
-            return False
+             return False
     
         
     def get_containments(self):

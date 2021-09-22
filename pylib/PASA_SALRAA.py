@@ -472,6 +472,8 @@ class PASA_SALRAA:
     
     def _build_trellis(self, mpg_component):
 
+        logger.debug("-building trellis")
+        
         mpg = self._multipath_graph
 
         nodes = sorted(mpg_component, key=lambda x: x._lend)
@@ -511,6 +513,8 @@ class PASA_SALRAA:
                     best_score = scored_path.get_score()
                     best_scoring_path = scored_path
 
+        logger.debug("-retrieved best transcript path {} with score: {}".format(best_scoring_path, best_score))
+                    
         return best_scoring_path
 
 
