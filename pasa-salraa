@@ -100,6 +100,11 @@ def run_pasa_salraa(genome_fasta_filename, bam_file, output_filename,
     ofh = open(output_filename, 'wt')
     
     genome_contigs_list = get_genome_contigs_listing(genome_fasta_filename)
+
+    prereconstruct_info_dir = "__prereconstruct"
+    if not os.path.exists(prereconstruct_info_dir):
+        os.makedirs(prereconstruct_info_dir)
+        
     
     for contig_acc in genome_contigs_list:
 
@@ -114,8 +119,9 @@ def run_pasa_salraa(genome_fasta_filename, bam_file, output_filename,
         if sg.is_empty():
             logger.info(f"-no splice graph created for contig: {contig_acc}.... skipping.")
             continue
-            
-        sg.write_intron_exon_splice_graph_bed_files("prereconstruct.{}.pad1".format(contig_acc), pad=1)
+
+        
+        sg.write_intron_exon_splice_graph_bed_files("{}/prereconstruct.{}.pad1".format(prereconstruct_info_dir, contig_acc), pad=1)
         
         pasa_salraa_obj = PASA_SALRAA(sg, CPU)
         pasa_salraa_obj.build_multipath_graph(contig_acc, contig_seq_str, bam_file, allow_spacers)
