@@ -29,8 +29,6 @@ from MultiProcessManager import MultiProcessManager
 logger = logging.getLogger(__name__)
 
 
-DEBUG_FILES_FLAG = False
-
 class PASA_SALRAA:
 
     min_transcript_length = 200
@@ -114,13 +112,14 @@ class PASA_SALRAA:
             component_counter += 1
             coord_span = get_mpgn_list_coord_span(mpg_component)
             logger.info("PASA_SALRAA - assembly of component {} region: {}:{}-{}".format(component_counter, self._contig_acc, coord_span[0], coord_span[1]))
+            mpg_token = "{}-{}-{}".format(self._contig_acc, coord_span[0], coord_span[1])
             if PASA_SALRAA_Globals.DEBUG:
-                mpgn_description_filename = "{}/{}-{}-{}.mpgns.txt".format(mpg_component_debug_dir, self._contig_acc, coord_span[0], coord_span[1])
+                mpgn_description_filename = "{}/{}.mpgns.txt".format(mpg_component_debug_dir, mpg_token)
                 write_mpg_component_debug_file(mpg_component, mpgn_description_filename)
 
                         
             p = Process(target=self._reconstruct_isoforms_single_component,
-                        args=(q, mpg_component, component_counter, single_best_only) )
+                        args=(q, mpg_component, component_counter, mpg_token, single_best_only) )
 
             mpm.launch_process(p)
 
@@ -147,7 +146,7 @@ class PASA_SALRAA:
     ##################
         
     
-    def _reconstruct_isoforms_single_component(self, q, mpg_component, component_counter, single_best_only=False):
+    def _reconstruct_isoforms_single_component(self, q, mpg_component, component_counter, mpg_token, single_best_only=False):
 
 
         MIN_SCORE_RATIO = 0.0001
@@ -177,7 +176,7 @@ class PASA_SALRAA:
                     for pasa_vertex in pasa_vertices:
                         logger.debug(pasa_vertex.describe_pasa_vertex())
 
-                self._write_all_scored_paths_to_file(component_counter, round_iter, pasa_vertices)
+                self._write_all_scored_paths_to_file(component_counter, round_iter, mpg_token, pasa_vertices)
 
 
 
@@ -188,7 +187,7 @@ class PASA_SALRAA:
 
             assert(type(transcript_path) == PASA_scored_path)
 
-            logger.debug("Retrieved best transcript path: {}".format(transcript_path))
+            logger.debug("Retrieved best transcript path for mpg {} : {}".format(mpg_token, transcript_path))
 
             transcript_path_token = str(transcript_path.get_multiPath_obj())
             if transcript_path_token in paths_seen:
@@ -590,30 +589,28 @@ class PASA_SALRAA:
 
         return
     
-    def _write_all_scored_paths_to_file(self, component_counter, round_iter, pasa_vertices):
+    def _write_all_scored_paths_to_file(self, component_counter, round_iter, mpg_token, pasa_vertices):
 
-        global DEBUG_FILES_FLAG
         
         outdirname = "__all_scored_paths"
-        if DEBUG_FILES_FLAG is False:
-            if os.path.exists(outdirname):
-                rmtree(outdirname)
-                
-            os.makedirs(outdirname)
-            DEBUG_FILES_FLAG = True
 
-        outputfilename = "{}/scored_paths.R{}.gtf".format(outdirname, round_iter)
+        if not os.path.exists(outdirname):
+            os.makedirs(outdirname)
+
+        outputfilename = "{}/scored_paths.{}.R{}.gtf".format(outdirname, mpg_token, round_iter)
         
-        mode = 'at' if os.path.exists(outputfilename) else 'wt'
-        ofh = open(outputfilename, mode)
+        ofh = open(outputfilename, 'wt')
 
         for pasa_vertex in pasa_vertices:
+            print ("## pasa vertex:", file=ofh)
+            print(pasa_vertex.describe_pasa_vertex(), file=ofh)
             from_paths = pasa_vertex.get_fromPaths()
             for from_path in from_paths:
                 trans_obj = from_path.toTranscript()
                 trans_obj.add_meta('score', from_path.get_score())
                 gtf = trans_obj.to_GTF_format()
                 ofh.write(gtf + "\n")
+            print("", file=ofh) # spacer"
 
         ofh.close()
 

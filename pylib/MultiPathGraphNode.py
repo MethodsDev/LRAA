@@ -140,26 +140,21 @@ class MultiPathGraphNode:
             
     def __repr__(self):
 
-        """
         containments = self.get_containments()
-        text = "\t".join(str(x) for x in [self.get_simple_path(), self._lend, self._rend, self._count, self._weight, "len:{}".format(self._seq_length)])
-        for containment in containments:
-            text += "\n\t" + str(containment)
-
-        """
         
-        return("<mp:{} {}-{} Count:{} W:{:0.8f} Containments:{}, ScoreExcCont:{:.4f} ScoreInclCon:{:.4f} len:{}>".format(
+        text = "<mp:{} {}-{} Count:{} W:{:0.8f} Containments:{}, ScoreExcCont:{:.4f} ScoreInclCon:{:.4f} len:{}>".format(
             self.get_simple_path(),
             self._lend, self._rend, self._count, self._weight,
-            len(self.get_containments()),
+            len(containments),
             self.get_score_EXCLUDE_containments(use_prev_weight=False),
             self.get_score_INCLUDE_containments(use_prev_weight=False),
-            self._seq_length))
+            self._seq_length)
 
-        """
-        print(text)
+        for containment in containments:
+            text += "\n\tcontained: " + str(containment)
+
         return text
-        """
+
 
         
     def has_successors(self):
@@ -297,6 +292,8 @@ class MultiPathGraphNode:
         adjusted_weight = max(MIN_WEIGHT, adjusted_weight) # to avoid going too low.
         
         self.set_weight(adjusted_weight)
+
+        logger.debug("fraction compatibile: {}, adjusted weight -> {}".format(fraction_compatible, adjusted_weight))
         
         return
         

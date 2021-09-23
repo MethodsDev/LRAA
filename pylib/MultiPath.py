@@ -202,7 +202,10 @@ class MultiPath:
         my_path = self.get_simple_path()
         other_path = other_multipath.get_simple_path()
 
-        return Simple_path_utils.simple_paths_overlap_and_compatible_spacefree_region_path_A(self.get_splice_graph(), my_path, other_path)
+        if my_path == other_path:
+            return True
+        else:
+            return Simple_path_utils.simple_paths_overlap_and_compatible_spacefree_region_path_A(self.get_splice_graph(), my_path, other_path)
 
     
 

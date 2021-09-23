@@ -380,6 +380,9 @@ def simple_paths_overlap_and_compatible_spacefree_region_path_A(sg:Splice_graph,
             else:
                 return False
 
+    if not alignment_started:
+        return False
+            
     return True # no conflicts detected
     
 
@@ -698,6 +701,9 @@ def test_simple_paths_overlap_and_compatible_spacefree_region_path_A():
     assert(simple_paths_overlap_and_compatible_spacefree_region_path_A(sg, p6, sp6) == True)
     assert(simple_paths_overlap_and_compatible_spacefree_region_path_A(sg, sp6, p6) == False)
 
+    p7 = ['E:2']
+    assert(simple_paths_overlap_and_compatible_spacefree_region_path_A(sg, sp3, p7) == False)
+    
     
 def test_merge_simple_paths_containing_spacers():
 
