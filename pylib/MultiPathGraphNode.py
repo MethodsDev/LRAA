@@ -139,7 +139,10 @@ class MultiPathGraphNode:
     
             
     def __repr__(self):
+        return(self.toString(recursive=True)) # to get first round of containments
 
+
+    def toString(self, recursive=False):
         containments = self.get_containments()
         
         text = "<mp:{} {}-{} Count:{} W:{:0.8f} Containments:{}, ScoreExcCont:{:.4f} ScoreInclCon:{:.4f} len:{}>".format(
@@ -150,11 +153,11 @@ class MultiPathGraphNode:
             self.get_score_INCLUDE_containments(use_prev_weight=False),
             self._seq_length)
 
-        for containment in containments:
-            text += "\n\tcontained: " + str(containment)
+        if recursive:
+            for containment in containments:
+                text += "\n\tcontained: " + containment.toString(recursive=False)
 
         return text
-
 
         
     def has_successors(self):
