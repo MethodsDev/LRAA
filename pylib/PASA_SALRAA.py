@@ -14,6 +14,7 @@ from Bam_alignment_extractor import Bam_alignment_extractor
 from MultiPath import MultiPath
 from MultiPathCounter import MultiPathCounter
 from PASA_SALRAA_Globals import SPACER
+import PASA_SALRAA_Globals
 from MultiPathGraph import MultiPathGraph
 from PASA_vertex import PASA_vertex
 from Transcript import Transcript
@@ -40,7 +41,8 @@ class PASA_SALRAA:
         self._splice_graph = splice_graph
 
         self._multipath_graph = None  # set under build_multipath_graph()
-
+        self._contig_acc = None # set under build_multipath_graph()
+        
         self._num_parallel_processes = num_parallel_processes
         
         return
@@ -52,6 +54,7 @@ class PASA_SALRAA:
 
         multipath_graph = MultiPathGraph(mp_counter, self._splice_graph, PASA_SALRAA.min_mpgn_read_count, allow_spacers)
         self._multipath_graph = multipath_graph
+        self._contig_acc = contig_acc
 
         ## debugging info
         logger.info("writing __multipath_graph.dat")
@@ -81,12 +84,41 @@ class PASA_SALRAA:
         q = Queue()
         
         mpm = MultiProcessManager(self._num_parallel_processes, q)
+
+        def get_mpgn_list_coord_span(mpgn_list):
+
+            coords = list()
+            for mpgn in mpgn_list:
+                mpgn_coords = mpgn.get_coords()
+                coords.extend(mpgn_coords)
+
+            coords = sorted(coords)
+            
+            return coords[0], coords[-1]
+        
+
+        mpg_component_debug_dir = "__mpg_components"
+        if PASA_SALRAA_Globals.DEBUG:
+            if not os.path.exists(mpg_component_debug_dir):
+                os.makedirs(mpg_component_debug_dir)
+
+        def write_mpg_component_debug_file(mpgn_list, filename):
+            logger.debug("-writing mpgn description file: {}".format(filename))
+            with open(filename, 'wt') as ofh:
+                for mpgn in mpgn_list:
+                    print(str(mpgn), file=ofh)
+        
         
         component_counter = 0
         for mpg_component in mpg_components:
             component_counter += 1
-            logger.info("PASA_SALRAA - assembly of component {}".format(component_counter))
-            
+            coord_span = get_mpgn_list_coord_span(mpg_component)
+            logger.info("PASA_SALRAA - assembly of component {} region: {}:{}-{}".format(component_counter, self._contig_acc, coord_span[0], coord_span[1]))
+            if PASA_SALRAA_Globals.DEBUG:
+                mpgn_description_filename = "{}/{}-{}-{}.mpgns.txt".format(mpg_component_debug_dir, self._contig_acc, coord_span[0], coord_span[1])
+                write_mpg_component_debug_file(mpg_component, mpgn_description_filename)
+
+                        
             p = Process(target=self._reconstruct_isoforms_single_component,
                         args=(q, mpg_component, component_counter, single_best_only) )
 
