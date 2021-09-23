@@ -25,6 +25,7 @@ import time
 from multiprocessing import Process, Queue
 import traceback
 from MultiProcessManager import MultiProcessManager
+from collections import defaultdict
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +35,8 @@ class PASA_SALRAA:
     min_transcript_length = 200
     min_mpgn_read_count = 1
 
+    max_contained_to_be_a_pasa_vertex = 10
+    
     def __init__(self, splice_graph, num_parallel_processes=1):
 
         self._splice_graph = splice_graph
@@ -149,12 +152,27 @@ class PASA_SALRAA:
     def _reconstruct_isoforms_single_component(self, q, mpg_component, component_counter, mpg_token, single_best_only=False):
 
 
+        ## exclude those mpgn's that are contained by many transcripts to reduce the trellis size.
+        contained_mpg_counter = defaultdict(int)
+        for mpgn in mpg_component:
+            for mpgn_contained in mpgn.get_containments():
+                contained_mpg_counter[mpgn_contained] += 1
+
+        mpg_components_for_trellis = list()
+        
+        for mpgn in mpg_component:
+            if contained_mpg_counter[mpgn] <= PASA_SALRAA.max_contained_to_be_a_pasa_vertex:
+                mpg_components_for_trellis.append(mpgn)
+
+
+        mpg_component = mpg_components_for_trellis # replace for trellis building
+        logger.info("-num vertices for trellis: {}".format(len(mpg_component)))
+        
         MIN_SCORE_RATIO = 0.0001
 
         best_transcript_paths = list()
 
         paths_seen = set()
-
 
         def reinit_weights(mpgn_list):
             for mpgn in mpgn_list:
