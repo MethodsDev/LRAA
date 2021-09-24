@@ -269,7 +269,12 @@ class MultiPathGraphNode:
         #sys.stderr.write("reevaluating weights for {}".format(self))
         
         assert(type(transcript_multiPath) == MultiPath.MultiPath)
+
+        self.set_weight(0.001)
+
+
         
+        """
         transcript_simple_path = transcript_multiPath.get_simple_path()
         
         compatible_score = self.get_score_INCLUDE_containments(use_prev_weight=True)
@@ -297,7 +302,8 @@ class MultiPathGraphNode:
         self.set_weight(adjusted_weight)
 
         logger.debug("fraction compatibile: {}, adjusted weight -> {}".format(fraction_compatible, adjusted_weight))
+        """
         
         return
-        
+
         

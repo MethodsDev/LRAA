@@ -207,6 +207,9 @@ class PASA_SALRAA:
 
             logger.debug("Retrieved best transcript path for mpg {} : {}".format(mpg_token, transcript_path))
 
+            self._write_best_score_path_info_to_file(transcript_path, round_iter, mpg_token)
+            
+            
             transcript_path_token = str(transcript_path.get_multiPath_obj())
             if transcript_path_token in paths_seen:
                 logger.debug("best path {} already reported. Stopping path extractions from component now.".format(transcript_path_token))
@@ -590,13 +593,26 @@ class PASA_SALRAA:
                 
         logger.debug("mpgns found compatible with transcript path: {} include {}".format(transcript_path_multipath_obj, mpgn_list))
         logger.debug("mpgns found INcomptable are: {}".format(mpgns_not_compatible))
+
+
+        def recursive_reweight(mpgn):
+            if mpgn.get_reweighted_flag() is False:
+                mpgn.set_weight(0.000001)
+                for contained_mpgn in mpgn.get_containments():
+                    recursive_reweight(contained_mpgn)
         
         for mpgn in mpgn_list:
             logger.debug("_decrement: {}".format(mpgn))
-            if mpgn.get_reweighted_flag() is False:
-                mpgn.reevaluate_weighting_via_path_compatibilities(transcript_path_multipath_obj)
-                
-                        
+            recursive_reweight(mpgn)
+            
+            #if mpgn.get_reweighted_flag() is False:
+            #    mpgn.reevaluate_weighting_via_path_compatibilities(transcript_path_multipath_obj)
+
+        ## //TODO: //FIXME  why vertex path incompatible but still part of transcript path?
+
+        for mpgn in transcript_path.get_path_mpgn_list():
+            recursive_reweight(mpgn)
+        
         return
 
 
@@ -635,6 +651,25 @@ class PASA_SALRAA:
         return
     
 
+    def _write_best_score_path_info_to_file(self, transcript_path, round_iter, mpg_token):
+
+        outdirname = "__selected_best_scored_paths"
+        
+        if not os.path.exists(outdirname):
+            os.makedirs(outdirname)
+
+        outputfilename = "{}/selected_best_path.{}.R{}.gtf".format(outdirname, mpg_token, round_iter)
+        
+        with open(outputfilename, 'wt') as ofh:
+            print("Transcript path: " + str(transcript_path), file=ofh)
+
+            print("\nMPGNs represented:\n", file=ofh)
+            
+            for mpgn in transcript_path.get_path_mpgn_list():
+                print(mpgn, file=ofh)
+
+
+    
     def get_splice_graph(self):
         return self._splice_graph
 

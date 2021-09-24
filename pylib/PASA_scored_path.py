@@ -28,9 +28,14 @@ class PASA_scored_path:
         span_lend, span_rend = self._multiPath_obj.get_coords()
         
         self._contig_span_len = span_rend - span_lend + 1
+
+        # init
+        self._score = -1
+        self._initial_score = -1
         
         score = self.compute_path_score()
-        
+
+        # set
         self._score = score
         self._initial_score = score
 
@@ -132,12 +137,29 @@ class PASA_scored_path:
         assert(self._cdna_len > 0 and self._contig_span_len > 0)
         
         score = 0
-        seen = set()
 
 
-        # ordered list, containments only incorporated into score accoridng to left-most containment node.
+        all_mpgn_nodes = set()
+        
+        
         mpgn_list = self.get_path_mpgn_list()
-        mpgn_list = sorted(mpgn_list, key=lambda x: x._lend)
+
+
+        def recursively_capture_nodes(mpgn):
+
+            if mpgn not in all_mpgn_nodes:
+                all_mpgn_nodes.add(mpgn)
+                for contained_mpgn in mpgn.get_containments():
+                    recursively_capture_nodes(mpgn)
+
+        for mpgn in mpgn_list:
+            recursively_capture_nodes(mpgn)
+
+        # sum up weights
+        for mpgn in all_mpgn_nodes:
+            score += mpgn.get_weight() * mpgn.get_count()
+
+        """
 
 
         audit_txt = ""
@@ -163,6 +185,10 @@ class PASA_scored_path:
 
         if PASA_SALRAA_Globals.DEBUG:
             logger.debug(audit_txt)
+           
+        """
+
+        logger.debug(str(self) + "\n^^^ computed with score = {}".format(score))
             
         return score
     
