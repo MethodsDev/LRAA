@@ -42,7 +42,7 @@ class Bam_alignment_extractor:
         return
     
     
-    def get_read_alignments(self, contig_acc, pretty=False, min_per_id = 98):        
+    def get_read_alignments(self, contig_acc, pretty=False, config=PASA_SALRAA_Globals.config):        
 
         discarded_read_counter = defaultdict(int)
 
@@ -67,6 +67,12 @@ class Bam_alignment_extractor:
             if read.is_secondary:
                 discarded_read_counter["secondary"] += 1
                 continue
+
+
+            # determine min per_id based on read type:
+            min_per_id = PASA_SALRAA_Globals.config['min_per_id_illumina']
+            if read.has_tag("RG") and read.get_tag("RG") == "PBLR":
+                min_per_id = PASA_SALRAA_Globals.config['min_per_id_pacbio']
             
             # check read alignment percent identity
             cigar_stats = read.get_cigar_stats()

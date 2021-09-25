@@ -2,6 +2,7 @@ import sys, os, re
 from MultiPath import MultiPath
 from MultiPathGraph import MultiPathGraphNode
 from PASA_scored_path import PASA_scored_path
+import PASA_SALRAA_Globals
 
 import logging
 
@@ -16,8 +17,12 @@ class PASA_vertex:
         
         self._multipath_graph_node = multipath_graph_node            
 
-        self._weight = 1.0 # contribution of read content towards scores
+        if multipath_graph_node.get_seq_length() > PASA_SALRAA_Globals.config['min_long_read_length']:
+            self.weight = PASA_SALRAA_Globals.config['weight_long_read']
+        else:
+            self._weight = PASA_SALRAA_Globals.config['weight_short_read'] # contribution of read content towards scores
         
+                
         self._fromPaths = list() # hold scored paths.
 
         # add unextended current path node as initial path

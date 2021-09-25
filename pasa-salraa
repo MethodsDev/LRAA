@@ -37,9 +37,6 @@ def main():
     parser.add_argument("--single_best_only", action='store_true', default=False,
                         help="only report the single highest scoring isoform per component")
 
-    parser.add_argument("--min_per_id", type=int, default=80,
-                        help="minimum percent identity for a read alignment to be incorporated into the splice graph")
-
     parser.add_argument("--CPU", type=int, default=1,
                         help="number of cores for multithreading")
     
@@ -56,7 +53,6 @@ def main():
     bam_filename = args.bam
     output_filename = args.outputfile
     single_best_only = args.single_best_only
-    min_per_id = args.min_per_id
     CPU = args.CPU
 
     if args.mpm_monitor:
@@ -75,7 +71,6 @@ def main():
                     output_filename,
                     READ_ALN_GAP_MERGE,
                     single_best_only,
-                    min_per_id,
                     CPU,
                     allow_spacers)
     
@@ -88,7 +83,6 @@ def main():
 def run_pasa_salraa(genome_fasta_filename, bam_file, output_filename,
                     read_aln_gap_merge,
                     single_best_only,
-                    min_per_id,
                     CPU,
                     allow_spacers):
 
@@ -111,7 +105,6 @@ def run_pasa_salraa(genome_fasta_filename, bam_file, output_filename,
         logger.info(f"-processing contig: {contig_acc}")
         
         sg = Splice_graph()
-        sg.set_min_per_id(min_per_id)
         sg.set_read_aln_gap_merge(read_aln_gap_merge)
         contig_seq_str = Util_funcs.retrieve_contig_seq_from_fasta_file(contig_acc, genome_fasta_filename)
         sg.build_splice_graph_for_contig(contig_acc, contig_seq_str, bam_file)

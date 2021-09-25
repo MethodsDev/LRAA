@@ -168,7 +168,7 @@ class PASA_SALRAA:
         mpg_component = mpg_components_for_trellis # replace for trellis building
         logger.info("-num vertices for trellis: {}".format(len(mpg_component)))
 
-        MIN_SCORE = 2.0  # require at least 2 reads
+        MIN_SCORE = PASA_SALRAA_Globals.config['min_path_score']
 
         best_transcript_paths = list()
 
@@ -256,7 +256,7 @@ class PASA_SALRAA:
     def _populate_read_multi_paths(self, contig_acc, contig_seq, bam_file):
 
         bam_extractor = Bam_alignment_extractor(bam_file)
-        pretty_alignments = bam_extractor.get_read_alignments(contig_acc, pretty=True, min_per_id = self.get_splice_graph().get_min_per_id())
+        pretty_alignments = bam_extractor.get_read_alignments(contig_acc, pretty=True)
         
         grouped_alignments = self._group_alignments_by_read_name(pretty_alignments)
 
@@ -527,7 +527,7 @@ class PASA_SALRAA:
         
         mpg = self._multipath_graph
 
-        nodes = sorted(mpg_component, key=lambda x: x._lend)
+        nodes = sorted(mpg_component, key=lambda x: (x._lend, x._rend))
         
         # init the pasa vertex list
         

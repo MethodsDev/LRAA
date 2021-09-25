@@ -54,8 +54,6 @@ class Splice_graph:
         self._itree_exon_segments = itree.IntervalTree()
         self._intron_objs = dict() # "lend:rend" => intron_obj
 
-        self._min_read_aln_per_id = 98
-        
         return
 
 
@@ -209,7 +207,7 @@ class Splice_graph:
         
         bam_extractor = Bam_alignment_extractor(self._alignments_bam_filename)
         
-        pretty_alignments = bam_extractor.get_read_alignments(self._contig_acc, pretty=True, min_per_id=self._min_read_aln_per_id)
+        pretty_alignments = bam_extractor.get_read_alignments(self._contig_acc, pretty=True)
         logger.info("-got {} pretty alignments.".format(len(pretty_alignments)))
         
         total_read_alignments_used = 0
@@ -931,9 +929,3 @@ class Splice_graph:
     def is_empty(self):
         return len(self._splice_graph) == 0
 
-        
-    def set_min_per_id(self, min_per_id):
-        self._min_read_aln_per_id = min_per_id
-
-    def get_min_per_id(self):
-        return self._min_read_aln_per_id
