@@ -26,7 +26,8 @@ illum_w_pbio.chr17.bam
 illum_w_pbio.chr17.bam.bai
 illum_w_pbio.chr17.fa
 illum_w_pbio.chr17.fa.fai
-
+igv.small.sh
+igv.large.sh
 );
 
 my %keep = map { + $_ => 1 } @files_to_keep;

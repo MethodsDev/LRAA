@@ -16,8 +16,13 @@ class PASA_scored_path:
     def __init__(self, path_list_of_multipath_graph_nodes):
 
 
+        self._all_represented_mpgns = set() # stores all input mpgns and their contained mpgns
+        
         for mpgn in path_list_of_multipath_graph_nodes:
             assert(type(mpgn) == MultiPathGraphNode)
+            self._all_represented_mpgns.add(mpgn)
+            for mpgn_contained in mpgn.get_containments():
+                self._all_represented_mpgns.add(mpgn_contained)
         
         self._mpgn_list_path = path_list_of_multipath_graph_nodes
         
@@ -34,7 +39,7 @@ class PASA_scored_path:
         self._initial_score = -1
         
         score = self.compute_path_score()
-
+        
         # set
         self._score = score
         self._initial_score = score
@@ -43,7 +48,9 @@ class PASA_scored_path:
         
     def __repr__(self):
         return("PASA_scored_path: (score={:.5f}, IScore={:.5f}) mpgns: {}".format(self.get_score(), self.get_initial_score(), self.get_path_mpgn_list()))
-    
+
+
+        
         
     def get_score(self):
         return self._score
@@ -54,6 +61,9 @@ class PASA_scored_path:
     def get_path_mpgn_list(self):
         return list(self._mpgn_list_path)
 
+    def get_all_represented_mpgns(self):
+        return list(self._all_represented_mpgns)
+    
     
     def get_multiPath_obj(self):
         return self._multiPath_obj

@@ -167,8 +167,8 @@ class PASA_SALRAA:
 
         mpg_component = mpg_components_for_trellis # replace for trellis building
         logger.info("-num vertices for trellis: {}".format(len(mpg_component)))
-        
-        MIN_SCORE_RATIO = 0.0001
+
+        MIN_SCORE = 2.0  # require at least 2 reads
 
         best_transcript_paths = list()
 
@@ -181,58 +181,57 @@ class PASA_SALRAA:
 
 
         round_iter = 0        
-        while True:
+
+        mpgns_require_representation = set(mpg_component)
+
+        pasa_vertices = self._build_trellis(mpg_component)
+
+        if logger.getEffectiveLevel() == logging.DEBUG: ## for debugging info only
+            if round_iter == 1:
+                for pasa_vertex in pasa_vertices:
+                    logger.debug(pasa_vertex.describe_pasa_vertex())
+
+            self._write_all_scored_paths_to_file(component_counter, round_iter, mpg_token, pasa_vertices)
+
+        all_scored_paths = self._retrieve_all_scored_paths(pasa_vertices)
+
+        all_scored_paths = sorted(all_scored_paths, key=lambda x: x.get_score())
+        
+        while len(mpgns_require_representation) > 0 and len(all_scored_paths) > 0:
 
             round_iter += 1
-
-            reinit_weights(mpg_component)
-
-            pasa_vertices = self._build_trellis(mpg_component)
-
-            if logger.getEffectiveLevel() == logging.DEBUG: ## for debugging info only
-                if round_iter == 1:
-                    for pasa_vertex in pasa_vertices:
-                        logger.debug(pasa_vertex.describe_pasa_vertex())
-
-                self._write_all_scored_paths_to_file(component_counter, round_iter, mpg_token, pasa_vertices)
-
-
-
-            transcript_path = self._retrieve_best_transcript(pasa_vertices)
-
-            if transcript_path is None:
-                break
-
-            assert(type(transcript_path) == PASA_scored_path)
-
-            logger.debug("Retrieved best transcript path for mpg {} : {}".format(mpg_token, transcript_path))
-
-            self._write_best_score_path_info_to_file(transcript_path, round_iter, mpg_token)
             
+            #reinit_weights(mpg_component)
+            top_scored_path = all_scored_paths.pop()
+            assert(type(top_scored_path) == PASA_scored_path)
+
+            if top_scored_path.get_score() < MIN_SCORE:
+                break
             
-            transcript_path_token = str(transcript_path.get_multiPath_obj())
-            if transcript_path_token in paths_seen:
-                logger.debug("best path {} already reported. Stopping path extractions from component now.".format(transcript_path_token))
-                break
+            mpgns_represented = top_scored_path.get_all_represented_mpgns()
 
-            paths_seen.add(transcript_path_token)
+            found_prev_unrepresented_mpgn = False
+            for mpgn_represented in mpgns_represented:
+                if mpgn_represented in mpgns_require_representation:
+                    found_prev_unrepresented_mpgn = True
+                    mpgns_require_representation.remove(mpgn_represented)
 
+            if found_prev_unrepresented_mpgn:
+                logger.debug("Retrieved best (Score={})  transcript path for mpg {} : {}".format(top_scored_path.get_score(), mpg_token, top_scored_path))
+                self._write_best_score_path_info_to_file(top_scored_path, round_iter, mpg_token)
+            
+                best_transcript_paths.append(top_scored_path)
 
-            if (transcript_path.get_score() > 0 and
-                (len(best_transcript_paths) == 0 or
-                 transcript_path.get_score() / best_transcript_paths[0].get_initial_score() >= MIN_SCORE_RATIO) ):
+                # adjust weights
+                self._decrement_transcript_path_vertices(top_scored_path, pasa_vertices)
+                for path in all_scored_paths:
+                    path.rescore()
 
-                best_transcript_paths.append(transcript_path)
+                # reprioritize
+                all_scored_paths = sorted(all_scored_paths, key=lambda x: x.get_score())
+                
 
-                if single_best_only:
-                    break
-
-                self._decrement_transcript_path_vertices(transcript_path, pasa_vertices)
-                self._rescore_transcript_paths(pasa_vertices)
-            else:
-                break
-
-
+                
         # from the best transcript paths, reconstruct the actual transcripts themselves:
 
 
@@ -569,6 +568,20 @@ class PASA_SALRAA:
                     
         return best_scoring_path
 
+
+    def _retrieve_all_scored_paths(self, pasa_vertices):
+
+        all_scored_paths = list()
+        
+        for pasa_vertex in pasa_vertices:
+            these_scored_paths = pasa_vertex.get_fromPaths()
+            all_scored_paths.extend(these_scored_paths)
+                    
+        return all_scored_paths
+
+
+    
+    
 
     def _decrement_transcript_path_vertices(self, transcript_path, pasa_vertices):
 
