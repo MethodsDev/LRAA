@@ -18,9 +18,9 @@ class PASA_vertex:
         self._multipath_graph_node = multipath_graph_node            
 
         if multipath_graph_node.get_seq_length() > PASA_SALRAA_Globals.config['min_long_read_length']:
-            self.weight = PASA_SALRAA_Globals.config['weight_long_read']
+            multipath_graph_node.set_weight(PASA_SALRAA_Globals.config['weight_long_read'])
         else:
-            self._weight = PASA_SALRAA_Globals.config['weight_short_read'] # contribution of read content towards scores
+            multipath_graph_node.set_weight(PASA_SALRAA_Globals.config['weight_short_read']) # contribution of read content towards scores
         
                 
         self._fromPaths = list() # hold scored paths.
