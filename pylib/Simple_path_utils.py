@@ -315,11 +315,28 @@ def simple_path_A_within_bounds_of_simple_path_B(sg:Splice_graph, simple_path_A:
     
 
 
-def simple_path_A_contains_and_compatible_with_simple_path_B(sg:Splice_graph, simple_path_A:list, simple_path_B:list) -> bool: 
+def simple_path_A_contains_and_compatible_with_simple_path_B_spacefree_region_path_A(sg:Splice_graph, simple_path_A:list, simple_path_B:list) -> bool: 
 
-    return simple_path_A_within_bounds_of_simple_path_B(sg, simple_path_B, simple_path_A) and simple_paths_overlap_and_compatible_spacefree_region_path_A(sg, simple_path_A, simple_path_B)
+    if simple_path_A == simple_path_B:
+        return True
+    elif path_A_contains_path_B(remove_spacers_from_path(simple_path_A), remove_spacers_from_path(simple_path_B)):
+        return True
+    else:
+        return simple_path_A_within_bounds_of_simple_path_B(sg, simple_path_B, simple_path_A) and simple_paths_overlap_and_compatible_spacefree_region_path_A(sg, simple_path_A, simple_path_B)
 
 
+
+def simple_path_A_contains_and_compatible_with_simple_path_B_spacer_aware_both_paths(sg:Splice_graph, simple_path_A:list, simple_path_B:list) -> bool: 
+
+    if simple_path_A == simple_path_B:
+        return True
+    elif path_A_contains_path_B(remove_spacers_from_path(simple_path_A), remove_spacers_from_path(simple_path_B)):
+        return True
+    else:
+        return simple_path_A_within_bounds_of_simple_path_B(sg, simple_path_B, simple_path_A) and simple_paths_overlap_and_compatible_spacer_aware_both_paths(sg, simple_path_A, simple_path_B)
+
+
+    
 
 def simple_paths_overlap_and_compatible_spacefree_region_path_A(sg:Splice_graph, simple_path_A:list, simple_path_B:list) -> bool:
 
@@ -401,6 +418,8 @@ def simple_paths_overlap_and_compatible_spacer_aware_both_paths(sg:Splice_graph,
 
     my_path = simple_path_A.copy()
     other_path = simple_path_B.copy()
+
+    alignment_started = False
     
     while(len(my_path) > 0 and len(other_path) > 0):
         my_node_id = my_path[0]
@@ -421,6 +440,7 @@ def simple_paths_overlap_and_compatible_spacer_aware_both_paths(sg:Splice_graph,
             other_path.pop(0)
             my_path_spacer_mode = False
             other_path_spacer_mode = False
+            alignment_started = True
             continue
 
         my_node_obj = sg.get_node_obj_via_id(my_node_id)
@@ -442,6 +462,9 @@ def simple_paths_overlap_and_compatible_spacer_aware_both_paths(sg:Splice_graph,
             else:
                 return False
 
+    if not alignment_started:
+        return False
+            
     return True # no conflicts detected
 
 
@@ -766,3 +789,13 @@ def test_trim_terminal_spacers():
 
     assert(trim_terminal_spacers(simple_path_C) == ["a", "b", "c"] )
 
+
+def remove_spacers_from_path(simple_path):
+
+    new_path = list()
+    for node_id in simple_path:
+        if node_id != SPACER:
+            new_path.append(node_id)
+
+    return new_path
+    

@@ -28,6 +28,7 @@ class PASA_scored_path:
         
         self._multiPath_obj = MultiPath.multiPath_from_mpgn_list(self._mpgn_list_path)
 
+                
         self._cdna_len = self._multiPath_obj.get_cdna_length()
 
         span_lend, span_rend = self._multiPath_obj.get_coords()
@@ -44,12 +45,17 @@ class PASA_scored_path:
         self._score = score
         self._initial_score = score
 
+        self._validate_compatible_containments()
+        
         
         
     def __repr__(self):
-        return("PASA_scored_path: (score={:.5f}, IScore={:.5f}) mpgns: {}".format(self.get_score(), self.get_initial_score(), self.get_path_mpgn_list()))
+        txt = "PASA_scored_path: {} (score={:.5f}, IScore={:.5f})\nmpgns:\n".format(self.get_multiPath_obj(), self.get_score(), self.get_initial_score())
 
+        for mpgn in self.get_path_mpgn_list():
+            txt += str(mpgn) + "\n"
 
+        return txt
         
         
     def get_score(self):
@@ -61,8 +67,21 @@ class PASA_scored_path:
     def get_path_mpgn_list(self):
         return list(self._mpgn_list_path)
 
-    def get_all_represented_mpgns(self):
-        return list(self._all_represented_mpgns)
+    def get_all_represented_mpgns(self, additional_mpgns_to_check=None):
+        
+        represented_mpgns = set(self._all_represented_mpgns)
+
+        if additional_mpgns_to_check:
+
+            scored_simple_path = self.get_multiPath_obj().get_simple_path()
+            
+            for mpgn in additional_mpgns_to_check:
+                sg = mpgn.get_splice_graph()
+                mpgn_simple_path = mpgn.get_simple_path()
+                if Simple_path_utils.simple_path_A_contains_and_compatible_with_simple_path_B_spacer_aware_both_paths(sg, scored_simple_path, mpgn_simple_path):
+                    represented_mpgns.add(mpgn)
+
+        return represented_mpgns
     
     
     def get_multiPath_obj(self):
@@ -202,4 +221,20 @@ class PASA_scored_path:
             
         return score
     
+    
+
+    def _validate_compatible_containments(self):
+
+        
+        scored_simple_path = self.get_multiPath_obj().get_simple_path()
+        
+        for mpgn in self.get_path_mpgn_list():
+            sg = mpgn.get_splice_graph()
+            mpgn_simple_path = mpgn.get_simple_path()
+            
+            if Simple_path_utils.simple_path_A_contains_and_compatible_with_simple_path_B_spacer_aware_both_paths(sg, scored_simple_path, mpgn_simple_path):
+                logger.debug("Validated scored path: {}\ncontains path {}\n".format(scored_simple_path, mpgn_simple_path))
+            else:
+                raise RuntimeError("Error, scored path: {}\ndoes not contain path {}\n".format(scored_simple_path, mpgn_simple_path))
+
     

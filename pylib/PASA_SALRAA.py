@@ -208,8 +208,8 @@ class PASA_SALRAA:
             if top_scored_path.get_score() < MIN_SCORE:
                 break
             
-            mpgns_represented = top_scored_path.get_all_represented_mpgns()
-
+            mpgns_represented = top_scored_path.get_all_represented_mpgns(additional_mpgns_to_check=mpgns_require_representation)
+            
             found_prev_unrepresented_mpgn = False
             for mpgn_represented in mpgns_represented:
                 if mpgn_represented in mpgns_require_representation:
@@ -676,12 +676,7 @@ class PASA_SALRAA:
         with open(outputfilename, 'wt') as ofh:
             print("Transcript path: " + str(transcript_path), file=ofh)
 
-            print("\nMPGNs represented:\n", file=ofh)
-            
-            for mpgn in transcript_path.get_path_mpgn_list():
-                print(mpgn, file=ofh)
-
-
+ 
     
     def get_splice_graph(self):
         return self._splice_graph

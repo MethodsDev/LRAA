@@ -59,7 +59,7 @@ class MultiPathGraph:
 
             
         ## sort by rend
-        self._mp_graph_nodes_list = sorted(self._mp_graph_nodes_list, key=lambda x: x._rend)
+        self._mp_graph_nodes_list = sorted(self._mp_graph_nodes_list, key=lambda x: (x._rend, x._lend))
 
         ordered_nodes = self._mp_graph_nodes_list
         
