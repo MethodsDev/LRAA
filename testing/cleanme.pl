@@ -42,4 +42,6 @@ foreach my $file (<*>) {
 }
 
 
+`rm -rf ./__*`;
+
 exit(0);

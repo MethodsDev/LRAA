@@ -1,6 +1,6 @@
 
 
-all: pbio illumina both
+
 
 
 pbio:
@@ -15,6 +15,8 @@ both:
 	../../pasa-salraa --bam illumina_plus_pacbio.merged.bam --genome minig.fa --outputfile pasa-salraa.both.gtf
 
 
+
+all: pbio illumina both
 
 
 clean:
