@@ -234,7 +234,9 @@ class PASA_SALRAA:
                 
         # from the best transcript paths, reconstruct the actual transcripts themselves:
 
-
+        self._validate_pairwise_incompatibilities(best_transcript_paths)
+        
+        
         transcripts = list() 
 
 
@@ -682,3 +684,24 @@ class PASA_SALRAA:
         return self._splice_graph
 
 
+
+    def _validate_pairwise_incompatibilities(self, pasa_scored_paths):
+
+        if len(pasa_scored_paths) < 2:
+            return
+        
+        for i in range(1, len(pasa_scored_paths)):
+            mp_A = pasa_scored_paths[i].get_multiPath_obj()  
+            sp_A = mp_A.get_simple_path()
+            sg = mp_A.get_splice_graph()
+            
+            for j in range(i-1, -1, -1):
+                mp_B = pasa_scored_paths[j].get_multiPath_obj()
+                sp_B = mp_B.get_simple_path()
+
+                if Simple_path_utils.simple_paths_overlap_and_compatible_spacer_aware_both_paths(sg, sp_A, sp_B):
+                    raise RuntimeError("Error, final paths:\n{} and \n{}\noverlap and are compatible - should have gotten assembled together".format(sp_A, sp_B))
+
+        return
+    
+                
