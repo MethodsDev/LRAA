@@ -74,11 +74,11 @@ class PASA_SALRAA:
         mpg_components = mpg.define_disjoint_graph_components_via_shared_splice_graph_vertex()
 
         logger.info("{} connected components identified".format(len(mpg_components)))
-        mpg.write_mp_graph_nodes_to_gtf("mpgns.pre.gtf")
+        mpg.write_mp_graph_nodes_to_gtf("__mpgns.pre.gtf")
 
         mpg_components = mpg.remove_small_components(mpg_components, PASA_SALRAA.min_transcript_length)
         logger.info("{} components surviving the min length {} criterion.".format(len(mpg_components), PASA_SALRAA.min_transcript_length))
-        mpg.write_mp_graph_nodes_to_gtf("mpgns.post_length_filter.gtf")
+        mpg.write_mp_graph_nodes_to_gtf("__mpgns.post_length_filter.gtf")
         
         all_reconstructed_transcripts = list()
 

@@ -153,7 +153,7 @@ def run_pasa_salraa(genome_fasta_filename, bam_file, output_filename,
             continue
 
         
-        sg.write_intron_exon_splice_graph_bed_files("{}/prereconstruct.{}.pad1".format(prereconstruct_info_dir, contig_acc), pad=1)
+        sg.write_intron_exon_splice_graph_bed_files("{}/__prereconstruct.{}.pad1".format(prereconstruct_info_dir, contig_acc), pad=1)
         
         pasa_salraa_obj = PASA_SALRAA(sg, CPU)
         pasa_salraa_obj.build_multipath_graph(contig_acc, contig_seq_str, bam_file, allow_spacers)
