@@ -13,8 +13,27 @@ from Transcript import Transcript
 import Util_funcs
 import PASA_SALRAA_Globals
 import MultiProcessManager as mpm
-
 import logging
+
+
+"""
+
+Illumina reads are expected by default.
+
+PacBio reads must be labeled with group ID 'PBLR' so they are recognized as such within the bam file.  This group ID annotation can be added using Picard like so:
+
+    java -jar picard.jar AddOrReplaceReadGroups I=pacbioccs.bam O=pacbioccs.PBLR.bam RGID=PBLR RGLB=lib2 RGPL=pacbio RGPU=unit2 RGSM=pacbio VALIDATION_STRINGENCY=LENIENT
+
+The resulting annotated pacbio alignments can then be merged with the Illumina bam like so:
+
+    samtools merge illumina_plus_pacbio.merged.bam illumina.bam pacbioccs.PBLR.bam 
+
+and  illumina_plus_pacbio.merged.bam  then becomes input to pasa-salraa
+
+"""
+
+
+
 #FORMAT = "%(asctime)-15s %(levelname)s %(module)s.%(name)s.%(funcName)s at %(lineno)d :\n\t%(message)s\n"
 FORMAT = "%(asctime)-15s %(levelname)s %(module)s.%(name)s.%(funcName)s:\n\t%(message)s\n"
 
@@ -45,9 +64,20 @@ def main():
 
     parser.add_argument("--mpm_monitor", action='store_true', default=False)
 
-    parser.add_argument("--no_allow_spacers", action='store_true', default=False)
 
-    parser.add_argument("--min_path_score", type=float, default=1.0, help="minimum score for an isoform to be reported")
+    ## config settings
+
+    config_group = parser.add_argument_group("config settings")
+
+    config_group.add_argument("--no_allow_spacers", action='store_true', default=False)
+
+    config_group.add_argument("--min_path_score", type=float, default=10.0, help="minimum score for an isoform to be reported")
+
+    config_group.add_argument("--min_per_id_illumina", type=float, default=98.0, help='min per_id for illumina read alignments')
+    config_group.add_argument("--min_per_id_pacbio", type=float, default=80.0, help='min per_id for pacbio read alignments')
+    
+    
+    
     
     args = parser.parse_args()
     
@@ -57,7 +87,12 @@ def main():
     single_best_only = args.single_best_only
     CPU = args.CPU
 
+    # update config
     PASA_SALRAA_Globals.config['min_path_score'] = args.min_path_score
+    PASA_SALRAA_Globals.config['min_per_id_illumina'] = args.min_per_id_illumina
+    PASA_SALRAA_Globals.config['min_per_id_pacbio'] = args.min_per_id_pacbio
+    
+    
     
     if args.mpm_monitor:
         mpm.set_debug()
