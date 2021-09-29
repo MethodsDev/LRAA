@@ -59,18 +59,49 @@ class PASA_vertex:
 
         self_mpgn = self.get_mpgn()
         assert(type(self_mpgn) == MultiPathGraphNode)
+
+        if PASA_SALRAA_Globals.DEBUG:
+            path_ext_dir = "__path_extension_audits"
+            if not os.path.exists(path_ext_dir):
+                os.makedirs(path_ext_dir)
+            mp_id = self_mpgn.get_id()
+            path_ext_audit_file = os.path.join(path_ext_dir, "{}.extension_audit".format(mp_id))
+            extension_audit_ofh = open(path_ext_audit_file, 'at')
+            print("############################################################################", file=extension_audit_ofh)
+            print("# Evaluating comparison to prev pasa vertex: {} with from paths:".format(prev_pasa_vertex), file=extension_audit_ofh)
+            for i, from_path in enumerate(prev_pasa_vertex.get_fromPaths()):
+                print("[From path {}: {}".format(i, from_path), file=extension_audit_ofh)
+            print("##### Done from path listing.", file=extension_audit_ofh)
+            
         
         for prev_scored_path in prev_pasa_vertex.get_fromPaths():
-            if not prev_scored_path.incompatibility_detected(self_mpgn):
+            if prev_scored_path.incompatibility_detected(self_mpgn):
+
+                if PASA_SALRAA_Globals.DEBUG:
+                    print("-incompatible extension of {}\nto prev scored path: {}".format(self_mpgn, prev_scored_path), file=extension_audit_ofh)
+
+            else:
 
                 extension_path_candidate = prev_scored_path.create_scored_path_extension(self_mpgn)
+
+                if PASA_SALRAA_Globals.DEBUG:
+                    print("-extension path candidate: {}".format(extension_path_candidate), file=extension_audit_ofh)
+                
                 if extension_path_candidate.get_score() > best_score:
                     best_score = extension_path_candidate.get_score()
                     best_prev_scored_path = extension_path_candidate
+
+                    if PASA_SALRAA_Globals.DEBUG:
+                        print("\t** best so far.", file=extension_audit_ofh)
+
+                    
                     
         if best_prev_scored_path is not None:
             self._fromPaths.append(best_prev_scored_path)
             logger.debug("Added best extension path: {} to {}".format(best_prev_scored_path, self))
+
+            if PASA_SALRAA_Globals.DEBUG:
+                print("**  best selected extension path: {}".format(best_prev_scored_path), file=extension_audit_ofh)
             
         return
     

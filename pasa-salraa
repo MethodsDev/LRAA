@@ -69,7 +69,7 @@ def main():
 
     config_group = parser.add_argument_group("config settings")
 
-    config_group.add_argument("--no_allow_spacers", action='store_true', default=False)
+    config_group.add_argument("--allow_spacers", action='store_true', default=False)
 
     config_group.add_argument("--min_path_score", type=float, default=10.0, help="minimum score for an isoform to be reported")
 
@@ -103,8 +103,8 @@ def main():
         PASA_SALRAA_Globals.DEBUG = True
 
 
-    allow_spacers = not args.no_allow_spacers
-        
+    allow_spacers = args.allow_spacers
+    
     run_pasa_salraa(genome_fasta_filename,
                     bam_filename,
                     output_filename,

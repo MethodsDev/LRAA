@@ -17,13 +17,18 @@ class PASA_scored_path:
 
 
         self._all_represented_mpgns = set() # stores all input mpgns and their contained mpgns
+
+        def recursively_capture_nodes(mpgn):
+            assert(type(mpgn) == MultiPathGraphNode)
+            if mpgn not in self._all_represented_mpgns:
+                self._all_represented_mpgns.add(mpgn)
+                for contained_mpgn in mpgn.get_containments():
+                    recursively_capture_nodes(contained_mpgn)
         
         for mpgn in path_list_of_multipath_graph_nodes:
-            assert(type(mpgn) == MultiPathGraphNode)
-            self._all_represented_mpgns.add(mpgn)
-            for mpgn_contained in mpgn.get_containments():
-                self._all_represented_mpgns.add(mpgn_contained)
-        
+            recursively_capture_nodes(mpgn)
+
+                
         self._mpgn_list_path = path_list_of_multipath_graph_nodes
         
         self._multiPath_obj = MultiPath.multiPath_from_mpgn_list(self._mpgn_list_path)
@@ -50,8 +55,8 @@ class PASA_scored_path:
         
         
     def __repr__(self):
-        txt = "PASA_scored_path: {} (score={:.5f}, IScore={:.5f})\nmpgns:\n".format(self.get_multiPath_obj(), self.get_score(), self.get_initial_score())
-
+        txt = "PASA_scored_path: {} (Score={:.5f}, InitScore={:.5f})\nmpgns:\n".format(self.get_multiPath_obj(), self.get_score(), self.get_initial_score())
+        
         for mpgn in self.get_path_mpgn_list():
             txt += str(mpgn) + "\n"
 
@@ -167,27 +172,12 @@ class PASA_scored_path:
         
         score = 0
 
-
-        all_mpgn_nodes = set()
+        mpgn_list = self.get_all_represented_mpgns()
         
-        
-        mpgn_list = self.get_path_mpgn_list()
-
-
-        def recursively_capture_nodes(mpgn):
-
-            if mpgn not in all_mpgn_nodes:
-                all_mpgn_nodes.add(mpgn)
-                for contained_mpgn in mpgn.get_containments():
-                    recursively_capture_nodes(mpgn)
-
-        for mpgn in mpgn_list:
-            recursively_capture_nodes(mpgn)
-
         # sum up weights
-        for mpgn in all_mpgn_nodes:
+        for mpgn in mpgn_list:
             score += mpgn.get_weight() * mpgn.get_count()
-
+        
         """
 
 

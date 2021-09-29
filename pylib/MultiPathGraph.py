@@ -4,6 +4,7 @@ import MultiPath
 import MultiPathCounter
 import networkx as nx
 import Simple_path_utils as Simple_path_utils
+import PASA_SALRAA_Globals
 from PASA_SALRAA_Globals import SPACER
 from GenomeFeature import Intron, Exon
 from MultiPathGraphNode import MultiPathGraphNode
@@ -13,16 +14,21 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
+
+
     
 class MultiPathGraph:
 
 
-    def __init__(self, multiPathCounter, splice_graph, min_mpgn_read_count=1, allow_spacers=False): # //FIXME: enable interface to allow_spacers
+    def __init__(self, multiPathCounter, splice_graph, contig_acc, min_mpgn_read_count=1, allow_spacers=False): # //FIXME: enable interface to allow_spacers
 
         assert(type(multiPathCounter) == MultiPathCounter.MultiPathCounter)
         assert(type(splice_graph) == Splice_graph.Splice_graph)
         
         self._splice_graph = splice_graph
+        self._contig_acc = contig_acc
+
         
         mp_graph = nx.DiGraph()
         self._mp_graph = mp_graph
@@ -58,10 +64,17 @@ class MultiPathGraph:
             self._mp_graph_nodes_list.append(mp_graph_node)
 
             
-        ## sort by rend
-        self._mp_graph_nodes_list = sorted(self._mp_graph_nodes_list, key=lambda x: (x._rend, x._lend))
+        ## sort
+        self._mp_graph_nodes_list = sorted(self._mp_graph_nodes_list, key=lambda x: (x._lend, x._rend))
 
         ordered_nodes = self._mp_graph_nodes_list
+
+        if PASA_SALRAA_Globals.DEBUG:
+            mpg_build_dir = "__mpg_building"
+            if not os.path.exists(mpg_build_dir):
+                os.makedirs(mpg_build_dir)
+            build_file = os.path.join(mpg_build_dir, "build-{}.txt".format(self._contig_acc))
+            build_ofh = open(build_file, "wt")
         
         ## define edges, containments, and incompatibilities
         for i in range(0, len(ordered_nodes)):
@@ -70,26 +83,51 @@ class MultiPathGraph:
             for j in range(i-1, -1, -1):
                 node_j = ordered_nodes[j]
 
-                #print("comparing {},{}".format(node_j, node_i))
-                
-                if node_j._rend < node_i._lend:
-                    break # all earlier node j's will also be non-overlapping
+                if PASA_SALRAA_Globals.DEBUG:
+                    print("\n\n# comparing prev_j\n{}\nto_i\n{}".format(node_j, node_i), file=build_ofh)
 
+                # nope - need more clever logic tracking prev max rend in ordered list.
+                #if node_j._rend < node_i._lend:
+                #    if PASA_SALRAA_Globals.DEBUG:
+                #        print("-non-overlapping, short-circuiting", file=build_ofh)
+                #    break # all earlier node j's will also be non-overlapping
+
+                if node_j._rend < node_i._lend:
+                    # they do not overlap and so cannot be contained or overlapping/incompatible
+                    continue
+                
                 if node_i.contains_other_node(node_j):
                     # i contains j
+                    if PASA_SALRAA_Globals.DEBUG:
+                        print("i-contains-j", file=build_ofh)
                     node_i.add_containment(node_j)
+
                 elif node_j.contains_other_node(node_i):
                     # j contains i
+                    if PASA_SALRAA_Globals.DEBUG:
+                        print("j-contains-i", file=build_ofh)
                     node_j.add_containment(node_i)
+                    
                 elif node_i.compatible(node_j):
                     # draw edge between overlapping and compatible nodes.
+                    if PASA_SALRAA_Globals.DEBUG:
+                        print("i-COMPATIBLE-j", file=build_ofh)
                     self._mp_graph.add_edge(node_j, node_i)
                     logger.debug("adding edge: {},{}".format(node_j, node_i))
+                    
                 else:
                     # incompatible pairs
+                    if PASA_SALRAA_Globals.DEBUG:
+                        print("i-NOTcompatible-j", file=build_ofh)
                     incompatible_pair_token = MultiPathGraphNode.get_mpgn_pair_token(node_i, node_j)
                     self._incompatible_pairs.add(incompatible_pair_token)
                     
+
+        if PASA_SALRAA_Globals.DEBUG:
+            build_ofh.close()
+
+        return
+    
     
     def get_ordered_nodes(self):
         # these are sorted by rend

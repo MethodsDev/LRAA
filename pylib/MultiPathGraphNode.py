@@ -35,8 +35,8 @@ class MultiPathGraphNode:
         self._containments = set() # other MPG nodes fully contained by this node.
 
         MultiPathGraphNode.mp_id_counter += 1
-        self._id = "mp{}".format(MultiPathGraphNode.mp_id_counter)
-
+        self._id = "mp{}x".format(MultiPathGraphNode.mp_id_counter)
+        
         self._seq_length = self._compute_seq_length()
 
         self._component_id = 0  # will be set to a component ID after components are defined
@@ -145,7 +145,8 @@ class MultiPathGraphNode:
     def toString(self, recursive=False):
         containments = self.get_containments()
         
-        text = "<mp:{} {}-{} Count:{} W:{:0.8f} Containments:{}, ScoreExcCont:{:.4f} ScoreInclCon:{:.4f} len:{}>".format(
+        text = "<{}:{} {}-{} Count:{} W:{:0.8f} Containments:{}, ScoreExcCont:{:.4f} ScoreInclCon:{:.4f} len:{}>".format(
+            self.get_id(),
             self.get_simple_path(),
             self._lend, self._rend, self._count, self._weight,
             len(containments),

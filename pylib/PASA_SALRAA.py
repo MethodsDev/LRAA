@@ -53,7 +53,7 @@ class PASA_SALRAA:
 
         mp_counter = self._populate_read_multi_paths(contig_acc, contig_seq, bam_file)
 
-        multipath_graph = MultiPathGraph(mp_counter, self._splice_graph, PASA_SALRAA.min_mpgn_read_count, allow_spacers)
+        multipath_graph = MultiPathGraph(mp_counter, self._splice_graph, contig_acc, PASA_SALRAA.min_mpgn_read_count, allow_spacers)
         self._multipath_graph = multipath_graph
         self._contig_acc = contig_acc
 
@@ -184,8 +184,12 @@ class PASA_SALRAA:
 
         mpgns_require_representation = set(mpg_component)
 
-        pasa_vertices = self._build_trellis(mpg_component)
+        ###################
+        ## Building trellis
+        pasa_vertices = self._build_trellis(mpg_component, mpg_token)
+        ###################
 
+        
         if logger.getEffectiveLevel() == logging.DEBUG: ## for debugging info only
             if round_iter == 1:
                 for pasa_vertex in pasa_vertices:
@@ -523,9 +527,9 @@ class PASA_SALRAA:
 
     
     
-    def _build_trellis(self, mpg_component):
+    def _build_trellis(self, mpg_component, mpg_token):
 
-        logger.debug("-building trellis")
+        logger.debug("-building trellis for {}".format(mpg_token))
         
         mpg = self._multipath_graph
 
@@ -700,8 +704,10 @@ class PASA_SALRAA:
                 sp_B = mp_B.get_simple_path()
 
                 if Simple_path_utils.simple_paths_overlap_and_compatible_spacer_aware_both_paths(sg, sp_A, sp_B):
-                    raise RuntimeError("Error, final paths:\n{} and \n{}\noverlap and are compatible - should have gotten assembled together".format(sp_A, sp_B))
-
+                    raise RuntimeError("\n\n\n##****************************************************************************\n" +
+                                       "Error, final paths:\n{} and \n{}\noverlap and are compatible - should have gotten assembled together".format(pasa_scored_paths[i], pasa_scored_paths[j]) + 
+                                       "\n##***************************************************************************************\n\n")
+                
         return
     
                 
