@@ -57,7 +57,6 @@ class Splice_graph:
         return
 
 
-
     def get_contig_acc(self):
         return self._contig_acc
     
@@ -83,7 +82,14 @@ class Splice_graph:
             raise RuntimeError("Error, node_id: {} not recognized in splice graph".format(node_id))
         
         return(self._node_id_to_node[node_id])
-    
+
+
+    def get_successors(self, node):
+        return list(self._splice_graph.successors(node))
+
+    def get_predecessors(self, node):
+        return list(self._splice_graph.predecessors(node))
+            
     
     def get_overlapping_exon_segments(self, range_lend, range_rend):
 

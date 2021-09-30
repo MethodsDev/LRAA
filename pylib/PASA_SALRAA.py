@@ -363,17 +363,17 @@ class PASA_SALRAA:
                     path.append(SPACER) # spacer
 
 
-        # trim any terminal spacer
-        while len(path) > 0  and path[-1] == SPACER:
-            path.pop()
-        
-        # trim any initial spacer
-        while len(path) > 0 and path[0] == SPACER:
-            path.pop(0)
-            
+
+        # refine path
 
         if SPACER in path:
+            path = Simple_path_utils.trim_terminal_spacers(path)
             path = self._remove_stutters(path)
+
+        path = Simple_path_utils.add_spacers_between_disconnected_nodes(self.get_splice_graph(), path)
+        
+        if SPACER in path:
+
             path = self._try_easy_fill_spacers(path)
             
             

@@ -7,6 +7,9 @@ from PASA_SALRAA_Globals import SPACER
 from Splice_graph import Splice_graph
 from GenomeFeature import Exon
 from Util_funcs import coordpairs_overlap
+import logging
+
+logger = logging.getLogger(__name__)
 
 # Namespace: Simple_path_utils
 # includes basic functions for evaluating relationships between simple paths in the graph.
@@ -529,6 +532,38 @@ def remove_spacers_from_path(simple_path):
         if node_id != SPACER:
             new_path.append(node_id)
 
+    return new_path
+
+
+def add_spacers_between_disconnected_nodes(splice_graph, simple_path):
+
+    new_path = [ simple_path[0] ]
+
+    spacer_added = False
+    
+    for i in range(1, len(simple_path)):
+        prev_node_id = new_path[-1]
+        node_id = simple_path[i]
+
+        if prev_node_id != SPACER and node_id != SPACER:
+            # verify connection
+            prev_node = splice_graph.get_node_obj_via_id(prev_node_id)
+            node = splice_graph.get_node_obj_via_id(node_id)
+            if node in splice_graph.get_successors(prev_node):
+                # connection verified. No spacer needed
+                new_path.append(node_id)
+            else:
+                # must add spacer between them:
+                new_path.extend([SPACER, node_id])
+                spacer_added = True
+                
+        else:
+            # one must be a spacer already, so no connection to verify here.
+            new_path.append(node_id)
+
+    if spacer_added:
+        logger.debug("-spacer added between unconnected nodes. Prev path:\n{}\nnew path\n{}".format(simple_path, new_path))
+    
     return new_path
 
     
