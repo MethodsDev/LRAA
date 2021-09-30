@@ -15,7 +15,7 @@ config = {
     'weight_long_read' : 100,
 
     # long read settings
-    'min_long_read_length' : 500,
+    'min_long_read_length' : 400,
 
 
     # misc settings
