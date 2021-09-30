@@ -114,6 +114,11 @@ class PASA_scored_path:
 
     def rescore(self):
         self._score = self.compute_path_score()
+
+        if self._score > self._initial_score:
+            raise RuntimeError("Error, rescored path exceeds initial score for path: " + str(self))
+        
+            
         return
     
     

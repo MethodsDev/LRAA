@@ -5,6 +5,7 @@ import MultiPathGraph
 import MultiPathCounter
 import networkx as nx
 import Simple_path_utils as Simple_path_utils
+import PASA_SALRAA_Globals
 from PASA_SALRAA_Globals import SPACER
 from GenomeFeature import Intron, Exon
 import math
@@ -24,8 +25,6 @@ class MultiPathGraphNode:
     def __init__(self, multiPathObj, count, lend, rend, mpg):
         self._multiPath = multiPathObj
         self._count = count
-        self._weight = 1.0 # weight applied to read count, varied in pasa-salraa
-        self._prev_weight = 1.0 # retain previous weight setting
         
         self._lend = lend
         self._rend = rend
@@ -39,6 +38,14 @@ class MultiPathGraphNode:
         
         self._seq_length = self._compute_seq_length()
 
+        if self._seq_length > PASA_SALRAA_Globals.config['min_long_read_length']:
+            self._weight = PASA_SALRAA_Globals.config['weight_long_read']
+        else:
+            self._weight = PASA_SALRAA_Globals.config['weight_short_read'] # contribution of read content towards scores
+        
+        self._prev_weight = self._weight # retain previous weight setting
+
+        
         self._component_id = 0  # will be set to a component ID after components are defined
 
         self._reweighted_flag = False # should be initialized to False before each reconstruction round.
