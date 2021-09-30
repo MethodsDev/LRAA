@@ -537,6 +537,9 @@ def remove_spacers_from_path(simple_path):
 
 def add_spacers_between_disconnected_nodes(splice_graph, simple_path):
 
+    if len(simple_path) < 2:
+        return simple_path # nothing to do here.
+    
     new_path = [ simple_path[0] ]
 
     spacer_added = False
