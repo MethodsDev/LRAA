@@ -172,7 +172,10 @@ class MultiPath:
 
 
         simple_multipath = Simple_path_utils.trim_terminal_spacers(simple_multipath)
-                
+
+        if SPACER in simple_multipath:
+            simple_multipath = Simple_path_utils.try_fill_spacers_via_splicegraph(sg, simple_multipath)
+        
         return simple_multipath
 
 

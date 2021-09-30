@@ -468,9 +468,70 @@ def simple_paths_overlap_and_compatible_spacer_aware_both_paths(sg:Splice_graph,
     return True # no conflicts detected
 
 
+def try_fill_spacers_via_splicegraph(sg, simple_path):
 
 
+    new_path = simple_path.copy()
 
+    for i in range(len(simple_path)):
+        if simple_path[i] == SPACER:
+            if i == 0 or i == len(simple_path)-1:
+                # cant be terminal
+                continue
+
+            prev_node = simple_path[i-1]
+            next_node = simple_path[i+1]
+
+            if prev_node == SPACER or next_node == SPACER:
+                continue
+
+            prev_node_obj = sg.get_node_obj_via_id(prev_node)
+            next_node_obj = sg.get_node_obj_via_id(next_node)
+
+            # require exons on both sides of spacer
+            if not ( type(prev_node_obj) == Exon and type(next_node_obj) == Exon):
+                continue
+
+            intron_lend = prev_node_obj._rend + 1
+            intron_rend = next_node_obj._lend - 1
+
+            intron_obj = sg.get_intron_node_obj(intron_lend, intron_rend)
+            if intron_obj:
+                intron_id = intron_obj.get_id()
+                new_path[i] = intron_id # replace spacer
+
+
+    return new_path
+                
+
+def split_path_at_spacers(simple_path):
+
+    if SPACER not in simple_path:
+        return [simple_path]
+
+    else:
+        simple_path = trim_terminal_spacers(simple_path)
+        paths = [ [] ]
+        
+        for node_id in simple_path:
+            if node_id == SPACER:
+                paths.append([])
+            else:
+                paths[-1].append(node_id)
+
+
+    return paths
+
+def remove_spacers_from_path(simple_path):
+
+    new_path = list()
+    for node_id in simple_path:
+        if node_id != SPACER:
+            new_path.append(node_id)
+
+    return new_path
+
+    
 ###############
 # unit tests ##
 ###############
@@ -790,12 +851,23 @@ def test_trim_terminal_spacers():
     assert(trim_terminal_spacers(simple_path_C) == ["a", "b", "c"] )
 
 
-def remove_spacers_from_path(simple_path):
 
-    new_path = list()
-    for node_id in simple_path:
-        if node_id != SPACER:
-            new_path.append(node_id)
 
-    return new_path
+def test_split_path_at_spacers():
+
+    p = ['a', SPACER, 'b']
+    assert(split_path_at_spacers(p) == [ ['a'], ['b'] ])
+
+    p = [SPACER]
+    assert(split_path_at_spacers(p) == [[]])
+
+    p = [SPACER, 'c']
+    assert(split_path_at_spacers(p) == [['c']])
+    
+    p = ['d', SPACER]
+    assert(split_path_at_spacers(p) == [['d']])
+
+    p = [SPACER, 'd', SPACER, 'e', SPACER, 'f', 'g', SPACER]
+    assert(split_path_at_spacers(p) == [['d'], ['e'], ['f', 'g']])
+
     

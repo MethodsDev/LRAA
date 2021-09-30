@@ -491,40 +491,8 @@ class PASA_SALRAA:
 
     def _try_easy_fill_spacers(self, path):
 
-
-        new_path = path.copy()
+        return Simple_path_utils.try_fill_spacers_via_splicegraph(self._splice_graph, path)
         
-        for i in range(len(path)):
-            if path[i] == SPACER:
-                if i == 0 or i == len(path)-1:
-                    # cant be terminal
-                    continue
-                
-                prev_node = path[i-1]
-                next_node = path[i+1]
-
-                if prev_node == SPACER or next_node == SPACER:
-                    continue
-                
-                prev_node_obj = self._splice_graph.get_node_obj_via_id(prev_node)
-                next_node_obj = self._splice_graph.get_node_obj_via_id(next_node)
-
-                # require exons on both sides of spacer
-                if not ( type(prev_node_obj) == Exon and type(next_node_obj) == Exon):
-                    continue
-                
-                intron_lend = prev_node_obj._rend + 1
-                intron_rend = next_node_obj._lend - 1
-
-                intron_obj = self._splice_graph.get_intron_node_obj(intron_lend, intron_rend)
-                if intron_obj:
-                    intron_id = intron_obj.get_id()
-                    new_path[i] = intron_id # replace spacer
-
-        
-        return new_path
-                
-
     
     
     def _build_trellis(self, mpg_component, mpg_token):
