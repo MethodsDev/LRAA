@@ -234,7 +234,7 @@ class Bam_alignment_extractor:
             prev_ref_start = ref_start
 
 
-        print("genome segments from read: {}".format(genome_segments))
+        #print("genome segments from read: {}".format(genome_segments))
         
         return genome_segments
 
