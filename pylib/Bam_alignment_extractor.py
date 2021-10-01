@@ -119,8 +119,8 @@ class Bam_alignment_extractor:
 
     def _get_alignment_segments(self, pysam_read_alignment):
         
-        aligned_pairs = pysam_read_alignment.get_blocks()
-
+        aligned_pairs = self._get_genome_alignment_blocks(pysam_read_alignment)
+ 
         #print(aligned_pairs)
         
         ## merge adjacent blocks within range.
@@ -156,6 +156,87 @@ class Bam_alignment_extractor:
             
         return alignment_segments
     
+
+
+        
+    def _get_genome_alignment_blocks(self, read):
+	
+        cigartuples = read.cigartuples
+	
+        """
+        M       BAM_CMATCH      0
+        I       BAM_CINS        1
+        D       BAM_CDEL        2
+        N       BAM_CREF_SKIP   3
+        S       BAM_CSOFT_CLIP  4
+        H       BAM_CHARD_CLIP  5
+        P       BAM_CPAD        6
+        =       BAM_CEQUAL      7
+        X       BAM_CDIFF       8
+        B       BAM_CBACK       9
+        """
+
+
+
+        ref_start = read.reference_start
+        read_start = 0
+
+        prev_ref_start = ref_start
+        prev_read_start = read_start
+
+        genome_segments = []
+
+        for cigartuple in cigartuples:
+            code, val = cigartuple
+
+            token = None
+            
+            if code == 0:
+                token = "BAM_CMATCH"
+                ref_start += val
+                read_start += val
+                prev_ref_start += 1
+                prev_read_start += 1
+
+            elif code == 1:
+                token = "BAM_CINS"
+                read_start += val
+                prev_read_start += 1
+
+            elif code == 2:
+                token = "BAM_CDEL"
+                ref_start += val
+                prev_ref_start += 1
+                
+            elif code == 3:
+                token = "BAM_CREF_SKIP"
+                ref_start += val
+                prev_ref_start += 1
+
+            elif code == 4:
+                token = "BAM_CSOFT_CLIP"
+                read_start += val
+                prev_read_start += 1
+
+            elif code == 5:
+                token = "BAM_CHARD_CLIP"
+                read_start += val
+                prev_read_start += 1
+
+            else:
+                raise RuntimeError("Not sure how to handle code {}".format(code))
+
+
+            if token in ["BAM_CMATCH", "BAM_CDEL"]:
+                genome_segments.append([prev_ref_start -1, ref_start]) # make zero-based left-inclusive right-exclusive for consistency w/ pysam blocks
+            
+            prev_read_start = read_start
+            prev_ref_start = ref_start
+
+
+        print("genome segments from read: {}".format(genome_segments))
+        
+        return genome_segments
 
 
         
