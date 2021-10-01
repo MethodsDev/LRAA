@@ -19,6 +19,12 @@ class Pretty_alignment:
         self._pysam_alignment = pysam_alignment
         self._pretty_alignment_segments = pretty_alignment_segments
 
+        if pysam_alignment.has_tag("RG") and pysam_alignment.get_tag("RG") == "PBLR":
+            self._read_type = "PBLR"
+        else:
+            self._read_type = "ILMN"
+        
+        
     def __repr__(self):
         return str(self._pretty_alignment_segments)
 
@@ -30,3 +36,7 @@ class Pretty_alignment:
         return self._pretty_alignment_segments
 
 
+    def get_read_type(self):
+        return self._read_type
+
+    

@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 class MultiPath:
     
     
-    def __init__(self, splice_graph, paths_list):
+    def __init__(self, splice_graph, paths_list, read_types = set()):
 
         self._splice_graph = splice_graph
 
@@ -40,6 +40,8 @@ class MultiPath:
 
         self._lend = coords[0]
         self._rend = coords[-1]
+
+        self._read_types = read_types
         
         return
 
@@ -49,6 +51,14 @@ class MultiPath:
         simple_path = Simple_path_utils.trim_terminal_spacers(simple_path)
         return(simple_path)
 
+
+    def include_read_type(self, read_type):
+        self._read_types.add(read_type)
+
+    def has_read_type(self, read_type):
+        bool_has_read_type = read_type in self._read_types
+        return bool_has_read_type
+        
     def get_splice_graph(self):
         return self._splice_graph
     
@@ -213,7 +223,7 @@ class MultiPath:
     
 
     def __repr__(self):
-        return(str(self._simple_path))
+        return(str(self._simple_path) + " rtypes:" + str(self._read_types))
     
 
     

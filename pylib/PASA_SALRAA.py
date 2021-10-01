@@ -275,7 +275,11 @@ class PASA_SALRAA:
         for read_name in grouped_alignments:
             #print("{}\t{}".format(read_name, len(grouped_alignments[read_name])))
             paths_list = list()
+            read_type = None
             for pretty_alignment in grouped_alignments[read_name]:
+                if read_type is None:
+                    read_type = pretty_alignment.get_read_type() 
+
                 path = self._map_read_to_graph(pretty_alignment.get_pretty_alignment_segments())
                                     
                 logger.debug("pretty_alignment: {} maps to graph path: {}".format(pretty_alignment, path))
@@ -286,9 +290,9 @@ class PASA_SALRAA:
 
             mp = None
             if paths_list:
-                mp = MultiPath(self._splice_graph, paths_list)
+                mp = MultiPath(self._splice_graph, paths_list, read_types = { read_type, } )
                 logger.debug("paths_list: {} -> mp: {}".format(paths_list, mp))
-                mp_counter.add(mp)
+                mp_counter.add(mp, read_type)
 
             read_graph_mappings_ofh.write("\t".join([read_name, str(pretty_alignment), str(mp)]) + "\n")
 

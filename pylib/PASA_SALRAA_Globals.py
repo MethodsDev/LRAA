@@ -14,10 +14,6 @@ config = {
     'weight_short_read' : 1,
     'weight_long_read' : 100,
 
-    # long read settings
-    'min_long_read_length' : 400,
-
-
     # misc settings
     'min_path_score' : 10
     
