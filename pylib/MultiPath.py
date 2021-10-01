@@ -58,7 +58,10 @@ class MultiPath:
     def has_read_type(self, read_type):
         bool_has_read_type = read_type in self._read_types
         return bool_has_read_type
-        
+
+    def get_read_types(self):
+        return self._read_types.copy()
+    
     def get_splice_graph(self):
         return self._splice_graph
     

@@ -39,25 +39,25 @@ class MultiPathGraph:
         
         multiPathCountPairs = multiPathCounter.get_all_MultiPathCountPairs()
         for mpCountPair in multiPathCountPairs:
-            mp, count = mpCountPair.get_multipath_and_count()
+            orig_mp, count = mpCountPair.get_multipath_and_count()
 
             if count < min_mpgn_read_count:
                 continue
 
             
-            if (not allow_spacers) and SPACER in mp:
+            if (not allow_spacers) and SPACER in orig_mp:
                 # split into separate mps:
-                simple_paths_list = Simple_path_utils.split_path_at_spacers(mp.get_simple_path())
-                logger.debug("-not allowing spacers, so path:\n{}\nwas split into paths:\n{}".format(mp, simple_paths_list))
+                simple_paths_list = Simple_path_utils.split_path_at_spacers(orig_mp.get_simple_path())
+                logger.debug("-not allowing spacers, so path:\n{}\nwas split into paths:\n{}".format(orig_mp, simple_paths_list))
                 # convert to multipath objects
                 path_list = []
                 for simple_path in simple_paths_list:
-                    mp = MultiPath.MultiPath(splice_graph, [ simple_path ])
+                    mp = MultiPath.MultiPath(splice_graph, [ simple_path ], read_types = orig_mp.get_read_types())
                     path_list.append(mp)
 
                 
             else:
-                path_list = [mp]
+                path_list = [orig_mp]
 
             for mp in path_list:
                 #print("mp: {}, count {}".format(mp, count))
