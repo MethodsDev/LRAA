@@ -147,7 +147,10 @@ class Splice_graph:
             self.write_intron_exon_splice_graph_bed_files("__final_graph", pad=0)
             self.describe_graph("__final.graph")
 
+
+        #print(self._itree_exon_segments )
         
+            
         return self._splice_graph
     
 

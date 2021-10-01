@@ -416,7 +416,7 @@ class PASA_SALRAA:
             # check for overlap and not extending beyond feature rend
             if (segment[0] < exon_segment._rend and
                 segment[1] > exon_segment._lend and
-                segment[1] <= exon_segment._rend):
+                exon_segment._rend <= segment[1]):
 
                 path.append(exon_segment.get_id())
 
@@ -430,15 +430,18 @@ class PASA_SALRAA:
 
         overlapping_segments = self._splice_graph.get_overlapping_exon_segments(segment[0], segment[1])
         overlapping_segments = sorted(overlapping_segments, key=lambda x: x._lend)
-        
+
+                
         for exon_segment in overlapping_segments:
             # check for overlap and not extending beyond feature rend
             if (segment[0] < exon_segment._rend and
                 segment[1] > exon_segment._lend and
-                segment[0] >= exon_segment._lend):
+                exon_segment._lend >= segment[0]):
 
                 path.append(exon_segment.get_id())
 
+        #logger.debug("segment {} maps to {}".format(segment, path))
+                
         return path
 
 
