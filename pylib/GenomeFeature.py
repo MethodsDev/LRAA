@@ -18,7 +18,8 @@ class GenomeFeature:
         self._lend = lend
         self._rend = rend
         self._id = "__id_not_set__"
-
+        self._read_types = set()
+        
         return
 
     def get_contig_acc(self):
@@ -40,7 +41,22 @@ class GenomeFeature:
     def get_id(self):
         return self._id
 
+    def add_read_type(self, read_type:str):
+        self._read_types.add(read_type)
+
+    def add_read_types(self, read_types:list):
+        for read_type in read_types:
+            self.add_read_type(read_type)
         
+        
+    def has_raed_type(self, read_type):
+        return read_type in self._read_types
+    
+
+    def get_read_types(self):
+        return list(self._read_types)
+
+    
 class Intron(GenomeFeature):
 
     intron_id_counter = 0
@@ -62,7 +78,7 @@ class Intron(GenomeFeature):
         return self._count
     
     def __repr__(self):
-        return("Intron: {} {}-{} count:{}".format(self._id, self._lend, self._rend, self._count))
+        return("Intron: {} {}-{} count:{} rtypes:{}".format(self._id, self._lend, self._rend, self._count, self.get_read_types()))
 
     def get_orient(self):
         return self._orient

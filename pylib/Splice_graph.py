@@ -116,7 +116,7 @@ class Splice_graph:
         self._initialize_contig_coverage()
 
         ## intron extracion.
-        # -requires min 2 intron-supporting reads
+        # -requires min intron-supporting reads
         # -excludes introns w/ heavily unbalanced splice site support 
         self._populate_exon_coverage_and_extract_introns()  # stores intron objs in self._intron_objs
         
@@ -212,6 +212,8 @@ class Splice_graph:
 
         intron_counter = defaultdict(int)
 
+        intron_to_read_types = defaultdict(set)
+        
         intron_splice_site_support = defaultdict(int)
         
         bam_extractor = Bam_alignment_extractor(self._alignments_bam_filename)
@@ -225,6 +227,8 @@ class Splice_graph:
 
             alignment_segments = pretty_alignment.get_pretty_alignment_segments()
             #print("Pretty alignment segments: " + str(alignment_segments))
+
+            read_type = pretty_alignment.get_read_type()
             
             if len(alignment_segments) > 1:
                 # ensure proper consensus splice sites.
@@ -232,6 +236,8 @@ class Splice_graph:
                 #print("introns list: " + str(introns_list))
                 for intron in introns_list:
                     intron_counter[intron] += 1
+                    intron_to_read_types[intron].add(read_type)
+                    
                     intron_lend,intron_rend,splice_orient = intron
                     intron_splice_site_support[intron_lend] += 1
                     intron_splice_site_support[intron_rend] += 1
@@ -249,6 +255,9 @@ class Splice_graph:
         
         # retain only those introns that meet the min threshold
         for intron_coords, count in intron_counter.items():
+
+            read_types = intron_to_read_types[intron_coords]
+            
             if count >= Splice_graph._min_intron_support:
                 ## check splice support
                 intron_lend,intron_rend,intron_orient = intron_coords
@@ -260,6 +269,8 @@ class Splice_graph:
 
                 if min_support/max_support >= Splice_graph._min_alt_splice_freq:
                     intron_obj = Intron(self._contig_acc, intron_lend, intron_rend, intron_orient, count)
+                    intron_obj.add_read_types(list(read_types))
+                    
                     intron_coords_key = "{}:{}".format(intron_lend, intron_rend)
                     self._intron_objs[intron_coords_key] = intron_obj
             
@@ -418,8 +429,12 @@ class Splice_graph:
         for intron in introns_to_delete:
             intron_coords = intron.get_coords()
             intron_key = "{}:{}".format(intron_coords[0], intron_coords[1])
-            logger.debug("removing intron: {} {}".format(intron_key, self._intron_objs[intron_key]))
-            del self._intron_objs[intron_key]
+            intron_obj = self._intron_objs[intron_key]
+            if intron_obj.has_read_type("PBLR"):
+                logger.debug("-retaining intron {} as having long read support".format(str(intron_obj)))
+            else:
+                logger.debug("removing intron: {} {}".format(intron_key, self._intron_objs[intron_key]))
+                del self._intron_objs[intron_key]
             
         return
 
@@ -566,6 +581,14 @@ class Splice_graph:
             else:
                 raise RuntimeError("Error, not identifying node: {} as Exon or Intron type - instead {} ".format(node, type(node)))
 
+        # store splice junction coordinates.
+        splice_coords = set()
+        for intron_obj in intron_objs:
+            lend, rend = intron_obj.get_coords()
+            splice_coords.add(lend)
+            splice_coords.add(rend)
+        
+            
         # build interval tree for exon segments.
 
         exon_itree = itree.IntervalTree()
@@ -594,6 +617,12 @@ class Splice_graph:
                 #print("\toverlaps: {}".format(overlapping_exon_seg))
 
                 overlapping_exon_seg = overlapping_exon_seg_iv.data
+
+                # see if connected by an intron
+                exon_lend, exon_rend = overlapping_exon_seg.get_coords()
+                if exon_lend - 1 in splice_coords or exon_rend + 1 in splice_coords:
+                    continue
+                
                 
                 if float(overlapping_exon_seg.get_read_support()) / float(intron.get_read_support()) < Splice_graph._min_alt_unspliced_freq:
                     exons_to_purge.add(overlapping_exon_seg)
