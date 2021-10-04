@@ -47,9 +47,8 @@ class GenomeFeature:
     def add_read_types(self, read_types:list):
         for read_type in read_types:
             self.add_read_type(read_type)
-        
-        
-    def has_raed_type(self, read_type):
+            
+    def has_read_type(self, read_type):
         return read_type in self._read_types
     
 
