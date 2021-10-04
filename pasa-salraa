@@ -71,10 +71,10 @@ def main():
 
     config_group.add_argument("--allow_spacers", action='store_true', default=False)
 
-    config_group.add_argument("--min_path_score", type=float, default=10.0, help="minimum score for an isoform to be reported")
+    config_group.add_argument("--min_path_score", type=float, default=PASA_SALRAA_Globals.config['min_path_score'], help="minimum score for an isoform to be reported")
 
-    config_group.add_argument("--min_per_id_illumina", type=float, default=98.0, help='min per_id for illumina read alignments')
-    config_group.add_argument("--min_per_id_pacbio", type=float, default=80.0, help='min per_id for pacbio read alignments')
+    config_group.add_argument("--min_per_id_illumina", type=float, default=PASA_SALRAA_Globals.config['min_per_id_illumina'], help='min per_id for illumina read alignments')
+    config_group.add_argument("--min_per_id_pacbio", type=float, default=PASA_SALRAA_Globals.config['min_per_id_pacbio'], help='min per_id for pacbio read alignments')
     
     
     

@@ -86,7 +86,7 @@ class Bam_alignment_extractor:
                 per_id = 100 - (mismatch_count/aligned_base_count)*100
                 #logger.info(f"-read per_id: {per_id}")
                 if per_id < min_per_id:
-                    logger.debug("read {} has insufficient per_id {}".format(read.query_name, per_id))
+                    logger.debug("read {} has insufficient per_id {}, < min {} required ".format(read.query_name, per_id, min_per_id))
                     discarded_read_counter["low_perID"] += 1
                     #print(read)
                     #print("Cigar_stats: " + str(cigar_stats))
