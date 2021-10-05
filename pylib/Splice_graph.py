@@ -623,11 +623,13 @@ class Splice_graph:
                 if exon_lend - 1 in splice_coords or exon_rend + 1 in splice_coords:
                     continue
                 
-                
+
                 if float(overlapping_exon_seg.get_read_support()) / float(intron.get_read_support()) < Splice_graph._min_alt_unspliced_freq:
+                    logger.debug("-pruning {} as has exon_read_support:{} / intron_read_support:{} < min_alt_unspliced_freq: {}".format(overlapping_exon_seg, overlapping_exon_seg.get_read_support(), float(intron.get_read_support(), Splice_graph._min_alt_unspliced_freq) ) )
                     exons_to_purge.add(overlapping_exon_seg)
                     
-                
+
+        
         logger.info("-removing {} lowly expressed exon segments based on intron overlap".format(len(exons_to_purge)))
         if exons_to_purge:
             draft_splice_graph.remove_nodes_from(exons_to_purge)
@@ -886,25 +888,18 @@ class Splice_graph:
         return
 
 
-    def _is_unspliced_exon_segment(self, exon, intron):
+    def _is_unspliced_exon_segment_artifact(self, exon, intron):
 
 
-        intron_bias_correction = 2 # give it a bonus given that its harder to align spliced reads properly than unspliced reads, and so there's likely a bias against the introns in comparison.
+        if exon.get_read_support() < Splice_graph._min_alt_unspliced_freq * intron.get_read_support():
+            return True
         
-        
-        if intron.get_read_support() * intron_bias_correction < exon.get_read_support():
-            # exon is more supported.
-            return False
-
             
         intron_lend, intron_rend = intron.get_coords()
         exon_lend, exon_rend = exon.get_coords()
 
         
-        if exon_lend == intron_lend and exon_rend == intron_rend:
-            return True
-
-        # prune singleton exon segments falling in more highly expressed introns:
+        # prune singleton exon segments falling in sufficiently expressed introns:
         if (not self._node_has_predecessors(exon)) and (not self._node_has_successors(exon)):
             return True
 
@@ -939,7 +934,7 @@ class Splice_graph:
 
         exons_to_purge = set()
 
-        ## should we restrict to certain introns here? min coverage?
+        ## should we restrict to certain introns here? min coverage? YES!!!
         
         for intron in intron_objs:
             intron_lend,intron_rend = intron.get_coords()
@@ -947,10 +942,10 @@ class Splice_graph:
 
             for overlapping_exon_seg in overlapping_exon_segs:
                 exon_seg = overlapping_exon_seg.data
-                if self._is_unspliced_exon_segment(exon=exon_seg, intron=intron):
+                if self._is_unspliced_exon_segment_artifact(exon=exon_seg, intron=intron):
                     exons_to_purge.add(exon_seg)
 
-        logger.info("-removing {} likley unspliced exon segments based on intron overlap".format(len(exons_to_purge)))
+        logger.info("-removing {} likely unspliced exon segments based on intron overlap".format(len(exons_to_purge)))
         if exons_to_purge:
             draft_splice_graph.remove_nodes_from(exons_to_purge)
 
