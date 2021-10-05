@@ -625,7 +625,10 @@ class Splice_graph:
                 
 
                 if float(overlapping_exon_seg.get_read_support()) / float(intron.get_read_support()) < Splice_graph._min_alt_unspliced_freq:
-                    logger.debug("-pruning {} as has exon_read_support:{} / intron_read_support:{} < min_alt_unspliced_freq: {}".format(overlapping_exon_seg, overlapping_exon_seg.get_read_support(), float(intron.get_read_support(), Splice_graph._min_alt_unspliced_freq) ) )
+                    logger.debug("-pruning {} as has exon_read_support:{} / intron_read_support:{} < min_alt_unspliced_freq: {}".format(overlapping_exon_seg,
+                                                                                                                                        overlapping_exon_seg.get_read_support(),
+                                                                                                                                        intron.get_read_support(),
+                                                                                                                                        Splice_graph._min_alt_unspliced_freq) )
                     exons_to_purge.add(overlapping_exon_seg)
                     
 
