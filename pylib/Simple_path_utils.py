@@ -474,6 +474,19 @@ def simple_paths_overlap_and_compatible_spacer_aware_both_paths(sg:Splice_graph,
 def try_fill_spacers_via_splicegraph(sg, simple_path):
 
 
+
+    # first, try to insert missing introns
+    new_path = try_fill_spacers_via_splicegraph_insert_missing_introns(sg, simple_path)
+
+    # remove spacers between connected nodes.
+    new_path = remove_spacers_between_connected_nodes(sg, new_path)
+
+    return new_path
+
+
+
+def try_fill_spacers_via_splicegraph_insert_missing_introns(sg, simple_path):
+
     new_path = simple_path.copy()
 
     for i in range(len(simple_path)):
@@ -506,6 +519,33 @@ def try_fill_spacers_via_splicegraph(sg, simple_path):
 
     return new_path
                 
+
+
+def remove_spacers_between_connected_nodes(sg, simple_path):
+
+    simple_path = simple_path.copy()
+    
+    deleted_spacer = "DELETED_SPACER"
+    
+    for i in range(1, len(simple_path)-1):
+        if simple_path[i] == SPACER:
+            prev_node_id = simple_path[i-1]
+            next_node_id = simple_path[i+1]
+            prev_node_obj = sg.get_node_obj_via_id(prev_node_id)
+            next_node_obj = sg.get_node_obj_via_id(next_node_id)
+
+            if next_node_obj in sg.get_successors(prev_node_obj):
+                # connected. Remove SPACER
+                simple_path[i] = deleted_spacer
+                logger.debug("-deleting spacer between connected nodes {} and {} in path {}".format(prev_node_id, next_node_id, simple_path))
+
+    new_path = simple_path
+    if deleted_spacer in simple_path:
+        new_path = [x for x in simple_path if x != deleted_spacer]
+
+    return new_path
+
+
 
 def split_path_at_spacers(simple_path):
 
