@@ -145,8 +145,8 @@ class PASA_scored_path:
         #    print("\t" + str(exon_or_intron))
         
         transcript_exon_segments = list()
-
-        orient = '?'
+        
+        orient = '.' # '?'
         contig_acc = exons_and_introns[0].get_contig_acc()
 
         for feature in exons_and_introns:
