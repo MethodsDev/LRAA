@@ -262,7 +262,10 @@ class PASA_SALRAA:
     def _populate_read_multi_paths(self, contig_acc, contig_seq, bam_file):
 
         bam_extractor = Bam_alignment_extractor(bam_file)
-        pretty_alignments = bam_extractor.get_read_alignments(contig_acc, pretty=True)
+        pretty_alignments = bam_extractor.get_read_alignments(contig_acc,
+                                                              region_lend=self._splice_graph._region_lend,
+                                                              region_rend=self._splice_graph._region_rend,
+                                                              pretty=True)
         
         grouped_alignments = self._group_alignments_by_read_name(pretty_alignments)
 
