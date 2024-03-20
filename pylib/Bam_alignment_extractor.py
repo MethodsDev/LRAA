@@ -42,15 +42,21 @@ class Bam_alignment_extractor:
         return
     
     
-    def get_read_alignments(self, contig_acc, pretty=False, config=PASA_SALRAA_Globals.config):        
+    def get_read_alignments(self, contig_acc, region_lend=None, region_rend=None,
+                            pretty=False, config=PASA_SALRAA_Globals.config):
 
         discarded_read_counter = defaultdict(int)
 
         read_alignments = list()
         
         # parse read alignments, capture introns and genome coverage info.
+        read_fetcher = None
+        if region_lend is not None and region_rend is not None:
+            read_fetcher = self._pysam_reader.fetch(contig_acc, region_lend, region_rend)
+        else:
+            read_fetcher = self._pysam_reader.fetch(contig_acc)
 
-        for read in self._pysam_reader.fetch(contig_acc):
+        for read in read_fetcher:
             
             if read.is_paired and not read.is_proper_pair:
                 discarded_read_counter["improper_pair"] += 1

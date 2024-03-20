@@ -122,7 +122,7 @@ class Splice_graph:
         return overlapping_exon_segments
     
 
-    def build_splice_graph_for_contig(self, contig_acc, contig_seq_str, alignments_bam_file):
+    def build_splice_graph_for_contig(self, contig_acc, contig_seq_str, alignments_bam_file, region_lend, region_rend):
 
         logger.info("creating splice graph for {} leveraging bam {}".format(contig_acc,                                                                                         alignments_bam_file))
         
@@ -130,6 +130,8 @@ class Splice_graph:
         self._contig_seq_str = contig_seq_str
         self._contig_seq_len = len(contig_seq_str)
         self._alignments_bam_filename = alignments_bam_file
+        self._region_lend = region_lend
+        self._region_rend = region_rend
         
         ## do the work:
         
@@ -238,7 +240,9 @@ class Splice_graph:
         
         bam_extractor = Bam_alignment_extractor(self._alignments_bam_filename)
         
-        pretty_alignments = bam_extractor.get_read_alignments(self._contig_acc, pretty=True)
+        pretty_alignments = bam_extractor.get_read_alignments(self._contig_acc,
+                                                              region_lend=self._region_lend, region_rend=self._region_rend,
+                                                              pretty=True)
         logger.info("-got {} pretty alignments.".format(len(pretty_alignments)))
         
         total_read_alignments_used = 0

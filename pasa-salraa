@@ -77,7 +77,14 @@ def main():
     config_group.add_argument("--min_per_id_pacbio", type=float, default=PASA_SALRAA_Globals.config['min_per_id_pacbio'], help='min per_id for pacbio read alignments')
     
     
-    
+    ## restrict to contig and optionally region of contig
+
+    contig_group_setting = parser.add_argument_group("target specific contig (or region of contig)")
+
+    contig_group_setting.add_argument("--restrict_to_contig", type=str, default=None,
+                                      help="restrict run to single contig")
+    contig_group_setting.add_argument("--restrict_region_range", type=str, default=None,
+                                      help="restrict to region on contig lend:rend")
     
     args = parser.parse_args()
     
@@ -125,7 +132,8 @@ def main():
                     READ_ALN_GAP_MERGE,
                     single_best_only,
                     CPU,
-                    allow_spacers)
+                    allow_spacers,
+                    args)
     
     
     sys.exit(0)
@@ -137,7 +145,8 @@ def run_pasa_salraa(genome_fasta_filename, bam_file, output_filename,
                     read_aln_gap_merge,
                     single_best_only,
                     CPU,
-                    allow_spacers):
+                    allow_spacers,
+                    args):
 
     # data structures want:
     # ultimately exons and introns
@@ -145,8 +154,19 @@ def run_pasa_salraa(genome_fasta_filename, bam_file, output_filename,
     # define coverage intervals and introns as graph components.
 
     ofh = open(output_filename, 'wt')
-    
-    genome_contigs_list = get_genome_contigs_listing(genome_fasta_filename)
+
+    if args.restrict_to_contig:
+        genome_contigs_list = [args.restrict_to_contig]
+    else:
+        genome_contigs_list = get_genome_contigs_listing(genome_fasta_filename)
+
+    restrict_region_lend, restrict_region_rend = None, None
+    if args.restrict_region_range:
+        restrict_region_lend, restrict_region_rend = re.split("[\\:\\-]", args.restrict_region_range)
+        restrict_region_lend = int(restrict_region_lend)
+        restrict_region_rend = int(restrict_region_rend)
+        assert restrict_region_lend < restrict_region_rend, f"Error, {args.restrict_region_range} invalid range"
+
 
     prereconstruct_info_dir = "__prereconstruct"
     if not os.path.exists(prereconstruct_info_dir):
@@ -160,7 +180,7 @@ def run_pasa_salraa(genome_fasta_filename, bam_file, output_filename,
         sg = Splice_graph()
         sg.set_read_aln_gap_merge(read_aln_gap_merge)
         contig_seq_str = Util_funcs.retrieve_contig_seq_from_fasta_file(contig_acc, genome_fasta_filename)
-        sg.build_splice_graph_for_contig(contig_acc, contig_seq_str, bam_file)
+        sg.build_splice_graph_for_contig(contig_acc, contig_seq_str, bam_file, restrict_region_lend, restrict_region_rend)
 
         if sg.is_empty():
             logger.info(f"-no splice graph created for contig: {contig_acc}.... skipping.")
