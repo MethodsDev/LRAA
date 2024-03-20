@@ -34,7 +34,7 @@ class Splice_graph:
     _min_terminal_splice_exon_anchor_length = 15
 
 
-    _remove_unspliced_introns = True
+    _remove_unspliced_introns = False #True
     
     def __init__(self):
 
@@ -54,11 +54,31 @@ class Splice_graph:
         self._itree_exon_segments = itree.IntervalTree()
         self._intron_objs = dict() # "lend:rend" => intron_obj
 
+        # set param
+
+        
         return
 
+    @classmethod
+    def init_sg_params(cls, params):
+        cls._read_aln_gap_merge_int = params['read_aln_gap_merge_int'] ## internal alignment gap merging
+        cls._inter_exon_segment_merge_dist = params['inter_exon_segment_merge_dist']  ## unbranched exon segments within this range get merged into single segments.
+        cls._max_genomic_contig_length = params['max_genomic_contig_length']
+
+        # noise filtering params
+        cls._min_alt_splice_freq = params['min_alt_splice_freq']
+        cls._min_alt_unspliced_freq = params['min_alt_unspliced_freq']
+        cls._max_intron_length_for_exon_segment_filtering = params['max_intron_length_for_exon_segment_filtering']
+        cls._min_intron_support = params['min_intron_support']
+        cls._min_terminal_splice_exon_anchor_length = params['min_terminal_splice_exon_anchor_length']
+
+        cls._remove_unspliced_introns = params['remove_unspliced_introns']
+
+    
 
     def get_contig_acc(self):
         return self._contig_acc
+
     
     def set_read_aln_gap_merge(self, read_aln_gap_merge_int):
 
@@ -66,6 +86,7 @@ class Splice_graph:
 
         return
 
+    
     def get_intron_node_obj(self, intron_lend, intron_rend):
 
         intron_token = "{}:{}".format(intron_lend, intron_rend)
@@ -102,7 +123,6 @@ class Splice_graph:
     
 
     def build_splice_graph_for_contig(self, contig_acc, contig_seq_str, alignments_bam_file):
-
 
         logger.info("creating splice graph for {} leveraging bam {}".format(contig_acc,                                                                                         alignments_bam_file))
         

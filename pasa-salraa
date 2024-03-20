@@ -104,6 +104,20 @@ def main():
 
 
     allow_spacers = args.allow_spacers
+
+
+    splice_graph_params_dict = { 'read_aln_gap_merge_int' :  10,
+                                 'inter_exon_segment_merge_dist' : 50,
+                                 'max_genomic_contig_length' : 1e10,
+                                 'min_alt_splice_freq' : 1e-5,
+                                 'min_alt_unspliced_freq' : 1e-5,
+                                 'max_intron_length_for_exon_segment_filtering' : 10000,
+                                 'min_intron_support' : 1,
+                                 'min_terminal_splice_exon_anchor_length' : 15,
+                                 'remove_unspliced_introns' : False }
+
+    Splice_graph.init_sg_params(splice_graph_params_dict)
+    
     
     run_pasa_salraa(genome_fasta_filename,
                     bam_filename,
