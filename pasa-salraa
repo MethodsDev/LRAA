@@ -191,14 +191,18 @@ def run_pasa_salraa(genome_fasta_filename, bam_file, output_filename,
             logger.info(f"-no splice graph created for contig: {contig_acc}.... skipping.")
             continue
 
-        
-        sg.write_intron_exon_splice_graph_bed_files("{}/__prereconstruct.{}.pad1".format(prereconstruct_info_dir, contig_acc), pad=1)
+        if PASA_SALRAA_Globals.DEBUG:
+            sg.write_intron_exon_splice_graph_bed_files("{}/__prereconstruct.{}.pad1".format(prereconstruct_info_dir, contig_acc), pad=1)
 
         ##---------------------
         ## Assemble transcripts
         
         pasa_salraa_obj = PASA_SALRAA(sg, CPU)
+        logger.info(f"-building splice graph for {contig_acc}")
         pasa_salraa_obj.build_multipath_graph(contig_acc, contig_seq_str, bam_file, allow_spacers)
+        
+
+        logger.info(f"-begin reconstructing isoforms for {contig_acc}")
         transcripts = pasa_salraa_obj.reconstruct_isoforms(single_best_only)
 
         logger.info("writing gtf output for {} containing {} transcripts".format(contig_acc, len(transcripts)))

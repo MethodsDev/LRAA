@@ -23,6 +23,9 @@ class MultiPathGraph:
 
     def __init__(self, multiPathCounter, splice_graph, contig_acc, min_mpgn_read_count=1, allow_spacers=False):
 
+
+        logger.info(f"START building MultiPathGraph for {contig_acc}")
+        
         assert(type(multiPathCounter) == MultiPathCounter.MultiPathCounter)
         assert(type(splice_graph) == Splice_graph.Splice_graph)
         
@@ -48,7 +51,8 @@ class MultiPathGraph:
             if (not allow_spacers) and SPACER in orig_mp:
                 # split into separate mps:
                 simple_paths_list = Simple_path_utils.split_path_at_spacers(orig_mp.get_simple_path())
-                logger.debug("-not allowing spacers, so path:\n{}\nwas split into paths:\n{}".format(orig_mp, simple_paths_list))
+                if PASA_SALRAA_Globals.DEBUG:
+                    logger.debug("-not allowing spacers, so path:\n{}\nwas split into paths:\n{}".format(orig_mp, simple_paths_list))
                 # convert to multipath objects
                 path_list = []
                 for simple_path in simple_paths_list:
@@ -80,6 +84,10 @@ class MultiPathGraph:
         ## sort
         self._mp_graph_nodes_list = sorted(self._mp_graph_nodes_list, key=lambda x: (x._lend, x._rend))
 
+        
+        ## TODO:// use interval tree to capture only those reads that overlap the current exon set.
+
+        
         ordered_nodes = self._mp_graph_nodes_list
 
         if PASA_SALRAA_Globals.DEBUG:
@@ -125,8 +133,9 @@ class MultiPathGraph:
                     # draw edge between overlapping and compatible nodes.
                     if PASA_SALRAA_Globals.DEBUG:
                         print("i-COMPATIBLE-j", file=build_ofh)
+                        logger.debug("adding edge: {},{}".format(node_j, node_i))
                     self._mp_graph.add_edge(node_j, node_i)
-                    logger.debug("adding edge: {},{}".format(node_j, node_i))
+                    
                     
                 else:
                     # incompatible pairs
@@ -139,6 +148,9 @@ class MultiPathGraph:
         if PASA_SALRAA_Globals.DEBUG:
             build_ofh.close()
 
+
+        logger.info(f"DONE building MultiPathGraph for {contig_acc}")
+            
         return
     
     

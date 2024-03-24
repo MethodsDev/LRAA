@@ -51,17 +51,22 @@ class PASA_SALRAA:
 
     def build_multipath_graph(self, contig_acc, contig_seq, bam_file, allow_spacers=False):
 
+        logger.info(f"-building multipath graph for {contig_acc}")
+        start_time = time.time()
         mp_counter = self._populate_read_multi_paths(contig_acc, contig_seq, bam_file)
 
         multipath_graph = MultiPathGraph(mp_counter, self._splice_graph, contig_acc, PASA_SALRAA.min_mpgn_read_count, allow_spacers)
         self._multipath_graph = multipath_graph
         self._contig_acc = contig_acc
-
+        
         if PASA_SALRAA_Globals.DEBUG:
             ## debugging info
             logger.info("writing __multipath_graph.dat")
             multipath_graph.describe_graph("__multipath_graph.dat")
         
+            
+        build_time = time.time() - start_time
+        logger.info("-multipath graph building took {:.1f} seconds.".format(build_time))
         
         return
 
@@ -122,7 +127,7 @@ class PASA_SALRAA:
                 write_mpg_component_debug_file(mpg_component, mpgn_description_filename)
 
                         
-            p = Process(target=self._reconstruct_isoforms_single_component,
+            p = Process(target=self._reconstruct_isoforms_single_component, name=mpg_token,
                         args=(q, mpg_component, component_counter, mpg_token, single_best_only) )
 
             mpm.launch_process(p)
@@ -286,8 +291,11 @@ class PASA_SALRAA:
         mp_counter = MultiPathCounter()
 
         # capture the read->path assignments:
-        read_graph_mappings_ofh = open("__read_graph_mappings.dat", "wt")
-        
+        if PASA_SALRAA_Globals.DEBUG:
+            read_graph_mappings_ofh = open("__read_graph_mappings.dat", "wt")
+            
+
+        logger.info("-start: mapping read alignments to the graph")
         for read_name in grouped_alignments:
             #print("{}\t{}".format(read_name, len(grouped_alignments[read_name])))
             paths_list = list()
@@ -310,15 +318,19 @@ class PASA_SALRAA:
                 logger.debug("paths_list: {} -> mp: {}".format(paths_list, mp))
                 mp_counter.add(mp)
 
-            read_graph_mappings_ofh.write("\t".join([read_name, str(pretty_alignment), str(mp)]) + "\n")
+            if PASA_SALRAA_Globals.DEBUG:
+                read_graph_mappings_ofh.write("\t".join([read_name, str(pretty_alignment), str(mp)]) + "\n")
 
 
-        read_graph_mappings_ofh.close()
+        if PASA_SALRAA_Globals.DEBUG:
+            read_graph_mappings_ofh.close()
         #print(mp_counter)
-        
+
+        logger.info("-done: mapping read alignments to the graph")
+            
         return mp_counter
     
-         
+    
 
     def _group_alignments_by_read_name(self, pretty_alignments):
 
