@@ -111,6 +111,11 @@ class Bam_alignment_extractor:
 
     def get_pretty_alignments(self, read_alignments_list):
 
+        """
+        stores the pysam alignment record along with inferred transcript exon segments,
+        where exon segments involve joining nearby alignment segments separated by short indels
+        """
+        
         pretty_alignments = list()
         
         for read_alignment in read_alignments_list:

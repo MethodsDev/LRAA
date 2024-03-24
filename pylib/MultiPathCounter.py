@@ -23,6 +23,10 @@ class MultiPathCountPair:
 
     def include_read_type(self, read_type):
         self._multipath.include_read_type(read_type)
+
+    def include_read_name(self, read_name):
+        self._multipath.include_read_name(read_name)
+    
         
     def __repr__(self):
         ret_text = "{}\t{}".format(str(self._multipath), self._count)
@@ -39,17 +43,23 @@ class MultiPathCounter:
         return
 
 
-    def add(self, multipath, read_type):
+    def add(self, multipath):
 
         multipath_key = str(multipath)
         if multipath_key in self._multipath_counter:
-            self._multipath_counter[multipath_key].increment()
-            self._multipath_counter[multipath_key].include_read_type(read_type)
+            mp = self._multipath_counter[multipath_key]
         else:
-            self._multipath_counter[multipath_key] = MultiPathCountPair(multipath)
-        
-        return
+            mp = self._multipath_counter[multipath_key] = MultiPathCountPair(multipath)
 
+        
+        mp.increment()
+        mp.include_read_type(multipath.get_read_types())
+        mp.include_read_name(multipath.get_read_names())
+                    
+        return
+    
+
+    
     def get_all_MultiPathCountPairs(self):
         return(self._multipath_counter.values())
 

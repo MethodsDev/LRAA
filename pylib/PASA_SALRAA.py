@@ -57,10 +57,11 @@ class PASA_SALRAA:
         self._multipath_graph = multipath_graph
         self._contig_acc = contig_acc
 
-        ## debugging info
-        logger.info("writing __multipath_graph.dat")
-        multipath_graph.describe_graph("__multipath_graph.dat")
-
+        if PASA_SALRAA_Globals.DEBUG:
+            ## debugging info
+            logger.info("writing __multipath_graph.dat")
+            multipath_graph.describe_graph("__multipath_graph.dat")
+        
         
         return
 
@@ -261,18 +262,30 @@ class PASA_SALRAA:
 
     def _populate_read_multi_paths(self, contig_acc, contig_seq, bam_file):
 
+        """
+        Reads the alignments from the BAM and for each read traces it
+        through a path in the graph.
+        The path is stored as a multipath object with a count associated with the number of reads assigned to it.
+        """
+        
+        
         bam_extractor = Bam_alignment_extractor(bam_file)
         pretty_alignments = bam_extractor.get_read_alignments(contig_acc,
                                                               region_lend=self._splice_graph._region_lend,
                                                               region_rend=self._splice_graph._region_rend,
                                                               pretty=True)
-        
-        grouped_alignments = self._group_alignments_by_read_name(pretty_alignments)
 
-        logger.info("-got {} pretty alignments grouped into {} alignment groups.".format(len(pretty_alignments), len(grouped_alignments)))
+
+        # grouping read alignments according to read pairings (for illumina PE data):
+        # group alignments:  grouped_alignments['read_name'] = list(read1_pretty_alignment, read2_pretty_alignment, ...)
+        grouped_alignments = self._group_alignments_by_read_name(pretty_alignments)
         
+        logger.info("-got {} pretty alignments grouped into {} alignment groups.".format(len(pretty_alignments), len(grouped_alignments)))
+
+        # distill read alignments into unique multipaths (so if 10k alignments yield the same structure, there's one multipath with 10k count associated)
         mp_counter = MultiPathCounter()
 
+        # capture the read->path assignments:
         read_graph_mappings_ofh = open("__read_graph_mappings.dat", "wt")
         
         for read_name in grouped_alignments:
@@ -287,15 +300,15 @@ class PASA_SALRAA:
                                     
                 logger.debug("pretty_alignment: {} maps to graph path: {}".format(pretty_alignment, path))
                 if path and path != SPACER:
-                    assert(path[0] != SPACER)
-                    assert(path[-1] != SPACER)
+                    assert path[0] != SPACER, "path[0] is SPACER, not allowed"
+                    assert path[-1] != SPACER, "path[-1] is SPACER, not allowed"
                     paths_list.append(path)
 
             mp = None
             if paths_list:
-                mp = MultiPath(self._splice_graph, paths_list, read_types = { read_type, } )
+                mp = MultiPath(self._splice_graph, paths_list, read_types = { read_type, }, read_names = { read_name, } )
                 logger.debug("paths_list: {} -> mp: {}".format(paths_list, mp))
-                mp_counter.add(mp, read_type)
+                mp_counter.add(mp)
 
             read_graph_mappings_ofh.write("\t".join([read_name, str(pretty_alignment), str(mp)]) + "\n")
 

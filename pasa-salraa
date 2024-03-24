@@ -172,11 +172,16 @@ def run_pasa_salraa(genome_fasta_filename, bam_file, output_filename,
     if not os.path.exists(prereconstruct_info_dir):
         os.makedirs(prereconstruct_info_dir)
         
+    ##----------------------------------------------
+    ## Begin assembly, target each contig separately
     
     for contig_acc in genome_contigs_list:
 
         logger.info(f"-processing contig: {contig_acc}")
-        
+
+        ##-------------------
+        ## build splice graph
+
         sg = Splice_graph()
         sg.set_read_aln_gap_merge(read_aln_gap_merge)
         contig_seq_str = Util_funcs.retrieve_contig_seq_from_fasta_file(contig_acc, genome_fasta_filename)
@@ -188,6 +193,9 @@ def run_pasa_salraa(genome_fasta_filename, bam_file, output_filename,
 
         
         sg.write_intron_exon_splice_graph_bed_files("{}/__prereconstruct.{}.pad1".format(prereconstruct_info_dir, contig_acc), pad=1)
+
+        ##---------------------
+        ## Assemble transcripts
         
         pasa_salraa_obj = PASA_SALRAA(sg, CPU)
         pasa_salraa_obj.build_multipath_graph(contig_acc, contig_seq_str, bam_file, allow_spacers)

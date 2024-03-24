@@ -135,24 +135,37 @@ class Splice_graph:
         
         ## do the work:
         
-        self._initialize_contig_coverage()
+        self._initialize_contig_coverage() # populates self._contig_base_cov
 
-        ## intron extracion.
+        ##---------------------------------------------------
+        ## intron extraction and exonic base coverage defined.
         # -requires min intron-supporting reads
-        # -excludes introns w/ heavily unbalanced splice site support 
-        self._populate_exon_coverage_and_extract_introns()  # stores intron objs in self._intron_objs
-        
-        self._build_draft_splice_graph() # initializes self._splice_graph
+        # -excludes introns w/ heavily unbalanced splice site support (via Splice_graph._min_alt_splice_freq setting)
+        # - stores intron objs in self._intron_objs
+        # - base coverage incremented under self._contig_base_cov
+        self._populate_exon_coverage_and_extract_introns()  
+
+
+        ##--------------------------------------------------------------------------------
+        # initializes self._splice_graph
+        # -defines exons by segmenting genomic coverage based on intron splice coordinates
+        # - constructs self._splice_graph as nx.DiGraph()
+        self._build_draft_splice_graph() 
 
         if self.is_empty():
             return None
+
         
         if PASA_SALRAA_Globals.DEBUG:
             self.write_intron_exon_splice_graph_bed_files("__prefilter", pad=0)
             self.describe_graph("__prefilter.graph")
                 
 
-        self._prune_lowly_expressed_intron_overlapping_exon_segments()  # removes exon segments, not introns, also removes unspliced introns if Splice_graph._remove_unspliced_introns flag is set.
+        ##----------------------------------------------
+        ## Refine the splice graph
+        ## removes exon segments, not introns, also removes unspliced introns if Splice_graph._remove_unspliced_introns flag is set.
+
+        self._prune_lowly_expressed_intron_overlapping_exon_segments()  
         
         self._merge_neighboring_proximal_unbranched_exon_segments()
         
@@ -169,13 +182,12 @@ class Splice_graph:
             self.write_intron_exon_splice_graph_bed_files("__final_graph", pad=0)
             self.describe_graph("__final.graph")
 
-
         #print(self._itree_exon_segments )
-        
-            
+
         return self._splice_graph
     
 
+    
     def _node_has_successors(self, node):
 
         if len(list(self._splice_graph.successors(node))) > 0:
@@ -239,7 +251,10 @@ class Splice_graph:
         intron_splice_site_support = defaultdict(int)
         
         bam_extractor = Bam_alignment_extractor(self._alignments_bam_filename)
-        
+
+        # get read alignments
+        # - illumina and pacbio reads filtered based on tech-specific min per_id
+        # - pretty alignments: store the pysam alignment record along with inferred transcript exons segments.
         pretty_alignments = bam_extractor.get_read_alignments(self._contig_acc,
                                                               region_lend=self._region_lend, region_rend=self._region_rend,
                                                               pretty=True)
