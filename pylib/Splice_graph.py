@@ -48,7 +48,7 @@ class Splice_graph:
         
         self._contig_base_cov = list()
         
-        self._splice_graph = None  # becomes networkx digraph
+        self._splice_graph = None  # becomes networkx digraph TODO://rename this var as confusing when using _splice_graph as this obj in other modules
         
         self._node_id_to_node = dict()
         self._itree_exon_segments = itree.IntervalTree()
