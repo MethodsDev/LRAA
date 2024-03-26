@@ -61,7 +61,7 @@ class MultiPathGraph:
                 # convert to multipath objects
                 path_list = []
                 for simple_path in simple_paths_list:
-                    mp = MultiPath.MultiPath(splice_graph, [ simple_path ], read_types = orig_mp.get_read_types())
+                    mp = MultiPath.MultiPath(splice_graph, [ simple_path ], read_types = orig_mp.get_read_types(), read_names = orig_mp.get_read_names())
                     path_list.append(mp)
 
                 

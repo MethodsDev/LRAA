@@ -121,6 +121,21 @@ class PASA_scored_path:
             
         return
     
+
+    def get_all_represented_reads(self):
+
+        read_names = set()
+        
+        for mpgn in self._all_represented_mpgns:
+            for read_name in mpgn.get_read_names():
+                read_names.add(read_name)
+            if mpgn.has_containments:
+                for contained_mpgn in mpgn.get_containments():
+                    for read_name in contained_mpgn.get_read_names():
+                        read_names.add(read_name)
+                        
+        return read_names
+
     
     def toTranscript(self):
 
@@ -129,6 +144,8 @@ class PASA_scored_path:
         mpgn_list = sorted(mpgn_list, key=lambda x: x._rend)
         
         splice_graph = mpgn_list[0].get_splice_graph()
+
+        read_names = self.get_all_represented_reads()
         
         # merge to a single multipath object
         simple_path_list = list()
@@ -166,6 +183,8 @@ class PASA_scored_path:
         transcript_obj = Transcript(contig_acc, transcript_exon_segments, orient)
 
         #transcript_obj.set_scored_path_obj(self)  # commenting out / lightening up object
+
+        transcript_obj.add_read_names(read_names)
         
         return transcript_obj
 

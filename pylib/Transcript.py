@@ -28,6 +28,8 @@ class Transcript (GenomeFeature):
         self._meta = None
 
         self._scored_path_obj = None #optional - useful if transcript obj was built based on a scored path
+
+        self.read_names = list() # list of read names supporting the transcript structure.
         
         return
 
@@ -57,12 +59,23 @@ class Transcript (GenomeFeature):
 
         self._meta[meta_key] = meta_val
         return
+
+
+    def add_read_names(self, read_names):
+        self.read_names = read_names
+        
     
 
     def to_GTF_format(self):
 
         ## transcript line:
-        gtf_text = "\t".join([self._contig_acc,
+
+        gtf_text = ""
+        
+        if self.read_names:
+            gtf_text = f"#{self._id}\t" + ",".join(self.read_names) + "\n"
+        
+        gtf_text += "\t".join([self._contig_acc,
                               "PASA-SALRAA",
                               "transcript",
                               str(self._lend),

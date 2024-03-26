@@ -23,6 +23,9 @@ class MultiPathGraphNode:
     mp_id_counter = 0
     
     def __init__(self, multiPathObj, count, lend, rend, mpg):
+
+        assert len(multiPathObj.get_read_names()) > 0, "error, multipath obj lacks read support - shouldnt be possible: " + str(multiPathObj)
+        
         self._multiPath = multiPathObj
         self._count = count
         
@@ -62,6 +65,9 @@ class MultiPathGraphNode:
     def get_simple_path(self):
         return(self._multiPath.get_simple_path())
 
+    def get_read_names(self):
+        return(self._multiPath.get_read_names())
+    
     def set_reweighted_flag(self, flag_setting):
         self._reweighted_flag = flag_setting
         return
@@ -152,14 +158,15 @@ class MultiPathGraphNode:
     def toString(self, recursive=False):
         containments = self.get_containments()
         
-        text = "<{}:{} {}-{} Count:{} W:{:0.8f} Containments:{}, ScoreExcCont:{:.4f} ScoreInclCon:{:.4f} len:{}>".format(
+        text = "<{}:{} {}-{} Count:{} W:{:0.8f} Containments:{}, ScoreExcCont:{:.4f} ScoreInclCon:{:.4f} len:{} read_names:{}>".format(
             self.get_id(),
             self.get_simple_path(),
             self._lend, self._rend, self._count, self._weight,
             len(containments),
             self.get_score_EXCLUDE_containments(use_prev_weight=False),
             self.get_score_INCLUDE_containments(use_prev_weight=False),
-            self._seq_length)
+            self._seq_length,
+            self.get_read_names())
 
         if recursive:
             for containment in containments:

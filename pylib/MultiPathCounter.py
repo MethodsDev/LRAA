@@ -47,6 +47,8 @@ class MultiPathCounter:
 
     def add(self, multipath_obj):
 
+        assert len(multipath_obj.get_read_names()) > 0
+        
         assert type(multipath_obj) == MultiPath.MultiPath
         multipath_key = str(multipath_obj.get_simple_path())
         
