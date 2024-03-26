@@ -83,6 +83,9 @@ class Bam_alignment_extractor:
             # check read alignment percent identity
             cigar_stats = read.get_cigar_stats()
             aligned_base_count = cigar_stats[0][0]
+            if aligned_base_count == 0:
+                aligned_base_count = cigar_stats[0][7] + cigar_stats[0][8]
+                
             mismatch_count = None
             if read.has_tag("NM"):
                 mismatch_count = int(read.get_tag("NM"))
@@ -202,7 +205,7 @@ class Bam_alignment_extractor:
 
             token = None
             
-            if code == 0:
+            if code in (0, 7, 8):
                 token = "BAM_CMATCH"
                 ref_start += val
                 read_start += val
