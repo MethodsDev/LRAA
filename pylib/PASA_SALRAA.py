@@ -296,7 +296,12 @@ class PASA_SALRAA:
             
 
         logger.info("-start: mapping read alignments to the graph")
-        for read_name in grouped_alignments:
+        num_alignments = len(grouped_alignments)
+        for i,read_name in enumerate(grouped_alignments):
+            if i % 100 == 0:
+                frac_done = i/num_alignments*100
+                sys.stderr.write(f"\r[{i} / {num_alignments} =  {frac_done:.2f}   ")
+            
             #print("{}\t{}".format(read_name, len(grouped_alignments[read_name])))
             paths_list = list()
             read_type = None

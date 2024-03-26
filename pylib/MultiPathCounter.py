@@ -4,19 +4,18 @@
 import sys, os, re
 from collections import defaultdict
 import logging
+import MultiPath
 
 logger = logging.getLogger(__name__)
 
 class MultiPathCountPair:
 
-    def __init__(self, multipath, count=1):
+    def __init__(self, multipath):
         self._multipath = multipath
-        self._count = count
-        return
+        self.reset_count()
 
     def increment(self, increment=1):
         self._count += increment
-        return
 
     def get_multipath_and_count(self):
         return(self._multipath, self._count)
@@ -26,6 +25,9 @@ class MultiPathCountPair:
 
     def include_read_name(self, read_name):
         self._multipath.include_read_name(read_name)
+
+    def reset_count(self):
+        self._count = len(self._multipath.get_read_names())
     
         
     def __repr__(self):
@@ -43,21 +45,21 @@ class MultiPathCounter:
         return
 
 
-    def add(self, multipath):
+    def add(self, multipath_obj):
 
-        multipath_key = str(multipath)
-        if multipath_key in self._multipath_counter:
-            mp = self._multipath_counter[multipath_key]
-        else:
-            mp = self._multipath_counter[multipath_key] = MultiPathCountPair(multipath)
-
+        assert type(multipath_obj) == MultiPath.MultiPath
+        multipath_key = str(multipath_obj.get_simple_path())
         
-        mp.increment()
-        mp.include_read_type(multipath.get_read_types())
-        mp.include_read_name(multipath.get_read_names())
-                    
-        return
-    
+        if multipath_key in self._multipath_counter:
+            orig_mp_count_pair = self._multipath_counter[multipath_key]
+            orig_mp_count_pair.include_read_name(multipath_obj.get_read_names())
+            orig_mp_count_pair.include_read_type(multipath_obj.get_read_types())
+            orig_mp_count_pair.reset_count()
+            
+
+        else:
+            self._multipath_counter[multipath_key] = MultiPathCountPair(multipath_obj)
+
 
     
     def get_all_MultiPathCountPairs(self):

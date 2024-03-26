@@ -76,6 +76,14 @@ def main():
     config_group.add_argument("--min_per_id_illumina", type=float, default=PASA_SALRAA_Globals.config['min_per_id_illumina'], help='min per_id for illumina read alignments')
     config_group.add_argument("--min_per_id_pacbio", type=float, default=PASA_SALRAA_Globals.config['min_per_id_pacbio'], help='min per_id for pacbio read alignments')
     
+
+    ## alt splice settings
+
+    config_group_altsplice = parser.add_argument_group("alt splice settings")
+
+    config_group_altsplice.add_argument("--min_alt_splice_freq", type=float, default=0.02, help="min fraction required for alt splicing at an exon boundary (default: 0.02)")
+    config_group_altsplice.add_argument("--min_alt_unspliced_freq", type=float, default=0.05, help="min fraction required for retained intron at splice boundary (default: 0.05)")
+    
     
     ## restrict to contig and optionally region of contig
 
@@ -116,13 +124,13 @@ def main():
     splice_graph_params_dict = { 'read_aln_gap_merge_int' :  10,
                                  'inter_exon_segment_merge_dist' : 50,
                                  'max_genomic_contig_length' : 1e10,
-                                 'min_alt_splice_freq' : 1e-5,
-                                 'min_alt_unspliced_freq' : 1e-5,
+                                 'min_alt_splice_freq' : args.min_alt_splice_freq,
+                                 'min_alt_unspliced_freq' : args.min_alt_unspliced_freq,
                                  'max_intron_length_for_exon_segment_filtering' : 10000,
                                  'min_intron_support' : 1,
                                  'min_terminal_splice_exon_anchor_length' : 15,
                                  'remove_unspliced_introns' : False }
-
+    
     Splice_graph.init_sg_params(splice_graph_params_dict)
     
     

@@ -121,6 +121,8 @@ class MultiPathGraph:
             for mp_node_id in mp_node_set:
                 mp_node_obj = self._mp_id_to_node[mp_node_id]
                 ordered_nodes.append(mp_node_obj)
+                #print(f"component_id: {component_id}\tmp_node_obj: {mp_node_obj}")
+
 
             ordered_nodes = sorted(ordered_nodes, key=lambda x: (x._lend, x._rend))  
 
