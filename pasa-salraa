@@ -58,11 +58,19 @@ def main():
 
     parser.add_argument("--CPU", type=int, default=1,
                         help="number of cores for multithreading")
+
+
+    parser.add_argument("--normalize_max_cov_level", type=int, default=10000, help="normalize to max read coverage level before assembly (default: 10000)")
     
-    parser.add_argument("--debug", "-d", action='store_true', default=False,
+    ## debug params
+    
+    debug_group = parser.add_argument_group("debug settings")
+
+    
+    debug_group.add_argument("--debug", "-d", action='store_true', default=False,
                         help='debug mode, more verbose')
 
-    parser.add_argument("--mpm_monitor", action='store_true', default=False)
+    debug_group.add_argument("--mpm_monitor", action='store_true', default=False)
 
 
     ## config settings
@@ -120,6 +128,38 @@ def main():
 
     allow_spacers = args.allow_spacers
 
+
+
+    ## perform normalization prior to assembly
+    pre_norm_bam_filename = bam_filename
+
+    if args.normalize_max_cov_level > 0:
+
+        bamsifter_prog = os.path.sep.join([os.path.dirname(os.path.realpath(__file__)), "plugins/bamsifter/bamsifter"])
+
+        norm_bam_filename = os.path.basename(bam_filename) + f".norm_{args.normalize_max_cov_level}.bam"
+        
+        cmd = " ".join([bamsifter_prog,
+                        f" -c {args.normalize_max_cov_level} ",
+                        f" -o {norm_bam_filename} ",
+                        bam_filename])
+                        
+        norm_bam_checkpoint = norm_bam_filename + ".ok"
+        if not os.path.exists(norm_bam_checkpoint):
+            logger.info("generating normalized bam file")
+            logger.info(cmd)
+            subprocess.check_call(cmd, shell=True)
+
+
+            samtools_index_cmd = f"samtools index {norm_bam_filename}" 
+            subprocess.check_call(samtools_index_cmd, shell=True)
+
+        bam_filename = norm_bam_filename
+
+
+    ###########################################
+    ## on to isoform discovery / reconstruction 
+            
 
     splice_graph_params_dict = { 'read_aln_gap_merge_int' :  10,
                                  'inter_exon_segment_merge_dist' : 50,
