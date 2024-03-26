@@ -54,8 +54,10 @@ class Splice_graph:
         self._itree_exon_segments = itree.IntervalTree()
         self._intron_objs = dict() # "lend:rend" => intron_obj
 
-        # set param
-
+        ## connected components (genes)
+        self._components = list() # ordered list of graph components
+        self._node_id_to_component = dict() # node_id -> component index
+        
         
         return
 
@@ -183,6 +185,17 @@ class Splice_graph:
             self.describe_graph("__final.graph")
 
         #print(self._itree_exon_segments )
+
+
+        connected_components = list(nx.connected_components(self._splice_graph.to_undirected()))
+
+        self._components = connected_components
+        for i,component in enumerate(self._components):
+            for node in component:
+                id = node.get_id()
+                logger.debug(f"assigning node {id} to component {i}")
+                self._node_id_to_component[id] = i
+        
 
         return self._splice_graph
     
@@ -339,26 +352,25 @@ class Splice_graph:
             if splice_type is not None:
                 introns_list.append( (intron_lend, intron_rend, splice_type) )
 
-        """
-            if splice_type is None:
-                continue
-            elif splice_type == '+':
-                top_strand_agreement_count += 1
-            elif splice_type == '-':
-                bottom_strand_agreement_count += 1
-            else:
-                raise RuntimeError("not sure what splice type we have here...")
-            
-        
-        if top_strand_agreement_count > 0 and bottom_strand_agreement_count > 0:
-            # inconsistent orientation of splicing events
-            return None
-        elif top_strand_agreement_count > 0 or bottom_strand_agreement_count > 0:
-            # all consistent splicing orientations
-            return introns_list
-        else:
-            raise RuntimeError("splicing analysis error... shouldn't happen")
-       """
+        #
+        #    if splice_type is None:
+        #        continue
+        #    elif splice_type == '+':
+        #        top_strand_agreement_count += 1
+        #    elif splice_type == '-':
+        #        bottom_strand_agreement_count += 1
+        #    else:
+        #        raise RuntimeError("not sure what splice type we have here...")
+        #    
+        # 
+        #if top_strand_agreement_count > 0 and bottom_strand_agreement_count > 0:
+        #    # inconsistent orientation of splicing events
+        #    return None
+        #elif top_strand_agreement_count > 0 or bottom_strand_agreement_count > 0:
+        #    # all consistent splicing orientations
+        #    return introns_list
+        #else:
+        #    raise RuntimeError("splicing analysis error... shouldn't happen")
 
         return introns_list
 
