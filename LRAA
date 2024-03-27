@@ -137,6 +137,9 @@ def main():
             samtools_index_cmd = f"samtools index {norm_bam_filename}" 
             subprocess.check_call(samtools_index_cmd, shell=True)
 
+            subprocess.check_call(f"touch {norm_bam_checkpoint}", shell=True)
+
+
         bam_filename = norm_bam_filename
 
 
