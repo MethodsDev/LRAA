@@ -16,23 +16,6 @@ import MultiProcessManager as mpm
 import logging
 
 
-"""
-
-Illumina reads are expected by default.
-
-PacBio reads must be labeled with group ID 'PBLR' so they are recognized as such within the bam file.  This group ID annotation can be added using Picard like so:
-
-    java -jar picard.jar AddOrReplaceReadGroups I=pacbioccs.bam O=pacbioccs.PBLR.bam RGID=PBLR RGLB=lib2 RGPL=pacbio RGPU=unit2 RGSM=pacbio VALIDATION_STRINGENCY=LENIENT
-
-The resulting annotated pacbio alignments can then be merged with the Illumina bam like so:
-
-    samtools merge illumina_plus_pacbio.merged.bam illumina.bam pacbioccs.PBLR.bam 
-
-and  illumina_plus_pacbio.merged.bam  then becomes input to pasa-salraa
-
-"""
-
-
 
 #FORMAT = "%(asctime)-15s %(levelname)s %(module)s.%(name)s.%(funcName)s at %(lineno)d :\n\t%(message)s\n"
 FORMAT = "%(asctime)-15s %(levelname)s %(module)s.%(name)s.%(funcName)s:\n\t%(message)s\n"
@@ -45,7 +28,7 @@ READ_ALN_GAP_MERGE = 10
 
 def main():
 
-    parser = argparse.ArgumentParser(description="pasa-salraa: short and long read alignment assembler",
+    parser = argparse.ArgumentParser(description="LRAA: Long Read Alignment Assembler",
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
     parser.add_argument("--bam", type=str, required=True, help="target bam file")
@@ -70,25 +53,26 @@ def main():
     debug_group.add_argument("--debug", "-d", action='store_true', default=False,
                         help='debug mode, more verbose')
 
-    debug_group.add_argument("--mpm_monitor", action='store_true', default=False)
+    debug_group.add_argument("--mpm_monitor", action='store_true', default=False) # multiprocessing monitor
 
 
     ## config settings
 
     config_group = parser.add_argument_group("config settings")
 
-    config_group.add_argument("--allow_spacers", action='store_true', default=False)
+    # disabling spacers for now - important for illumina or dirty long reads
+    #config_group.add_argument("--allow_spacers", action='store_true', default=False)
 
     config_group.add_argument("--min_path_score", type=float, default=PASA_SALRAA_Globals.config['min_path_score'], help="minimum score for an isoform to be reported")
 
-    config_group.add_argument("--min_per_id_illumina", type=float, default=PASA_SALRAA_Globals.config['min_per_id_illumina'], help='min per_id for illumina read alignments')
-    config_group.add_argument("--min_per_id_pacbio", type=float, default=PASA_SALRAA_Globals.config['min_per_id_pacbio'], help='min per_id for pacbio read alignments')
+    config_group.add_argument("--min_per_id", type=float, default=PASA_SALRAA_Globals.config['min_per_id'], help='min per_id for pacbio read alignments')
     
 
     ## alt splice settings
 
     config_group_altsplice = parser.add_argument_group("alt splice settings")
 
+    # TODO:// mv splice defaults to globals.config
     config_group_altsplice.add_argument("--min_alt_splice_freq", type=float, default=0.02, help="min fraction required for alt splicing at an exon boundary (default: 0.02)")
     config_group_altsplice.add_argument("--min_alt_unspliced_freq", type=float, default=0.05, help="min fraction required for retained intron at splice boundary (default: 0.05)")
     
@@ -112,10 +96,8 @@ def main():
 
     # update config
     PASA_SALRAA_Globals.config['min_path_score'] = args.min_path_score
-    PASA_SALRAA_Globals.config['min_per_id_illumina'] = args.min_per_id_illumina
-    PASA_SALRAA_Globals.config['min_per_id_pacbio'] = args.min_per_id_pacbio
-    
-    
+    PASA_SALRAA_Globals.config['min_per_id'] = args.min_per_id
+        
     
     if args.mpm_monitor:
         mpm.set_debug()
@@ -126,7 +108,8 @@ def main():
         PASA_SALRAA_Globals.DEBUG = True
 
 
-    allow_spacers = args.allow_spacers
+    allow_spacers = False
+    #allow_spacers = args.allow_spacers
 
 
 
@@ -170,6 +153,7 @@ def main():
                                  'min_intron_support' : 1,
                                  'min_terminal_splice_exon_anchor_length' : 15,
                                  'remove_unspliced_introns' : False }
+    # TODO:// put above settings into the config and add to cmd line interface
     
     Splice_graph.init_sg_params(splice_graph_params_dict)
     
@@ -181,7 +165,7 @@ def main():
                     single_best_only,
                     CPU,
                     allow_spacers,
-                    args)
+                    args) # TODO:// move params to config and pass config instead of args
     
     
     sys.exit(0)
