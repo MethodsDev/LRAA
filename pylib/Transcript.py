@@ -35,8 +35,31 @@ class Transcript (GenomeFeature):
         
         return
 
+    ## getters
 
+    def get_exon_segments(self):
+        return self._exon_segments.copy()
 
+    def get_strand(self):
+        return(self._orient)
+
+    def get_orient(self):
+        return(self.get_strand())
+   
+
+    def get_transcript_id(self):
+        if 'transcript_id' in self._meta:
+            return(self._meta['transcript_id'])
+        else:
+            return(self._id)
+
+    def get_gene_id(self):
+        if 'gene_id' in self._meta:
+            return(self._meta['gene_id'])
+        else:
+            return(self._gene_id)
+    
+    
     def __repr__(self):
 
         text = "Transcript: {} {}-{} [{}] segs: {}".format(self._contig_acc,
@@ -151,8 +174,8 @@ class GTF_contig_to_transcripts:
                 vals = line.split("\t")
                 contig = vals[0]
                 feature_type = vals[2]
-                lend = vals[3]
-                rend = vals[4]
+                lend = int(vals[3])
+                rend = int(vals[4])
                 strand = vals[6]
                 info = vals[8]
                 

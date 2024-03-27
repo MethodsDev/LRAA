@@ -124,9 +124,10 @@ class Splice_graph:
         return overlapping_exon_segments
     
 
-    def build_splice_graph_for_contig(self, contig_acc, contig_seq_str, alignments_bam_file, region_lend, region_rend):
+    def build_splice_graph_for_contig(self, contig_acc, contig_seq_str, alignments_bam_file, region_lend, region_rend, input_transcripts=None):
 
-        logger.info("creating splice graph for {} leveraging bam {}".format(contig_acc,                                                                                         alignments_bam_file))
+        logger.info("creating splice graph for {} leveraging bam {}".format(contig_acc,
+                                                                            alignments_bam_file))
         
         self._contig_acc = contig_acc
         self._contig_seq_str = contig_seq_str
@@ -147,6 +148,9 @@ class Splice_graph:
         # - base coverage incremented under self._contig_base_cov
         self._populate_exon_coverage_and_extract_introns()  
 
+        # incorporate guide structures if provided
+        if input_transcripts:
+            self._integrate_input_transcript_structures(input_transcripts)
 
         ##--------------------------------------------------------------------------------
         # initializes self._splice_graph
@@ -329,6 +333,48 @@ class Splice_graph:
         
                 
         return
+
+
+    
+    def _integrate_input_transcript_structures(self, transcripts):
+
+        """
+        Fold in the reference annotations:
+        - add introns where they're missing
+        - add base coverage where it's missing.
+        
+        """
+        
+                
+        ## Intron Capture
+
+        for transcript in transcripts:
+            orient = transcript.get_orient()
+            exon_segments = transcript.get_exon_segments()
+            last_rend = None
+
+            # add coverage for exonic region
+            for exon_segment in exon_segments:
+                lend, rend = exon_segment
+                for i in range(lend, rend + 1):
+                    if i > self._contig_seq_len:
+                        break
+                    if self._contig_base_cov[i] < 1:
+                        self._contig_base_cov[i] = 1
+
+                # add missing introns.:
+                if last_rend is not None:
+                    intron_lend = last_rend + 1
+                    intron_rend = rend - 1
+                    intron_coords_key = "{}:{}".format(intron_lend, intron_rend)
+                    if intron_coords_key not in self._intron_objs:
+                        intron_obj = Intron(self._contig_acc, intron_lend, intron_rend, orient, 1)
+                        intron_obj.add_read_types(['input_transcript']) ## TODO:// is this necessary? if not, remove.
+                        self._intron_objs[intron_coords_key] = intron_obj
+
+        return
+
+
 
     
     def _get_introns_matching_splicing_consensus(self, alignment_segments):

@@ -5,11 +5,12 @@ import sys, os, re
 import pysam
 import argparse
 import subprocess
+from collections import defaultdict
 
 sys.path.insert(0, os.path.sep.join([os.path.dirname(os.path.realpath(__file__)), "pylib"]))
 from Splice_graph import Splice_graph
 from PASA_SALRAA import PASA_SALRAA
-from Transcript import Transcript
+from Transcript import Transcript, GTF_contig_to_transcripts
 import Util_funcs
 import PASA_SALRAA_Globals
 import MultiProcessManager as mpm
@@ -34,6 +35,8 @@ def main():
     parser.add_argument("--bam", type=str, required=True, help="target bam file")
     parser.add_argument("--genome", type=str, required=True, help="target genome file")
 
+    parser.add_argument("--gtf", type=str, required=False, help="GTF to incorporate as guide during reconstruction or for targeting quant-only")
+    
     parser.add_argument("--outputfile", type=str, default="pasa-salraa.gtf", help="output filename")
 
     parser.add_argument("--single_best_only", action='store_true', default=False,
@@ -111,7 +114,8 @@ def main():
     allow_spacers = False
     #allow_spacers = args.allow_spacers
 
-
+    input_gtf = args.gtf
+    
 
     ## perform normalization prior to assembly
     pre_norm_bam_filename = bam_filename
@@ -168,6 +172,7 @@ def main():
                     single_best_only,
                     CPU,
                     allow_spacers,
+                    input_gtf,
                     args) # TODO:// move params to config and pass config instead of args
     
     
@@ -181,6 +186,7 @@ def run_pasa_salraa(genome_fasta_filename, bam_file, output_filename,
                     single_best_only,
                     CPU,
                     allow_spacers,
+                    input_gtf,
                     args):
 
     # data structures want:
@@ -206,6 +212,12 @@ def run_pasa_salraa(genome_fasta_filename, bam_file, output_filename,
     prereconstruct_info_dir = "__prereconstruct"
     if not os.path.exists(prereconstruct_info_dir):
         os.makedirs(prereconstruct_info_dir)
+
+
+    contig_to_input_transcripts = defaultdict(list)
+    if input_gtf:
+        logger.info(f"-capturing input transcripts from gtf {input_gtf}")
+        contig_to_input_transcripts = GTF_contig_to_transcripts.parse_GTF_to_Transcripts(input_gtf)
         
     ##----------------------------------------------
     ## Begin assembly, target each contig separately
@@ -220,8 +232,14 @@ def run_pasa_salraa(genome_fasta_filename, bam_file, output_filename,
         sg = Splice_graph()
         sg.set_read_aln_gap_merge(read_aln_gap_merge)
         contig_seq_str = Util_funcs.retrieve_contig_seq_from_fasta_file(contig_acc, genome_fasta_filename)
-        sg.build_splice_graph_for_contig(contig_acc, contig_seq_str, bam_file, restrict_region_lend, restrict_region_rend)
 
+        input_transcripts = contig_to_input_transcripts[contig_acc]
+
+        if input_transcripts is not None and len(input_transcripts) == 0:
+            input_transcripts = None
+        
+        sg.build_splice_graph_for_contig(contig_acc, contig_seq_str, bam_file, restrict_region_lend, restrict_region_rend, input_transcripts)
+        
         if sg.is_empty():
             logger.info(f"-no splice graph created for contig: {contig_acc}.... skipping.")
             continue
@@ -235,7 +253,6 @@ def run_pasa_salraa(genome_fasta_filename, bam_file, output_filename,
         pasa_salraa_obj = PASA_SALRAA(sg, CPU)
         logger.info(f"-building splice graph for {contig_acc}")
         pasa_salraa_obj.build_multipath_graph(contig_acc, contig_seq_str, bam_file, allow_spacers)
-        
 
         logger.info(f"-begin reconstructing isoforms for {contig_acc}")
         transcripts = pasa_salraa_obj.reconstruct_isoforms(single_best_only)
