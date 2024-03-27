@@ -76,9 +76,7 @@ class Bam_alignment_extractor:
 
 
             # determine min per_id based on read type:
-            min_per_id = PASA_SALRAA_Globals.config['min_per_id_illumina']
-            if read.has_tag("RG") and read.get_tag("RG") == "PBLR":
-                min_per_id = PASA_SALRAA_Globals.config['min_per_id_pacbio']
+            min_per_id = PASA_SALRAA_Globals.config['min_per_id']
             
             # check read alignment percent identity
             cigar_stats = read.get_cigar_stats()

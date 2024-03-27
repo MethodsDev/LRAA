@@ -40,11 +40,8 @@ class MultiPathGraphNode:
         self._id = "mp{}x".format(MultiPathGraphNode.mp_id_counter)
         
         self._seq_length = self._compute_seq_length()
-
-        if multiPathObj.has_read_type("PBLR"):
-            self._weight = PASA_SALRAA_Globals.config['weight_long_read']
-        else:
-            self._weight = PASA_SALRAA_Globals.config['weight_short_read'] # contribution of read content towards scores
+                
+        self._weight = 1.0 # contribution of read content towards scores
         
         self._prev_weight = self._weight # retain previous weight setting
         
