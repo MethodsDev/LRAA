@@ -1,6 +1,8 @@
 import sys, os, re
+from collections import defaultdict
 from GenomeFeature import GenomeFeature
 import PASA_scored_path
+
 
 class Transcript (GenomeFeature):
 
@@ -37,11 +39,16 @@ class Transcript (GenomeFeature):
 
     def __repr__(self):
 
-        return("Transcript: {} {}-{} [{}] segs: {}".format(self._contig_acc,
+        text = "Transcript: {} {}-{} [{}] segs: {}".format(self._contig_acc,
                                                            self._lend,
                                                            self._rend,
                                                            self._orient,
-                                                           self._exon_segments) )
+                                                           self._exon_segments)
+
+        if self._meta is not None:
+            text += "\t" + str(self._meta)
+
+        return text
         
         
     def set_scored_path_obj(self, scored_path_obj):
@@ -53,11 +60,20 @@ class Transcript (GenomeFeature):
         self._gene_id = gene_id
 
 
-    def add_meta(self, meta_key, meta_val):
+    def add_meta(self, meta_key, meta_val=None):
+        
         if self._meta == None:
             self._meta = dict()
 
-        self._meta[meta_key] = meta_val
+
+        if meta_val is None and type(meta_key)==dict:
+            self._meta = meta_key.copy()
+
+        elif meta_val is not None:
+            self._meta[meta_key] = meta_val
+        else:
+            raise RuntimeError("Error: not sure how to handle input params")
+            
         return
 
 
@@ -118,3 +134,112 @@ class Transcript (GenomeFeature):
         
         
         
+class GTF_contig_to_transcripts:
+
+    @classmethod
+    def parse_GTF_to_Transcripts(cls, gtf_filename):
+
+        gene_id_to_meta = defaultdict(dict)
+        transcript_id_to_meta = defaultdict(dict)
+        transcript_id_to_genome_info = defaultdict(dict)
+        
+        with open(gtf_filename, "rt") as fh:
+            for line in fh:
+                if line[0] == "#":
+                    continue
+                line = line.rstrip()
+                vals = line.split("\t")
+                contig = vals[0]
+                feature_type = vals[2]
+                lend = vals[3]
+                rend = vals[4]
+                strand = vals[6]
+                info = vals[8]
+                
+                info_dict = cls._parse_info(info)
+
+                if feature_type == 'gene':
+                    gene_id = info_dict['gene_id']
+                    gene_id_to_meta[gene_id] = info_dict
+                    
+                if 'transcript_id' not in info_dict:
+                    continue
+
+                if feature_type != 'exon':
+                    continue
+
+                
+                transcript_id = info_dict['transcript_id']
+                transcript_id_to_meta[transcript_id] = info_dict
+
+                transcript_id_to_genome_info[transcript_id]['contig'] = contig
+                transcript_id_to_genome_info[transcript_id]['strand'] = strand
+                if ('coords' in transcript_id_to_genome_info[transcript_id].keys()):
+                    transcript_id_to_genome_info[transcript_id]['coords'].append([lend, rend])
+                else:
+                    transcript_id_to_genome_info[transcript_id]['coords'] = [ [lend,rend] ]
+
+        # convert to transcript objects
+
+        contig_to_transcripts = defaultdict(list)
+
+        for transcript_id in transcript_id_to_genome_info:
+            transcript_info_dict = transcript_id_to_genome_info[transcript_id]
+            contig = transcript_info_dict['contig']
+            strand = transcript_info_dict['strand']
+            coords_list = transcript_info_dict['coords']
+
+            transcript_meta = transcript_id_to_meta[transcript_id]
+            gene_id = transcript_meta['gene_id']
+            gene_meta = gene_id_to_meta[gene_id]
+            transcript_meta.update(gene_meta)
+            
+            transcript_obj = Transcript(contig, coords_list, strand)
+            transcript_obj.add_meta(transcript_meta)
+
+            contig_to_transcripts[contig].append(transcript_obj)
+
+            
+        return contig_to_transcripts
+
+
+    
+    # private
+    @classmethod
+    def _parse_info(cls, info):
+
+        info_dict = dict()
+        
+        parts = info.split(";")
+        for part in parts:
+            part = part.strip()
+            m = re.match('^(\S+) \\"([^\\"]+)\\"', part)
+            if m:
+                token = m.group(1)
+                val = m.group(2)
+
+                info_dict[token] = val
+
+        return info_dict
+
+        
+if __name__=='__main__':
+
+    # testing gtf parser
+    usage = "usage: {} gtf_filename\n\n".format(sys.argv[0])
+
+    if len(sys.argv) < 2:
+        exit(usage)
+
+    gtf_filename = sys.argv[1]
+    
+    contig_to_transcripts = GTF_contig_to_transcripts.parse_GTF_to_Transcripts(gtf_filename)
+
+    for contig, transcript_list in contig_to_transcripts.items():
+        for transcript_obj in transcript_list:
+            print("\t".join([contig, str(transcript_obj)]))
+
+
+    sys.exit(0)
+
+
