@@ -1,9 +1,9 @@
 import sys, os, re
-from MultiPath import MultiPath
-from MultiPathGraph import MultiPathGraphNode
+from MultiPath import *
+from MultiPathGraph import *
 from GenomeFeature import *
 import Simple_path_utils
-from Transcript import Transcript
+from Transcript import *
 import PASA_SALRAA_Globals
 
 import math

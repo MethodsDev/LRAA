@@ -11,6 +11,7 @@ sys.path.insert(0, os.path.sep.join([os.path.dirname(os.path.realpath(__file__))
 from Splice_graph import Splice_graph
 from PASA_SALRAA import PASA_SALRAA
 from Transcript import Transcript, GTF_contig_to_transcripts
+from Quantify import Quantify
 import Util_funcs
 import PASA_SALRAA_Globals
 import MultiProcessManager as mpm
@@ -238,6 +239,7 @@ def main():
             pasa_salraa_obj = PASA_SALRAA(sg, CPU)
             pasa_salraa_obj.assign_transcripts_paths_in_graph(input_transcripts)
             mp_counter = pasa_salraa_obj._populate_read_multi_paths(contig_acc, contig_seq_str, bam_file_for_sg)
+            Quantify().quantify(input_transcripts, mp_counter)
             
     
         else:
@@ -254,6 +256,8 @@ def main():
             logger.info(f"-begin reconstructing isoforms for {contig_acc}")
             transcripts = pasa_salraa_obj.reconstruct_isoforms(single_best_only)
 
+            ## TODO://gene clustering
+            
             logger.info("writing gtf output for {} containing {} transcripts".format(contig_acc, len(transcripts)))
             for transcript in transcripts:
                 ofh.write(transcript.to_GTF_format() + "\n")
