@@ -343,6 +343,7 @@ class PASA_SALRAA:
     def assign_transcripts_paths_in_graph(self, transcripts):
 
         for transcript in transcripts:
+            logger.debug("-mapping transcript to graph: {}".format(transcript))
             segments = transcript.get_exon_segments()
             path = self._map_read_to_graph(segments)
             logger.debug(str(transcript) + " maps to graph as " + str(path))
@@ -366,6 +367,8 @@ class PASA_SALRAA:
 
     def _map_read_to_graph(self, alignment_segments):
 
+        logger.debug("incoming segments: {}".format(alignment_segments))
+        
         path = list()
 
         num_segments = len(alignment_segments)

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # encoding: utf-8
 
 import sys, os, re
@@ -92,7 +92,7 @@ class Splice_graph:
     def get_intron_node_obj(self, intron_lend, intron_rend):
 
         intron_token = "{}:{}".format(intron_lend, intron_rend)
-
+                
         if intron_token in self._intron_objs:
             return self._intron_objs[intron_token]
 
@@ -146,7 +146,8 @@ class Splice_graph:
         # -excludes introns w/ heavily unbalanced splice site support (via Splice_graph._min_alt_splice_freq setting)
         # - stores intron objs in self._intron_objs
         # - base coverage incremented under self._contig_base_cov
-        self._populate_exon_coverage_and_extract_introns()  
+
+        self._populate_exon_coverage_and_extract_introns()
 
         # incorporate guide structures if provided
         if input_transcripts:
@@ -316,7 +317,7 @@ class Splice_graph:
             
             if count >= Splice_graph._min_intron_support:
                 ## check splice support
-                intron_lend,intron_rend,intron_orient = intron_coords
+                intron_lend, intron_rend, intron_orient = intron_coords
                 splice_support_left = intron_splice_site_support[intron_lend]
                 splice_support_right = intron_splice_site_support[intron_rend]
 
@@ -346,7 +347,7 @@ class Splice_graph:
         """
         
                 
-        ## Intron Capture
+        ## Exon Coverage and Intron Capture
 
         for transcript in transcripts:
             orient = transcript.get_orient()
@@ -365,13 +366,18 @@ class Splice_graph:
                 # add missing introns.:
                 if last_rend is not None:
                     intron_lend = last_rend + 1
-                    intron_rend = rend - 1
+                    intron_rend = lend - 1
                     intron_coords_key = "{}:{}".format(intron_lend, intron_rend)
+
                     if intron_coords_key not in self._intron_objs:
                         intron_obj = Intron(self._contig_acc, intron_lend, intron_rend, orient, 1)
                         intron_obj.add_read_types(['input_transcript']) ## TODO:// is this necessary? if not, remove.
                         self._intron_objs[intron_coords_key] = intron_obj
 
+
+                last_rend = rend
+
+        
         return
 
 
