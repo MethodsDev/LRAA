@@ -40,7 +40,7 @@ class Splice_graph:
 
         # ------------------
         # instance variables
-        self._alignments_bam_filename = ""
+        #self._alignments_bam_filename = ""
         
         self._contig_acc = ""
         self._contig_seq_str = ""
@@ -132,7 +132,7 @@ class Splice_graph:
         self._contig_acc = contig_acc
         self._contig_seq_str = contig_seq_str
         self._contig_seq_len = len(contig_seq_str)
-        self._alignments_bam_filename = alignments_bam_file
+        #self._alignments_bam_filename = alignments_bam_file
         self._region_lend = region_lend
         self._region_rend = region_rend
         
@@ -147,7 +147,8 @@ class Splice_graph:
         # - stores intron objs in self._intron_objs
         # - base coverage incremented under self._contig_base_cov
 
-        self._populate_exon_coverage_and_extract_introns()
+        if alignments_bam_file is not None:
+            self._populate_exon_coverage_and_extract_introns(alignments_bam_file)
 
         # incorporate guide structures if provided
         if input_transcripts:
@@ -258,7 +259,7 @@ class Splice_graph:
         return
 
     
-    def _populate_exon_coverage_and_extract_introns(self):
+    def _populate_exon_coverage_and_extract_introns(self, bam_filename):
         
         ## Intron Capture
 
@@ -268,8 +269,8 @@ class Splice_graph:
         
         intron_splice_site_support = defaultdict(int)
         
-        bam_extractor = Bam_alignment_extractor(self._alignments_bam_filename)
-
+        bam_extractor = Bam_alignment_extractor(bam_filename)
+        
         # get read alignments
         # - illumina and pacbio reads filtered based on tech-specific min per_id
         # - pretty alignments: store the pysam alignment record along with inferred transcript exons segments.

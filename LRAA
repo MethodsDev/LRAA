@@ -220,22 +220,28 @@ def main():
         if input_transcripts is not None and len(input_transcripts) == 0:
             input_transcripts = None
         
-        sg.build_splice_graph_for_contig(contig_acc, contig_seq_str, bam_file_for_sg, restrict_region_lend, restrict_region_rend, input_transcripts)
-        
-        if sg.is_empty():
-            logger.info(f"-no splice graph created for contig: {contig_acc}.... skipping.")
-            continue
-
-        if PASA_SALRAA_Globals.DEBUG:
-            sg.write_intron_exon_splice_graph_bed_files("{}/__prereconstruct.{}.pad1".format(prereconstruct_info_dir, contig_acc), pad=1)
-
 
         if QUANT_ONLY:
 
             # get path assignments for the input transcripts
             # get the path assignments for the reads.
             # compare read mappings, assign categories
-            
+
+
+            # for quant only, build sg only based on the input gtf and not the alignments in the bam
+            sg.build_splice_graph_for_contig(contig_acc, contig_seq_str,
+                                             None, #bam_file_for_sg,
+                                             restrict_region_lend, restrict_region_rend, input_transcripts)
+
+            if sg.is_empty():
+                logger.info(f"-no splice graph created for contig: {contig_acc}.... skipping.")
+                continue
+
+            if PASA_SALRAA_Globals.DEBUG:
+                sg.write_intron_exon_splice_graph_bed_files("{}/__prereconstruct.{}.pad1".format(prereconstruct_info_dir, contig_acc), pad=1)
+
+
+
             pasa_salraa_obj = PASA_SALRAA(sg, CPU)
             pasa_salraa_obj.assign_transcripts_paths_in_graph(input_transcripts)
 
@@ -243,11 +249,22 @@ def main():
             q = Quantify()
             q.quantify(input_transcripts, mp_counter)
             q.report_quant_results(input_transcripts, ofh)
-                
+
+            
         else:
             ##---------------------
             ## Assemble transcripts
 
+            sg.build_splice_graph_for_contig(contig_acc, contig_seq_str, bam_file_for_sg, restrict_region_lend, restrict_region_rend, input_transcripts)
+
+            if sg.is_empty():
+                logger.info(f"-no splice graph created for contig: {contig_acc}.... skipping.")
+                continue
+
+            if PASA_SALRAA_Globals.DEBUG:
+                sg.write_intron_exon_splice_graph_bed_files("{}/__prereconstruct.{}.pad1".format(prereconstruct_info_dir, contig_acc), pad=1)
+
+            
             pasa_salraa_obj = PASA_SALRAA(sg, CPU)
             logger.info(f"-building splice graph for {contig_acc}")
             pasa_salraa_obj.build_multipath_graph(contig_acc, contig_seq_str, bam_file_for_sg, allow_spacers)
