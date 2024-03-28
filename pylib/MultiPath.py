@@ -105,6 +105,21 @@ class MultiPath:
 
         return exons_and_introns
 
+
+    def get_introns(self):
+        simple_path = self.get_simple_path()
+
+        sg = self.get_splice_graph()
+        
+        introns = list()
+        for node_id in simple_path:
+            if node_id != SPACER:
+                obj = sg.get_node_obj_via_id(node_id)
+                if type(obj) == Intron:
+                    introns.append(obj)
+
+        return introns
+
     
     def __len__(self):
         return(len(self._simple_path))

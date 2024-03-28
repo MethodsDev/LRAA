@@ -105,7 +105,13 @@ class Transcript (GenomeFeature):
 
 
     def add_read_names(self, read_names):
-        self.read_names = read_names
+        if self.read_names == None:
+            self.read_names = list()
+
+        if type(read_names) == list:
+            self.read_names.extend(read_names)
+        else:
+            self.read_names.append(read_names)
         
     
 
