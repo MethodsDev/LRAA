@@ -428,7 +428,6 @@ class PASA_SALRAA:
         path = Simple_path_utils.add_spacers_between_disconnected_nodes(self.get_splice_graph(), path)
         
         if SPACER in path:
-
             path = self._try_easy_fill_spacers(path)
             
             

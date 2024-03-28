@@ -172,7 +172,82 @@ class Quantify:
 
     
                 
-    def report_quant_results(transcripts, ofh):
+    def report_quant_results(self, transcripts, ofh):
 
+
+        read_name_to_transcripts = defaultdict(set)
+        
         for transcript in transcripts:
+            read_names = transcript.get_read_names()
+            for read_name in read_names:
+                read_name_to_transcripts[read_name].add(transcript)
+
+                
+        num_mapped_reads = len(read_name_to_transcripts)
+
+
+        transcript_to_read_count = defaultdict(float)
+
+        transcript_to_expr_val = defaultdict(float)
+        
+        ## first round of EM for now - split evenly across mapped transcripts.
+        for transcript in transcripts:
+
+            transcript_id = transcript.get_transcript_id()
             
+            transcript_read_count_total = 0
+            read_names = transcript.get_read_names()
+            for read_name in read_names:
+                num_transcripts_with_assigned_read = len(read_name_to_transcripts[read_name])
+                transcript_read_count_total += 1 / num_transcripts_with_assigned_read
+                
+            transcript_to_read_count[transcript_id] = transcript_read_count_total
+            transcript_to_expr_val[transcript_id] = transcript_read_count_total / num_mapped_reads * 1e6
+
+
+
+            
+        ## go through multiple rounds of EM
+        
+        for i in range(1,100):
+
+            logger.info("EM round {}".format(i))
+            
+            ## fractionally assign reads based on expr values
+            transcript_to_read_count.clear()
+            
+            for transcript in transcripts:
+                transcript_id = transcript.get_transcript_id()
+                transcript_read_count_total = 0
+                read_names = transcript.get_read_names()
+                transcript_expr = transcript_to_expr_val[transcript_id] 
+                for read_name in read_names:
+                    transcripts_with_read = read_name_to_transcripts[read_name]
+                    sum_expr = 0
+                    for tran_with_read in transcripts_with_read:
+                        tran_with_read_id = tran_with_read.get_transcript_id()
+                        sum_expr += transcript_to_expr_val[tran_with_read_id]
+                    frac_read_assignment = transcript_expr / sum_expr
+                    transcript_to_read_count[transcript_id] += frac_read_assignment
+
+            ## recompute expr_vals
+            transcript_to_expr_val.clear()
+
+            for transcript in transcripts:
+                transcript_id = transcript.get_transcript_id()
+                transcript_read_count = transcript_to_read_count[transcript_id]
+                transcript_to_expr_val[transcript_id] = transcript_read_count/num_mapped_reads * 1e6
+            
+                
+        ## generate final report.
+        for transcript in transcripts:
+            transcript_id = transcript.get_transcript_id()
+            gene_id = transcript.get_gene_id()
+            counts = transcript_to_read_count[transcript_id]
+            expr = transcript_to_expr_val[transcript_id]
+
+            print("\t".join([gene_id, transcript_id, f"{counts:.1f}", f"{expr:.3f}"]), file=ofh)
+
+
+        return 
+    

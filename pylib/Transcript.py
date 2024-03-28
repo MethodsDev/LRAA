@@ -62,7 +62,7 @@ class Transcript (GenomeFeature):
             return(self._meta['gene_id'])
         else:
             return(self._gene_id)
-    
+
     
     def __repr__(self):
 
@@ -103,13 +103,16 @@ class Transcript (GenomeFeature):
             
         return
 
+    def get_read_names(self):
+        return self.read_names.copy()
+    
 
     def add_read_names(self, read_names):
         if self.read_names == None:
             self.read_names = list()
 
-        if type(read_names) == list:
-            self.read_names.extend(read_names)
+        if type(read_names) in (list, set):
+            self.read_names.extend(list(read_names))
         else:
             self.read_names.append(read_names)
         

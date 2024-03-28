@@ -240,13 +240,11 @@ def main():
             pasa_salraa_obj.assign_transcripts_paths_in_graph(input_transcripts)
 
             mp_counter = pasa_salraa_obj._populate_read_multi_paths(contig_acc, contig_seq_str, bam_file_for_sg)
-            Quantify().quantify(input_transcripts, mp_counter)
-            
-    
+            q = Quantify()
+            q.quantify(input_transcripts, mp_counter)
+            q.report_quant_results(input_transcripts, ofh)
+                
         else:
-            ## Assembly
-            
-
             ##---------------------
             ## Assemble transcripts
 
