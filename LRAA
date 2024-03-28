@@ -24,8 +24,6 @@ FORMAT = "%(asctime)-15s %(levelname)s %(module)s.%(name)s.%(funcName)s:\n\t%(me
 logger = logging.getLogger()
 logging.basicConfig(format=FORMAT, level=logging.INFO)
 
-READ_ALN_GAP_MERGE = 10
-
 
 def main():
 
@@ -47,6 +45,8 @@ def main():
 
 
     parser.add_argument("--normalize_max_cov_level", type=int, default=10000, help="normalize to max read coverage level before assembly (default: 10000)")
+
+    parser.add_argument("--quant_only", action='store_true', default=False, help="perform quantification only (must specify --gtf with targets for quant)")
     
     ## debug params
     
@@ -96,12 +96,16 @@ def main():
     output_filename = args.outputfile
     single_best_only = args.single_best_only
     CPU = args.CPU
-
+    QUANT_ONLY = args.quant_only
+    input_gtf = args.gtf
+    
+    if args.quant_only and input_gtf is None:
+        sys.exit("If running --quant_only, must specify --gtf corresponding to targets of quantification")
+    
     # update config
     PASA_SALRAA_Globals.config['min_path_score'] = args.min_path_score
     PASA_SALRAA_Globals.config['min_per_id'] = args.min_per_id
         
-    
     if args.mpm_monitor:
         mpm.set_debug()
 
@@ -114,13 +118,13 @@ def main():
     allow_spacers = False
     #allow_spacers = args.allow_spacers
 
-    input_gtf = args.gtf
-    
-
     ## perform normalization prior to assembly
     pre_norm_bam_filename = bam_filename
 
-    if args.normalize_max_cov_level > 0:
+    bam_file_for_quant = pre_norm_bam_filename
+    bam_file_for_sg = pre_norm_bam_filename
+    
+    if (not QUANT_ONLY) and (args.normalize_max_cov_level > 0):
 
         bamsifter_prog = os.path.sep.join([os.path.dirname(os.path.realpath(__file__)), "plugins/bamsifter/bamsifter"])
 
@@ -137,14 +141,13 @@ def main():
             logger.info(cmd)
             subprocess.check_call(cmd, shell=True)
 
-
             samtools_index_cmd = f"samtools index {norm_bam_filename}" 
             subprocess.check_call(samtools_index_cmd, shell=True)
 
             subprocess.check_call(f"touch {norm_bam_checkpoint}", shell=True)
 
 
-        bam_filename = norm_bam_filename
+        bam_file_for_sg = norm_bam_filename
 
 
     ###########################################
@@ -165,36 +168,12 @@ def main():
     Splice_graph.init_sg_params(splice_graph_params_dict)
     
     
-    run_pasa_salraa(genome_fasta_filename,
-                    bam_filename,
-                    output_filename,
-                    READ_ALN_GAP_MERGE,
-                    single_best_only,
-                    CPU,
-                    allow_spacers,
-                    input_gtf,
-                    args) # TODO:// move params to config and pass config instead of args
-    
-    
-    sys.exit(0)
-
-
-
-
-def run_pasa_salraa(genome_fasta_filename, bam_file, output_filename,
-                    read_aln_gap_merge,
-                    single_best_only,
-                    CPU,
-                    allow_spacers,
-                    input_gtf,
-                    args):
-
     # data structures want:
     # ultimately exons and introns
     # build from reads.
     # define coverage intervals and introns as graph components.
 
-    ofh = open(output_filename, 'wt')
+
 
     if args.restrict_to_contig:
         genome_contigs_list = [args.restrict_to_contig]
@@ -220,8 +199,10 @@ def run_pasa_salraa(genome_fasta_filename, bam_file, output_filename,
         contig_to_input_transcripts = GTF_contig_to_transcripts.parse_GTF_to_Transcripts(input_gtf)
         
     ##----------------------------------------------
-    ## Begin assembly, target each contig separately
-    
+    ## Begin, target each contig separately
+
+    ofh = open(output_filename, 'wt')
+        
     for contig_acc in genome_contigs_list:
 
         logger.info(f"-processing contig: {contig_acc}")
@@ -230,7 +211,7 @@ def run_pasa_salraa(genome_fasta_filename, bam_file, output_filename,
         ## build splice graph
 
         sg = Splice_graph()
-        sg.set_read_aln_gap_merge(read_aln_gap_merge)
+
         contig_seq_str = Util_funcs.retrieve_contig_seq_from_fasta_file(contig_acc, genome_fasta_filename)
 
         input_transcripts = contig_to_input_transcripts[contig_acc]
@@ -238,7 +219,7 @@ def run_pasa_salraa(genome_fasta_filename, bam_file, output_filename,
         if input_transcripts is not None and len(input_transcripts) == 0:
             input_transcripts = None
         
-        sg.build_splice_graph_for_contig(contig_acc, contig_seq_str, bam_file, restrict_region_lend, restrict_region_rend, input_transcripts)
+        sg.build_splice_graph_for_contig(contig_acc, contig_seq_str, bam_file_for_sg, restrict_region_lend, restrict_region_rend, input_transcripts)
         
         if sg.is_empty():
             logger.info(f"-no splice graph created for contig: {contig_acc}.... skipping.")
@@ -247,19 +228,35 @@ def run_pasa_salraa(genome_fasta_filename, bam_file, output_filename,
         if PASA_SALRAA_Globals.DEBUG:
             sg.write_intron_exon_splice_graph_bed_files("{}/__prereconstruct.{}.pad1".format(prereconstruct_info_dir, contig_acc), pad=1)
 
-        ##---------------------
-        ## Assemble transcripts
-        
-        pasa_salraa_obj = PASA_SALRAA(sg, CPU)
-        logger.info(f"-building splice graph for {contig_acc}")
-        pasa_salraa_obj.build_multipath_graph(contig_acc, contig_seq_str, bam_file, allow_spacers)
 
-        logger.info(f"-begin reconstructing isoforms for {contig_acc}")
-        transcripts = pasa_salraa_obj.reconstruct_isoforms(single_best_only)
+        if QUANT_ONLY:
 
-        logger.info("writing gtf output for {} containing {} transcripts".format(contig_acc, len(transcripts)))
-        for transcript in transcripts:
-            ofh.write(transcript.to_GTF_format() + "\n")
+            # get path assignments for the input transcripts
+            # get the path assignments for the reads.
+            # compare read mappings, assign categories
+            
+            pasa_salraa_obj = PASA_SALRAA(sg, CPU)
+            pasa_salraa_obj.assign_transcripts_paths_in_graph(input_transcripts)
+            mp_counter = pasa_salraa_obj._populate_read_multi_paths(contig_acc, contig_seq_str, bam_file_for_sg)
+            
+    
+        else:
+            ## Assembly
+            
+
+            ##---------------------
+            ## Assemble transcripts
+
+            pasa_salraa_obj = PASA_SALRAA(sg, CPU)
+            logger.info(f"-building splice graph for {contig_acc}")
+            pasa_salraa_obj.build_multipath_graph(contig_acc, contig_seq_str, bam_file_for_sg, allow_spacers)
+
+            logger.info(f"-begin reconstructing isoforms for {contig_acc}")
+            transcripts = pasa_salraa_obj.reconstruct_isoforms(single_best_only)
+
+            logger.info("writing gtf output for {} containing {} transcripts".format(contig_acc, len(transcripts)))
+            for transcript in transcripts:
+                ofh.write(transcript.to_GTF_format() + "\n")
 
 
     ofh.close()

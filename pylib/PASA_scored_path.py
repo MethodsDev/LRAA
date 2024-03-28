@@ -184,7 +184,11 @@ class PASA_scored_path:
 
         #transcript_obj.set_scored_path_obj(self)  # commenting out / lightening up object
 
+        # decorate transcript obj
         transcript_obj.add_read_names(read_names)
+        transcript_obj._multipath = transcript_mp
+        transcript_obj._simplepath = transcript_mp.get_simple_path()
+        
         
         return transcript_obj
 

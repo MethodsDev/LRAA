@@ -30,6 +30,9 @@ from collections import defaultdict
 logger = logging.getLogger(__name__)
 
 
+## BIG TODO:// move functionality related to mapping features to the splicegraph to the actual splicegraph class instead of using all the wrapper functions herein. 
+
+
 class PASA_SALRAA:
 
     min_transcript_length = 200
@@ -335,6 +338,18 @@ class PASA_SALRAA:
             
         return mp_counter
     
+
+
+    def assign_transcripts_paths_in_graph(self, transcripts):
+
+        for transcript in transcripts:
+            segments = transcript.get_exon_segments()
+            path = self._map_read_to_graph(segments)
+            logger.debug(str(transcript) + " maps to graph as " + str(path))
+            transcript._simplepath = path
+
+        return
+
     
 
     def _group_alignments_by_read_name(self, pretty_alignments):

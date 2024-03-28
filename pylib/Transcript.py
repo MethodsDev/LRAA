@@ -32,6 +32,10 @@ class Transcript (GenomeFeature):
         self._scored_path_obj = None #optional - useful if transcript obj was built based on a scored path
 
         self.read_names = list() # list of read names supporting the transcript structure.
+
+        self._multipath = None # multipath obj
+
+        self._simplepath = None
         
         return
 
