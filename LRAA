@@ -119,6 +119,12 @@ def main():
     allow_spacers = False
     #allow_spacers = args.allow_spacers
 
+    if not os.path.exists(bam_filename + ".bai"):
+        logger.info("-missing index for bam {}, will try to make it...".format(bam_filename))
+        subprocess.check_call("samtools index " + bam_filename, shell=True)
+        
+
+    
     ## perform normalization prior to assembly
     pre_norm_bam_filename = bam_filename
 
