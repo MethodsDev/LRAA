@@ -209,6 +209,60 @@ def _convert_path_to_nodes_with_coords_list(sg:Splice_graph, simple_path:list) -
 
 
 
+def fraction_read_overlap(sg:Splice_graph, read_simple_path:list, transcript_simple_path:list) -> float:
+
+    nodes_in_common = list()
+    for node in read_simple_path:
+        if node in transcript_simple_path:
+            nodes_in_common.append(node)
+
+    read_simple_path_exons = simple_path_to_exon_objs(sg, read_simple_path)
+    read_align_len = 0
+    for exon in read_simple_path_exons:
+        lend, rend = exon.get_coords()
+        exon_len = rend - lend + 1
+        read_align_len += exon_len
+    
+    
+    exons_in_common = simple_path_to_exon_objs(sg, nodes_in_common)
+    common_region_len = 0
+    for exon in exons_in_common:
+        lend, rend = exon.get_coords()
+        exon_len = rend - lend + 1
+        common_region_len += exon_len
+
+    fraction_read_aligned_to_transcript = common_region_len / read_align_len
+
+    return fraction_read_aligned_to_transcript
+
+
+
+
+def simple_path_to_exon_objs(sg:Splice_graph, simple_path:list) -> list:
+
+    exons = list()
+    for node_id in simple_path:
+        if node_id != SPACER:
+            obj = sg.get_node_obj_via_id(node_id)
+            if type(obj) == Exon:
+                exons.append(obj)
+                
+    return exons
+
+def simple_path_to_intron_objs(sg:Splice_graph, simple_path:list) -> list:
+
+    introns = list()
+    for node_id in simple_path:
+        if node_id != SPACER:
+            obj = sg.get_node_obj_via_id(node_id)
+            if type(obj) == Intron:
+                introns.append(obj)
+                
+    return introns
+
+
+
+
 def _split_spacers_with_coords(simple_path_w_coords:list) -> list:
 
     adj_list = list()

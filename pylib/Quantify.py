@@ -6,7 +6,7 @@ import MultiPath
 import MultiPathCounter
 import Simple_path_utils as SPU
 from collections import defaultdict
-from PASA_SALRAA_Globals import SPACER
+from PASA_SALRAA_Globals import SPACER, DEBUG
 import logging
 
 
@@ -16,11 +16,15 @@ logger = logging.getLogger(__name__)
 
 class Quantify:
 
-    def __init__(self):
+    def __init__(self, splice_graph):
 
+        self._splice_graph = splice_graph
+        
         self._path_node_id_to_gene_ids = defaultdict(set)
 
         self._gene_id_to_transcript_objs = defaultdict(set)
+
+        self._read_name_to_multipath = dict()
         
         return
 
@@ -58,7 +62,7 @@ class Quantify:
 
 
 
-    def _assign_reads_to_transcripts(self, mp_counter):
+    def _assign_reads_to_transcripts(self, mp_counter, fraction_read_align_overlap=0.75):
 
         # assign to gene based on majority voting of nodes.
         # TODO:// might want or need this to involve length and/or feature type weighted shared node voting
@@ -76,7 +80,6 @@ class Quantify:
         
         num_paths_assigned = 0
         num_read_counts_assigned = 0
-
         
         
         for mp_count_pair in mp_count_pairs:
@@ -102,7 +105,7 @@ class Quantify:
             
             ## assign reads to transcripts
             gene_isoforms = self._gene_id_to_transcript_objs[top_gene]
-            transcripts_assigned = self._assign_path_to_transcript(mp, gene_isoforms)
+            transcripts_assigned = self._assign_path_to_transcript(mp, gene_isoforms, fraction_read_align_overlap)
             if transcripts_assigned is None:
                 logger.debug("mp_count_pair {} maps to gene but no isoform(transcript)".format(mp_count_pair))
             else:
@@ -150,29 +153,39 @@ class Quantify:
         
 
         
-    def _assign_path_to_transcript(self, mp, transcripts):
+    def _assign_path_to_transcript(self, mp, transcripts, fraction_read_align_overlap):
         
         assert type(mp) == MultiPath.MultiPath
         assert type(transcripts) == set, "Error, type(transcripts) is {} not set ".format(type(transcripts))
         assert type(list(transcripts)[0]) == Transcript.Transcript
-
+        assert fraction_read_align_overlap >= 0 and fraction_read_align_overlap <= 1.0, "Error, fraction_read_align_overlap must be between 0 and 1.0"
+        
         read_sp = mp.get_simple_path()
 
+        # store read name to mp for later debugging.
+        for read_name in mp.get_read_names():
+            self._read_name_to_multipath[read_name] = mp
+
+        
         transcripts_compatible_with_read = list()
         
         for transcript in transcripts:
             transcript_sp = transcript._simplepath
             assert transcript_sp is not None
 
-            if SPU.are_overlapping_and_compatible_NO_gaps_in_overlap(transcript_sp, read_sp):
+            if (SPU.are_overlapping_and_compatible_NO_gaps_in_overlap(transcript_sp, read_sp)
+                and
+                SPU.fraction_read_overlap(self._splice_graph, read_sp, transcript_sp) >= fraction_read_align_overlap):
+                
                 print("Read {} compatible with transcript {}".format(read_sp, transcript_sp))
                 transcripts_compatible_with_read.append(transcript)
-
+                
+                        
         return transcripts_compatible_with_read
 
     
                 
-    def report_quant_results(self, transcripts, ofh):
+    def report_quant_results(self, transcripts, ofh_quant_vals, ofh_read_tracking, run_EM=False):
 
 
         read_name_to_transcripts = defaultdict(set)
@@ -205,38 +218,39 @@ class Quantify:
             transcript_to_expr_val[transcript_id] = transcript_read_count_total / num_mapped_reads * 1e6
 
 
+     
+        if run_EM:
 
-            
-        ## go through multiple rounds of EM
-        
-        for i in range(1,100):
+            ## go through multiple rounds of EM
 
-            logger.info("EM round {}".format(i))
-            
-            ## fractionally assign reads based on expr values
-            transcript_to_read_count.clear()
-            
-            for transcript in transcripts:
-                transcript_id = transcript.get_transcript_id()
-                transcript_read_count_total = 0
-                read_names = transcript.get_read_names()
-                transcript_expr = transcript_to_expr_val[transcript_id] 
-                for read_name in read_names:
-                    transcripts_with_read = read_name_to_transcripts[read_name]
-                    sum_expr = 0
-                    for tran_with_read in transcripts_with_read:
-                        tran_with_read_id = tran_with_read.get_transcript_id()
-                        sum_expr += transcript_to_expr_val[tran_with_read_id]
-                    frac_read_assignment = transcript_expr / sum_expr
-                    transcript_to_read_count[transcript_id] += frac_read_assignment
+            for i in range(1,100):
 
-            ## recompute expr_vals
-            transcript_to_expr_val.clear()
+                logger.info("EM round {}".format(i))
 
-            for transcript in transcripts:
-                transcript_id = transcript.get_transcript_id()
-                transcript_read_count = transcript_to_read_count[transcript_id]
-                transcript_to_expr_val[transcript_id] = transcript_read_count/num_mapped_reads * 1e6
+                ## fractionally assign reads based on expr values
+                transcript_to_read_count.clear()
+
+                for transcript in transcripts:
+                    transcript_id = transcript.get_transcript_id()
+                    transcript_read_count_total = 0
+                    read_names = transcript.get_read_names()
+                    transcript_expr = transcript_to_expr_val[transcript_id] 
+                    for read_name in read_names:
+                        transcripts_with_read = read_name_to_transcripts[read_name]
+                        sum_expr = 0
+                        for tran_with_read in transcripts_with_read:
+                            tran_with_read_id = tran_with_read.get_transcript_id()
+                            sum_expr += transcript_to_expr_val[tran_with_read_id]
+                        frac_read_assignment = transcript_expr / sum_expr
+                        transcript_to_read_count[transcript_id] += frac_read_assignment
+
+                ## recompute expr_vals
+                transcript_to_expr_val.clear()
+
+                for transcript in transcripts:
+                    transcript_id = transcript.get_transcript_id()
+                    transcript_read_count = transcript_to_read_count[transcript_id]
+                    transcript_to_expr_val[transcript_id] = transcript_read_count/num_mapped_reads * 1e6
             
                 
         ## generate final report.
@@ -246,8 +260,19 @@ class Quantify:
             counts = transcript_to_read_count[transcript_id]
             expr = transcript_to_expr_val[transcript_id]
 
-            print("\t".join([gene_id, transcript_id, f"{counts:.1f}", f"{expr:.3f}"]), file=ofh)
+            readnames = transcript.get_read_names()
+            readnames = sorted(readnames)
+            
+            print("\t".join([gene_id, transcript_id, f"{counts:.1f}", f"{expr:.3f}"]), file=ofh_quant_vals)
 
+            if (DEBUG):
+                print("transcript_id\t{}\n{}".format(transcript_id, transcript._simplepath), file=ofh_read_tracking)
+                for readname in readnames:
 
+                    print("read:\t{}\n{}".format(readname, self._read_name_to_multipath[readname].get_simple_path()), file=ofh_read_tracking)
+                print("\n", file=ofh_read_tracking)
+            else:
+                print("\t".join([gene_id, transcript_id, ",".join(readnames)]), file=ofh_read_tracking)
+            
         return 
     

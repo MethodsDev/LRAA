@@ -177,7 +177,7 @@ class Splice_graph:
         
         self._merge_neighboring_proximal_unbranched_exon_segments()
         
-        self._prune_exon_spurs_at_introns()
+        # self._prune_exon_spurs_at_introns() ## TODO:// implement this in a data-driven way.
 
         if Splice_graph._remove_unspliced_introns:
             self._prune_unspliced_introns()

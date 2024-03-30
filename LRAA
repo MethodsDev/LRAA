@@ -36,7 +36,7 @@ def main():
 
     parser.add_argument("--gtf", type=str, required=False, help="GTF to incorporate as guide during reconstruction or for targeting quant-only")
     
-    parser.add_argument("--outputfile", type=str, default="pasa-salraa.gtf", help="output filename")
+    parser.add_argument("--output_prefix", type=str, default="LRAA", help="prefix for output filenames")
 
     parser.add_argument("--single_best_only", action='store_true', default=False,
                         help="only report the single highest scoring isoform per component")
@@ -94,7 +94,7 @@ def main():
     
     genome_fasta_filename = args.genome
     bam_filename = args.bam
-    output_filename = args.outputfile
+    output_prefix = args.output_prefix
     single_best_only = args.single_best_only
     CPU = args.CPU
     QUANT_ONLY = args.quant_only
@@ -202,8 +202,16 @@ def main():
     ##----------------------------------------------
     ## Begin, target each contig separately
 
-    ofh = open(output_filename, 'wt')
+    ofh_quant_read_tracker = None
+    if QUANT_ONLY:
+        output_filename = f"{output_prefix}.quant.expr"
+        ofh_quant_read_tracking_filename = f"{output_prefix}.quant.tracking"
+        ofh_quant_read_tracker = open(ofh_quant_read_tracking_filename, "wt")
+    else:
+        output_filename = f"{output_prefix}.gtf"
         
+    ofh = open(output_filename, 'wt')
+    
     for contig_acc in genome_contigs_list:
 
         logger.info(f"-processing contig: {contig_acc}")
@@ -230,7 +238,7 @@ def main():
 
             # for quant only, build sg only based on the input gtf and not the alignments in the bam
             sg.build_splice_graph_for_contig(contig_acc, contig_seq_str,
-                                             None, #bam_file_for_sg,
+                                             bam_file_for_sg,
                                              restrict_region_lend, restrict_region_rend, input_transcripts)
 
             if sg.is_empty():
@@ -245,10 +253,10 @@ def main():
             pasa_salraa_obj = PASA_SALRAA(sg, CPU)
             pasa_salraa_obj.assign_transcripts_paths_in_graph(input_transcripts)
 
-            mp_counter = pasa_salraa_obj._populate_read_multi_paths(contig_acc, contig_seq_str, bam_file_for_sg)
-            q = Quantify()
+            mp_counter = pasa_salraa_obj._populate_read_multi_paths(contig_acc, contig_seq_str, bam_file_for_quant)
+            q = Quantify(sg)
             q.quantify(input_transcripts, mp_counter)
-            q.report_quant_results(input_transcripts, ofh)
+            q.report_quant_results(input_transcripts, ofh, ofh_quant_read_tracker)
 
             
         else:
@@ -280,6 +288,9 @@ def main():
 
 
     ofh.close()
+    if QUANT_ONLY:
+        ofh_quant_read_tracker.close()
+
     
     return
     
