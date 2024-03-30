@@ -19,10 +19,11 @@ class Pretty_alignment:
         self._pysam_alignment = pysam_alignment
         self._pretty_alignment_segments = pretty_alignment_segments # defined in Bam_alignment_extractor //TODO: move logic here.
 
-        if pysam_alignment.has_tag("RG") and pysam_alignment.get_tag("RG") == "PBLR":
-            self._read_type = "PBLR"
-        else:
-            self._read_type = "ILMN"
+        #if pysam_alignment.has_tag("RG") and pysam_alignment.get_tag("RG") == "PBLR":
+        #    self._read_type = "PBLR"
+        #else:
+        #    self._read_type = "ILMN"
+        self._read_type = "PacBio"
         
         
     def __repr__(self):

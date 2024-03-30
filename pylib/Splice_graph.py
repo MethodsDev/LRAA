@@ -346,7 +346,8 @@ class Splice_graph:
         - add base coverage where it's missing.
         
         """
-        
+
+        logger.info("Integrating input transcript structures.")
                 
         ## Exon Coverage and Intron Capture
 
@@ -355,26 +356,34 @@ class Splice_graph:
             exon_segments = transcript.get_exon_segments()
             last_rend = None
 
+            logger.debug("Integrating transcript: {}".format(transcript))
+            
             # add coverage for exonic region
             for exon_segment in exon_segments:
                 lend, rend = exon_segment
+                logger.debug("-ensuring coverage for exon: {}-{}".format(lend, rend))
                 for i in range(lend, rend + 1):
                     if i > self._contig_seq_len:
                         break
                     if self._contig_base_cov[i] < 1:
                         self._contig_base_cov[i] = 1
 
+                
                 # add missing introns.:
                 if last_rend is not None:
                     intron_lend = last_rend + 1
                     intron_rend = lend - 1
                     intron_coords_key = "{}:{}".format(intron_lend, intron_rend)
-
+                    
                     if intron_coords_key not in self._intron_objs:
                         intron_obj = Intron(self._contig_acc, intron_lend, intron_rend, orient, 1)
-                        intron_obj.add_read_types(['input_transcript']) ## TODO:// is this necessary? if not, remove.
+                        intron_obj.add_read_types(['ref_transcript'])
                         self._intron_objs[intron_coords_key] = intron_obj
-
+                        logger.debug("adding intron {}".format(intron_coords_key))
+                    else:
+                        logger.debug("intron {} already in splice graph".format(intron_coords_key))
+                        # ensure read type represented.
+                        self._intron_objs[intron_coords_key].add_read_types(['ref_transcript']) 
 
                 last_rend = rend
 
@@ -534,7 +543,7 @@ class Splice_graph:
             intron_coords = intron.get_coords()
             intron_key = "{}:{}".format(intron_coords[0], intron_coords[1])
             intron_obj = self._intron_objs[intron_key]
-            if intron_obj.has_read_type("PBLR"):
+            if intron_obj.has_read_type("ref_transcript"):
                 logger.debug("-retaining intron {} as having long read support".format(str(intron_obj)))
             else:
                 logger.debug("removing intron: {} {}".format(intron_key, self._intron_objs[intron_key]))
