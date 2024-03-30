@@ -1,9 +1,10 @@
 import sys, os, re
-from MultiPath import *
-from MultiPathGraph import *
-from GenomeFeature import *
+import MultiPath
+import MultiPathGraph
+import MultiPathGraphNode
+import GenomeFeature
 import Simple_path_utils
-from Transcript import *
+import Transcript
 import PASA_SALRAA_Globals
 
 import math
@@ -19,7 +20,7 @@ class PASA_scored_path:
         self._all_represented_mpgns = set() # stores all input mpgns and their contained mpgns
 
         def recursively_capture_nodes(mpgn):
-            assert(type(mpgn) == MultiPathGraphNode)
+            assert(type(mpgn) == MultiPathGraphNode.MultiPathGraphNode)
             if mpgn not in self._all_represented_mpgns:
                 self._all_represented_mpgns.add(mpgn)
                 for contained_mpgn in mpgn.get_containments():
@@ -31,7 +32,7 @@ class PASA_scored_path:
                 
         self._mpgn_list_path = path_list_of_multipath_graph_nodes
         
-        self._multiPath_obj = MultiPath.multiPath_from_mpgn_list(self._mpgn_list_path)
+        self._multiPath_obj = MultiPath.MultiPath.multiPath_from_mpgn_list(self._mpgn_list_path)
 
                 
         self._cdna_len = self._multiPath_obj.get_cdna_length()
@@ -153,7 +154,7 @@ class PASA_scored_path:
             mp = mpgn.get_multiPathObj()
             simple_path_list.append(mp.get_simple_path())
         
-        transcript_mp = MultiPath(splice_graph, simple_path_list)
+        transcript_mp = MultiPath.MultiPath(splice_graph, simple_path_list)
 
         exons_and_introns = transcript_mp.get_ordered_exons_and_introns()
 
@@ -167,9 +168,9 @@ class PASA_scored_path:
         contig_acc = exons_and_introns[0].get_contig_acc()
 
         for feature in exons_and_introns:
-            if type(feature) == Exon:
+            if type(feature) == GenomeFeature.Exon:
                 transcript_exon_segments.append(feature.get_coords())
-            elif type(feature) == Intron:
+            elif type(feature) == GenomeFeature.Intron:
                 orient = feature.get_orient()
 
         if len(transcript_exon_segments) == 0:
@@ -180,7 +181,7 @@ class PASA_scored_path:
 
         #print("merged segments: " + str(transcript_exon_segments))
 
-        transcript_obj = Transcript(contig_acc, transcript_exon_segments, orient)
+        transcript_obj = Transcript.Transcript(contig_acc, transcript_exon_segments, orient)
 
         #transcript_obj.set_scored_path_obj(self)  # commenting out / lightening up object
 
