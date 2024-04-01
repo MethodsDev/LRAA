@@ -184,7 +184,14 @@ class GTF_contig_to_transcripts:
                 if line[0] == "#":
                     continue
                 line = line.rstrip()
+                
+                if not re.match("\\w", line):
+                    continue
                 vals = line.split("\t")
+                if len(vals) < 9:
+                    logger.warn("GTF line has fewer fields than expected. Skipping. {}".format(line))
+                    continue
+                                
                 contig = vals[0]
                 feature_type = vals[2]
                 lend = int(vals[3])
