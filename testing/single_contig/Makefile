@@ -1,7 +1,7 @@
 
 
 test_quick:
-	../../LRAA --bam pacbio.PBLR.small.bam --genome ref_genome.fa --CPU 4 --output_prefix LRAA.small  --normalize_max_cov_level 0 
+	../../LRAA --bam pacbio.PBLR.small.bam --genome ref_genome.fa --CPU 4 --output_prefix LRAA.small  --normalize_max_cov_level 0
 
 
 test_reads_only:

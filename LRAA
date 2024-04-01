@@ -45,7 +45,7 @@ def main():
                         help="number of cores for multithreading")
 
 
-    parser.add_argument("--normalize_max_cov_level", type=int, default=10000, help="normalize to max read coverage level before assembly (default: 10000)")
+    parser.add_argument("--normalize_max_cov_level", type=int, default=1000, help="normalize to max read coverage level before assembly (default: 1000)")
 
     parser.add_argument("--quant_only", action='store_true', default=False, help="perform quantification only (must specify --gtf with targets for quant)")
     
