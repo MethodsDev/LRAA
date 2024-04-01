@@ -704,7 +704,12 @@ class PASA_SALRAA:
         outdirname = "__selected_best_scored_paths"
         
         if not os.path.exists(outdirname):
-            os.makedirs(outdirname)
+            try:
+                os.makedirs(outdirname)
+                # ignore race condition across multiple threads. 
+            except:
+                pass
+            
 
         outputfilename = "{}/selected_best_path.{}.R{}.gtf".format(outdirname, mpg_token, round_iter)
         
