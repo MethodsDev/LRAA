@@ -91,9 +91,19 @@ class PASA_SALRAA:
         
         all_reconstructed_transcripts = list()
 
-        q = Queue()
-        
-        mpm = MultiProcessManager(self._num_parallel_processes, q)
+        USE_MULTIPROCESSOR = False
+        if self._num_parallel_processes > 1:
+            USE_MULTIPROCESSOR = True
+
+
+        q = None        
+        if USE_MULTIPROCESSOR:
+            logger.info("-Running assembly jobs with multiprocessing")
+            q = Queue()
+            mpm = MultiProcessManager(self._num_parallel_processes, q)
+        else:
+            logger.info("-Running using single thread, so multiprocessing disabled here.") # easier for debugging sometimes
+
 
         def get_mpgn_list_coord_span(mpgn_list):
 
@@ -103,9 +113,9 @@ class PASA_SALRAA:
                 coords.extend(mpgn_coords)
 
             coords = sorted(coords)
-            
+
             return coords[0], coords[-1]
-        
+
 
         mpg_component_debug_dir = "__mpg_components"
         if PASA_SALRAA_Globals.DEBUG:
@@ -118,7 +128,7 @@ class PASA_SALRAA:
                 for mpgn in mpgn_list:
                     print(str(mpgn), file=ofh)
         
-        
+        all_reconstructed_transcripts = list()
         component_counter = 0
         for mpg_component in mpg_components:
             component_counter += 1
@@ -129,25 +139,31 @@ class PASA_SALRAA:
                 mpgn_description_filename = "{}/{}.mpgns.txt".format(mpg_component_debug_dir, mpg_token)
                 write_mpg_component_debug_file(mpg_component, mpgn_description_filename)
 
-                        
-            p = Process(target=self._reconstruct_isoforms_single_component, name=mpg_token,
-                        args=(q, mpg_component, component_counter, mpg_token, single_best_only) )
 
-            mpm.launch_process(p)
+            if USE_MULTIPROCESSOR:
+                p = Process(target=self._reconstruct_isoforms_single_component, name=mpg_token,
+                            args=(q, mpg_component, component_counter, mpg_token, single_best_only) )
 
-        num_failures = mpm.wait_for_remaining_processes()
+                mpm.launch_process(p)
 
-        logger.info(mpm.summarize_status())
-        
-        if num_failures:
-            raise RuntimeError("Error, {} component failures encountered".format(num_failures))
+                num_failures = mpm.wait_for_remaining_processes()
 
-        all_reconstructed_transcripts = list()
+                logger.info(mpm.summarize_status())
 
-        queue_contents = mpm.retrieve_queue_contents()
-        for entry in queue_contents:
-            all_reconstructed_transcripts.extend(entry)
-                            
+            else:
+                reconstructed_transcripts = self._reconstruct_isoforms_single_component(q, mpg_component, component_counter, mpg_token, single_best_only)
+                all_reconstructed_transcripts.extend(reconstructed_transcripts)
+                
+
+        if USE_MULTIPROCESSOR:
+            if num_failures:
+                raise RuntimeError("Error, {} component failures encountered".format(num_failures))
+
+
+            queue_contents = mpm.retrieve_queue_contents()
+            for entry in queue_contents:
+                all_reconstructed_transcripts.extend(entry)
+
                 
         return all_reconstructed_transcripts
 
@@ -263,8 +279,11 @@ class PASA_SALRAA:
                 transcripts.append(transcript_obj)
                 logger.debug("-assembled: {}".format(str(transcript_obj)))
 
-        q.put(transcripts)
-        
+        if q is not None:
+            # using MultiProcessing Queue
+            q.put(transcripts)
+        else:
+            return transcripts
 
         
 

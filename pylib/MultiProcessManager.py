@@ -7,7 +7,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-SLEEPTIME = 0.01
+SLEEPTIME = 0.1
 
 MPM_DEBUG = False
 
@@ -27,7 +27,7 @@ class MultiProcessManager:
     def launch_process(self, process):
 
         if MPM_DEBUG:
-            logger.debug("-launching process")
+            logger.info("-launching process")
         
         if self.num_running >= self.num_parallel_processes:
             self.wait_for_open_slot()
@@ -40,36 +40,37 @@ class MultiProcessManager:
 
     def wait_for_open_slot(self):
         if MPM_DEBUG:
-            logger.debug("-waiting for open slot")
+            logger.info("-waiting for open slot")
 
         counter = 0
         while self.num_running >= self.num_parallel_processes:
             if MPM_DEBUG:
-                logger.debug("\twaiting for open slot round({})".format(counter))
+                logger.info("\twaiting for open slot round({})".format(counter))
             counter += 1
             self._screen_running_processes()
             time.sleep(SLEEPTIME)
 
     def _screen_running_processes(self):
 
-        logger.debug("-screening running processes")
+        if MPM_DEBUG:
+            logger.info("-screening {} running processes".format(len(self.process_list)))
 
         if self.queue is not None and not self.queue.empty():
             if MPM_DEBUG:
-                logger.debug("\t-reaping queue")
+                logger.info("\t-reaping queue")
             while not self.queue.empty():
                 if MPM_DEBUG:
-                    logger.debug("\t\t-try reaping entry from queue")
+                    logger.info("\t\t-try reaping entry from queue")
 
                 entry = self.queue.get()
 
                 if MPM_DEBUG:
-                    logger.debug("\t\t-reaped entry")
+                    logger.info("\t\t\t-reaped entry")
 
                 self.captured_queue_contents.append(entry)
 
             if MPM_DEBUG:
-                logger.debug("\t\t-done reaping queue")
+                logger.info("\t\t-done reaping queue")
 
         
         completed_processes = set()
@@ -77,51 +78,52 @@ class MultiProcessManager:
         for process in self.process_list:
             if process.is_alive():
                 if MPM_DEBUG:
-                    logger.debug("\t-process {} is alive.".format(process.name))
+                    logger.info("\t-process {} is alive.".format(process.name))
             else:
                 if MPM_DEBUG:
-                    logger.debug("\t-process {} is finished.".format(process.name))
+                    logger.info("\t-process {} is finished.".format(process.name))
                 completed_processes.add(process)
 
         if completed_processes:
             if MPM_DEBUG:
-                logger.debug("\t-processing {} completed processes.".format(len(completed_processes)))
+                logger.info("\t-processing {} completed processes.".format(len(completed_processes)))
 
             for completed_process in completed_processes:
                 
                 if MPM_DEBUG:
-                    logger.debug("\t\t\t<joining process {}>".format(completed_process.name))
+                    logger.info("\t\t\t<joining process {}>".format(completed_process.name))
                 completed_process.join()
                 if MPM_DEBUG:
-                    logger.debug("\t\t\t<joined process {} having exit code {}>".format(completed_process.name, completed_process.exitcode))
+                    logger.info("\t\t\t<joined process {} having exit code {}>".format(completed_process.name, completed_process.exitcode))
                 if completed_process.exitcode == 0:
                     self.num_successes += 1
                 else:
                     self.num_errors += 1
                     if MPM_DEBUG:
-                        logger.debug("-captured a failed process")
+                        logger.info("-captured a failed process")
 
                 # remove completed process from process list
                 self.process_list.remove(completed_process)
                 self.num_running -= 1
 
-                
-        logger.debug("\t-done screening running processes.")
+
+        if MPM_DEBUG:
+            logger.info("\t-done screening running processes.")
         
                 
     def wait_for_remaining_processes(self):
 
         if MPM_DEBUG:
-            logger.debug("-waiting for remaining processes")
+            logger.info("-waiting for remaining processes")
         
         while self.num_running > 0:
             if MPM_DEBUG:
-                logger.debug("-waiting on {} processes".format(self.num_running))
+                logger.info("-waiting on {} processes".format(self.num_running))
             self._screen_running_processes()
             time.sleep(SLEEPTIME)
 
         if MPM_DEBUG:
-            logger.debug("-done waiting. All processes are completed")
+            logger.info("-done waiting. All processes are completed")
 
         return self.num_errors
         
@@ -142,6 +144,7 @@ def set_debug():
 
 def test_mpm(num_parallel_processes=8, num_total_processes=100):
 
+    
     def runner(id,q):
         logger.info("running id:{}".format(id))
         x = id / (id % 10)  # should error as div-by-zero on occasion
@@ -150,6 +153,8 @@ def test_mpm(num_parallel_processes=8, num_total_processes=100):
         
     q = multiprocessing.Queue()
     mpm = MultiProcessManager(num_parallel_processes, q)
+    
+    set_debug()
         
     for i in range(num_total_processes):
     
@@ -160,8 +165,11 @@ def test_mpm(num_parallel_processes=8, num_total_processes=100):
 
     mpm.wait_for_remaining_processes()
     
-    
+    logger.info("Test job completed.")
+    logger.info("Captured queue contents are: {}".format(mpm.retrieve_queue_contents()))
+    logger.info(mpm.summarize_status())
 
+    
 
 
 if __name__=='__main__':
