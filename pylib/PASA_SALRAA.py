@@ -96,6 +96,14 @@ class PASA_SALRAA:
             USE_MULTIPROCESSOR = True
 
 
+        ##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        ##  *** Note, this consumes an inordinate amount of RAM when multiprocessing is used here in the current implementation ***
+        ##             DISABLING MULTITHREADING FOR NOW
+        ##
+        USE_MULTIPROCESSOR = False
+        ##
+        ##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        
         q = None        
         if USE_MULTIPROCESSOR:
             logger.info("-Running assembly jobs with multiprocessing")
