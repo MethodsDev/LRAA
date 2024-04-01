@@ -326,6 +326,10 @@ class PASA_SALRAA:
                 mp_list = [mp]
                 if not allow_spacers:
                     mp_list = mp.split_multipath_at_spacers()
+                    if len(mp_list) > 1:
+                        logger.debug("-SKIPPING read path that contains a SPACER: {}".format(mp))
+                        continue
+
                 logger.debug("paths_list: {} -> mp: {}".format(paths_list, mp_list))
                 for mp in mp_list:
                     mp_counter.add(mp)

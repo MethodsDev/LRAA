@@ -278,8 +278,12 @@ class MultiPath:
                                  [ split_simple_path ],
                                  read_types = self.get_read_types(),
                                  read_names = self.get_read_names())
+
             split_mps.append(split_mp)
 
+            
+        logger.debug("-SPACER SPLITTING of {}\ninto\n{}".format(self, split_mps))
+        
         return split_mps
 
 

@@ -257,10 +257,14 @@ def main():
 
 
             pasa_salraa_obj = PASA_SALRAA(sg, CPU)
+            logger.debug("\n//SECTION QUANT: Assigning input transcript paths in graph")
             pasa_salraa_obj.assign_transcripts_paths_in_graph(input_transcripts)
 
+            logger.debug("\n//SECTION QUANT: Assigning reads to paths in graph.")
             mp_counter = pasa_salraa_obj._populate_read_multi_paths(contig_acc, contig_seq_str, bam_file_for_quant, allow_spacers)
+
             q = Quantify(sg)
+            logger.debug("\n//SECTION QUANT: Quantifying transcripts according to read support.")
             q.quantify(input_transcripts, mp_counter)
             q.report_quant_results(input_transcripts, ofh, ofh_quant_read_tracker)
 

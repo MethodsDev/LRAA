@@ -177,7 +177,7 @@ class Quantify:
                 and
                 SPU.fraction_read_overlap(self._splice_graph, read_sp, transcript_sp) >= fraction_read_align_overlap):
                 
-                print("Read {} compatible with transcript {}".format(read_sp, transcript_sp))
+                #print("Read {} compatible with transcript {}".format(read_sp, transcript_sp))
                 transcripts_compatible_with_read.append(transcript)
                 
                         
@@ -185,7 +185,7 @@ class Quantify:
 
     
                 
-    def report_quant_results(self, transcripts, ofh_quant_vals, ofh_read_tracking, run_EM=False):
+    def report_quant_results(self, transcripts, ofh_quant_vals, ofh_read_tracking, run_EM=True):
 
 
         read_name_to_transcripts = defaultdict(set)
@@ -223,7 +223,7 @@ class Quantify:
 
             ## go through multiple rounds of EM
 
-            for i in range(1,100):
+            for i in range(1): #100):
 
                 logger.info("EM round {}".format(i))
 
