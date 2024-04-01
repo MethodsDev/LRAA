@@ -56,7 +56,7 @@ class PASA_SALRAA:
 
         logger.info(f"-building multipath graph for {contig_acc}")
         start_time = time.time()
-        mp_counter = self._populate_read_multi_paths(contig_acc, contig_seq, bam_file)
+        mp_counter = self._populate_read_multi_paths(contig_acc, contig_seq, bam_file, allow_spacers)
 
         multipath_graph = MultiPathGraph(mp_counter, self._splice_graph, contig_acc, PASA_SALRAA.min_mpgn_read_count, allow_spacers)
         self._multipath_graph = multipath_graph
@@ -268,7 +268,7 @@ class PASA_SALRAA:
 
         
 
-    def _populate_read_multi_paths(self, contig_acc, contig_seq, bam_file):
+    def _populate_read_multi_paths(self, contig_acc, contig_seq, bam_file, allow_spacers):
 
         """
         Reads the alignments from the BAM and for each read traces it
@@ -320,14 +320,18 @@ class PASA_SALRAA:
                     assert path[-1] != SPACER, "path[-1] is SPACER, not allowed"
                     paths_list.append(path)
 
-            mp = None
+            mp_list = None
             if paths_list:
                 mp = MultiPath(self._splice_graph, paths_list, read_types = { read_type, }, read_names = { read_name, } )
-                logger.debug("paths_list: {} -> mp: {}".format(paths_list, mp))
-                mp_counter.add(mp)
+                mp_list = [mp]
+                if not allow_spacers:
+                    mp_list = mp.split_multipath_at_spacers()
+                logger.debug("paths_list: {} -> mp: {}".format(paths_list, mp_list))
+                for mp in mp_list:
+                    mp_counter.add(mp)
 
             if PASA_SALRAA_Globals.DEBUG:
-                read_graph_mappings_ofh.write("\t".join([read_name, str(pretty_alignment), str(mp)]) + "\n")
+                read_graph_mappings_ofh.write("\t".join([read_name, str(pretty_alignment), str(mp_list)]) + "\n")
 
 
         if PASA_SALRAA_Globals.DEBUG:

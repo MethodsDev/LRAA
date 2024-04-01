@@ -261,7 +261,27 @@ class MultiPath:
         else:
             return Simple_path_utils.simple_paths_overlap_and_compatible_spacefree_region_path_A(self.get_splice_graph(), my_path, other_path)
 
-    
+
+
+
+    def split_multipath_at_spacers(self):
+        simple_path = self.get_simple_path()
+        if SPACER not in simple_path:
+            return [self]
+        
+        # need to split at spacers
+        split_simple_paths_list = Simple_path_utils.split_path_at_spacers(simple_path)
+
+        split_mps = list()
+        for split_simple_path in split_simple_paths_list:
+            split_mp = MultiPath(self._splice_graph,
+                                 [ split_simple_path ],
+                                 read_types = self.get_read_types(),
+                                 read_names = self.get_read_names())
+            split_mps.append(split_mp)
+
+        return split_mps
+
 
     def __repr__(self):
         return(str(self._simple_path) + " rtypes:" + str(self._read_types) + " rnames: " + str(self._read_names))

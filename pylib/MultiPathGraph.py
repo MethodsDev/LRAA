@@ -47,51 +47,34 @@ class MultiPathGraph:
         
         multiPathCountPairs = multiPathCounter.get_all_MultiPathCountPairs()
         for mpCountPair in multiPathCountPairs:
-            orig_mp, count = mpCountPair.get_multipath_and_count()
+            mp, count = mpCountPair.get_multipath_and_count()
 
             if count < min_mpgn_read_count:
                 continue
 
-            
-            if (not allow_spacers) and SPACER in orig_mp:
-                # split into separate mps:
-                simple_paths_list = Simple_path_utils.split_path_at_spacers(orig_mp.get_simple_path())
-                if PASA_SALRAA_Globals.DEBUG:
-                    logger.debug("-not allowing spacers, so path:\n{}\nwas split into paths:\n{}".format(orig_mp, simple_paths_list))
-                # convert to multipath objects
-                path_list = []
-                for simple_path in simple_paths_list:
-                    mp = MultiPath.MultiPath(splice_graph, [ simple_path ], read_types = orig_mp.get_read_types(), read_names = orig_mp.get_read_names())
-                    path_list.append(mp)
+            #print("mp: {}, count {}".format(mp, count))
 
-                
-            else:
-                path_list = [orig_mp]
+            first_node_id = mp[0]
+            last_node_id = mp[-1]
 
-            for mp in path_list:
-                #print("mp: {}, count {}".format(mp, count))
+            first_node_obj = splice_graph.get_node_obj_via_id(first_node_id)
+            last_node_obj = splice_graph.get_node_obj_via_id(last_node_id)
 
-                first_node_id = mp[0]
-                last_node_id = mp[-1]
+            lend_coord = first_node_obj.get_coords()[0]
+            rend_coord = last_node_obj.get_coords()[1]
 
-                first_node_obj = splice_graph.get_node_obj_via_id(first_node_id)
-                last_node_obj = splice_graph.get_node_obj_via_id(last_node_id)
+            mp_graph_node = MultiPathGraphNode(mp, count, lend_coord, rend_coord, mpg=self)
+            mp_graph.add_node(mp_graph_node)
 
-                lend_coord = first_node_obj.get_coords()[0]
-                rend_coord = last_node_obj.get_coords()[1]
+            self._mp_graph_nodes_list.append(mp_graph_node)
 
-                mp_graph_node = MultiPathGraphNode(mp, count, lend_coord, rend_coord, mpg=self)
-                mp_graph.add_node(mp_graph_node)
+            # assign mp to splice graph component
+            mp_graph_node_id = mp_graph_node.get_id()
+            self._mp_id_to_node[mp_graph_node_id] = mp_graph_node
 
-                self._mp_graph_nodes_list.append(mp_graph_node)
-
-                # assign mp to splice graph component
-                mp_graph_node_id = mp_graph_node.get_id()
-                self._mp_id_to_node[mp_graph_node_id] = mp_graph_node
-
-                component_id = self._splice_graph._node_id_to_component[first_node_id]
-                print(f"{mp_graph_node_id} first node is {first_node_id} and assigned to component_id {component_id}")   
-                sg_component_to_mp_id[component_id].add(mp_graph_node_id)
+            component_id = self._splice_graph._node_id_to_component[first_node_id]
+            print(f"{mp_graph_node_id} first node is {first_node_id} and assigned to component_id {component_id}")   
+            sg_component_to_mp_id[component_id].add(mp_graph_node_id)
 
 
 
