@@ -146,9 +146,6 @@ class PASA_SALRAA:
 
                 mpm.launch_process(p)
 
-                num_failures = mpm.wait_for_remaining_processes()
-
-                logger.info(mpm.summarize_status())
 
             else:
                 reconstructed_transcripts = self._reconstruct_isoforms_single_component(q, mpg_component, component_counter, mpg_token, single_best_only)
@@ -156,9 +153,10 @@ class PASA_SALRAA:
                 
 
         if USE_MULTIPROCESSOR:
+            num_failures = mpm.wait_for_remaining_processes()            
+            logger.info(mpm.summarize_status())
             if num_failures:
                 raise RuntimeError("Error, {} component failures encountered".format(num_failures))
-
 
             queue_contents = mpm.retrieve_queue_contents()
             for entry in queue_contents:
