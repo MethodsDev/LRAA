@@ -42,7 +42,7 @@ class Bam_alignment_extractor:
         return
     
     
-    def get_read_alignments(self, contig_acc, region_lend=None, region_rend=None,
+    def get_read_alignments(self, contig_acc, contig_strand=None, region_lend=None, region_rend=None,
                             pretty=False, config=PASA_SALRAA_Globals.config):
 
         discarded_read_counter = defaultdict(int)
@@ -57,7 +57,13 @@ class Bam_alignment_extractor:
             read_fetcher = self._pysam_reader.fetch(contig_acc)
 
         for read in read_fetcher:
-            
+
+            if contig_strand is not None:
+                if read.is_forward and contig_strand != '+':
+                    continue
+                if read.is_reverse and contig_strand != '-':
+                    continue
+                            
             if read.is_paired and not read.is_proper_pair:
                 discarded_read_counter["improper_pair"] += 1
                 continue

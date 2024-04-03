@@ -43,6 +43,7 @@ class Splice_graph:
         #self._alignments_bam_filename = ""
         
         self._contig_acc = ""
+        self._contig_strand = None
         self._contig_seq_str = ""
         self._contig_len = 0
         
@@ -124,12 +125,14 @@ class Splice_graph:
         return overlapping_exon_segments
     
 
-    def build_splice_graph_for_contig(self, contig_acc, contig_seq_str, alignments_bam_file, region_lend, region_rend, input_transcripts=None):
+    def build_splice_graph_for_contig(self, contig_acc, contig_strand, contig_seq_str, alignments_bam_file,
+                                      region_lend, region_rend, input_transcripts=None):
 
         logger.info("creating splice graph for {} leveraging bam {}".format(contig_acc,
                                                                             alignments_bam_file))
         
         self._contig_acc = contig_acc
+        self._contig_strand = contig_strand
         self._contig_seq_str = contig_seq_str
         self._contig_seq_len = len(contig_seq_str)
         #self._alignments_bam_filename = alignments_bam_file
@@ -148,11 +151,11 @@ class Splice_graph:
         # - base coverage incremented under self._contig_base_cov
 
         if alignments_bam_file is not None:
-            self._populate_exon_coverage_and_extract_introns(alignments_bam_file)
+            self._populate_exon_coverage_and_extract_introns(alignments_bam_file, contig_acc, contig_strand)
 
         # incorporate guide structures if provided
         if input_transcripts:
-            self._integrate_input_transcript_structures(input_transcripts)
+            self._integrate_input_transcript_structures(input_transcripts, contig_strand) # should already be limited to contig_acc
 
         ##--------------------------------------------------------------------------------
         # initializes self._splice_graph
@@ -259,7 +262,7 @@ class Splice_graph:
         return
 
     
-    def _populate_exon_coverage_and_extract_introns(self, bam_filename):
+    def _populate_exon_coverage_and_extract_introns(self, bam_filename, contig_acc, contig_strand):
         
         ## Intron Capture
 
@@ -274,7 +277,8 @@ class Splice_graph:
         # get read alignments
         # - illumina and pacbio reads filtered based on tech-specific min per_id
         # - pretty alignments: store the pysam alignment record along with inferred transcript exons segments.
-        pretty_alignments = bam_extractor.get_read_alignments(self._contig_acc,
+        pretty_alignments = bam_extractor.get_read_alignments(contig_acc,
+                                                              contig_strand,
                                                               region_lend=self._region_lend, region_rend=self._region_rend,
                                                               pretty=True)
         logger.info("-got {} pretty alignments.".format(len(pretty_alignments)))
@@ -338,7 +342,7 @@ class Splice_graph:
 
 
     
-    def _integrate_input_transcript_structures(self, transcripts):
+    def _integrate_input_transcript_structures(self, transcripts, contig_strand):
 
         """
         Fold in the reference annotations:
@@ -353,6 +357,10 @@ class Splice_graph:
 
         for transcript in transcripts:
             orient = transcript.get_orient()
+
+            if contig_strand is not None and orient != contig_strand:
+                continue
+            
             exon_segments = transcript.get_exon_segments()
             last_rend = None
 

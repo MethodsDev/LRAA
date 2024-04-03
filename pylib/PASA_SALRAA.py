@@ -52,11 +52,11 @@ class PASA_SALRAA:
         return
 
 
-    def build_multipath_graph(self, contig_acc, contig_seq, bam_file, allow_spacers=False):
+    def build_multipath_graph(self, contig_acc, contig_strand, contig_seq, bam_file, allow_spacers=False):
 
         logger.info(f"-building multipath graph for {contig_acc}")
         start_time = time.time()
-        mp_counter = self._populate_read_multi_paths(contig_acc, contig_seq, bam_file, allow_spacers)
+        mp_counter = self._populate_read_multi_paths(contig_acc, contig_strand, contig_seq, bam_file, allow_spacers)
 
         multipath_graph = MultiPathGraph(mp_counter, self._splice_graph, contig_acc, PASA_SALRAA.min_mpgn_read_count, allow_spacers)
         self._multipath_graph = multipath_graph
@@ -64,8 +64,9 @@ class PASA_SALRAA:
         
         if PASA_SALRAA_Globals.DEBUG:
             ## debugging info
-            logger.info("writing __multipath_graph.dat")
-            multipath_graph.describe_graph("__multipath_graph.dat")
+            debug_multipath_graph_filename = "__multipath_graph.{}.{}.dat".format(contig_acc, contig_strand)
+            logger.info("writing {}".format(debug_multipath_graph_filename))
+            multipath_graph.describe_graph(debug_multipath_graph_filename)
         
             
         build_time = time.time() - start_time
@@ -293,7 +294,7 @@ class PASA_SALRAA:
 
         
 
-    def _populate_read_multi_paths(self, contig_acc, contig_seq, bam_file, allow_spacers):
+    def _populate_read_multi_paths(self, contig_acc, contig_strand, contig_seq, bam_file, allow_spacers):
 
         """
         Reads the alignments from the BAM and for each read traces it
@@ -304,6 +305,7 @@ class PASA_SALRAA:
         
         bam_extractor = Bam_alignment_extractor(bam_file)
         pretty_alignments = bam_extractor.get_read_alignments(contig_acc,
+                                                              contig_strand,
                                                               region_lend=self._splice_graph._region_lend,
                                                               region_rend=self._splice_graph._region_rend,
                                                               pretty=True)

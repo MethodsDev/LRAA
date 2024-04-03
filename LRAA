@@ -200,10 +200,15 @@ def main():
         os.makedirs(prereconstruct_info_dir)
 
 
-    contig_to_input_transcripts = defaultdict(list)
+    contig_strand_to_input_transcripts = defaultdict(list)
     if input_gtf:
         logger.info(f"-capturing input transcripts from gtf {input_gtf}")
         contig_to_input_transcripts = GTF_contig_to_transcripts.parse_GTF_to_Transcripts(input_gtf)
+        for contig, transcript_obj_list in contig_to_input_transcripts.items():
+            for transcript in transcript_obj_list:
+                transcript_strand = transcript.get_strand()
+                contig_strand_token = "{}^{}".format(contig, transcript_strand)
+                contig_strand_to_input_transcripts[contig_strand_token].append(transcript)
         
     ##----------------------------------------------
     ## Begin, target each contig separately
@@ -220,81 +225,88 @@ def main():
     
     for contig_acc in genome_contigs_list:
 
-        logger.info(f"-processing contig: {contig_acc}")
-
-        ##-------------------
-        ## build splice graph
-
-        sg = Splice_graph()
 
         contig_seq_str = Util_funcs.retrieve_contig_seq_from_fasta_file(contig_acc, genome_fasta_filename)
-
-        input_transcripts = contig_to_input_transcripts[contig_acc]
-
-        if input_transcripts is not None and len(input_transcripts) == 0:
-            input_transcripts = None
         
-
-        if QUANT_ONLY:
-
-            # get path assignments for the input transcripts
-            # get the path assignments for the reads.
-            # compare read mappings, assign categories
-
-
-            # for quant only, build sg only based on the input gtf and not the alignments in the bam
-            sg.build_splice_graph_for_contig(contig_acc, contig_seq_str,
-                                             bam_file_for_sg,
-                                             restrict_region_lend, restrict_region_rend, input_transcripts)
-
-            if sg.is_empty():
-                logger.info(f"-no splice graph created for contig: {contig_acc}.... skipping.")
-                continue
-
-            if PASA_SALRAA_Globals.DEBUG:
-                sg.write_intron_exon_splice_graph_bed_files("{}/__prereconstruct.{}.pad1".format(prereconstruct_info_dir, contig_acc), pad=1)
-
-
-
-            pasa_salraa_obj = PASA_SALRAA(sg, CPU)
-            logger.debug("\n//SECTION QUANT: Assigning input transcript paths in graph")
-            pasa_salraa_obj.assign_transcripts_paths_in_graph(input_transcripts)
-
-            logger.debug("\n//SECTION QUANT: Assigning reads to paths in graph.")
-            mp_counter = pasa_salraa_obj._populate_read_multi_paths(contig_acc, contig_seq_str, bam_file_for_quant, allow_spacers)
-
-            q = Quantify(sg)
-            logger.debug("\n//SECTION QUANT: Quantifying transcripts according to read support.")
-            q.quantify(input_transcripts, mp_counter)
-            q.report_quant_results(input_transcripts, ofh, ofh_quant_read_tracker)
-
+        for contig_strand in ('+','-'):
+        
+            logger.info(f"-processing contig: {contig_acc} {contig_strand}")
             
-        else:
-            ##---------------------
-            ## Assemble transcripts
 
-            sg.build_splice_graph_for_contig(contig_acc, contig_seq_str, bam_file_for_sg, restrict_region_lend, restrict_region_rend, input_transcripts)
+            ##-------------------
+            ## build splice graph
 
-            if sg.is_empty():
-                logger.info(f"-no splice graph created for contig: {contig_acc}.... skipping.")
-                continue
-
-            if PASA_SALRAA_Globals.DEBUG:
-                sg.write_intron_exon_splice_graph_bed_files("{}/__prereconstruct.{}.pad1".format(prereconstruct_info_dir, contig_acc), pad=1)
-
+            sg = Splice_graph()
             
-            pasa_salraa_obj = PASA_SALRAA(sg, CPU)
-            logger.info(f"-building splice graph for {contig_acc}")
-            pasa_salraa_obj.build_multipath_graph(contig_acc, contig_seq_str, bam_file_for_sg, allow_spacers)
-
-            logger.info(f"-begin reconstructing isoforms for {contig_acc}")
-            transcripts = pasa_salraa_obj.reconstruct_isoforms(single_best_only)
-
-            ## TODO://gene clustering
+            contig_strand_token = "{}^{}".format(contig_acc, contig_strand)
+            input_transcripts = contig_strand_to_input_transcripts[contig_strand_token]
             
-            logger.info("writing gtf output for {} containing {} transcripts".format(contig_acc, len(transcripts)))
-            for transcript in transcripts:
-                ofh.write(transcript.to_GTF_format() + "\n")
+            if input_transcripts is not None and len(input_transcripts) == 0:
+                input_transcripts = None
+
+
+            if QUANT_ONLY:
+
+                # get path assignments for the input transcripts
+                # get the path assignments for the reads.
+                # compare read mappings, assign categories
+
+
+                # for quant only, build sg only based on the input gtf and not the alignments in the bam
+                sg.build_splice_graph_for_contig(contig_acc, contig_strand, contig_seq_str,
+                                                 bam_file_for_sg,
+                                                 restrict_region_lend, restrict_region_rend, input_transcripts)
+
+                if sg.is_empty():
+                    logger.info(f"-no splice graph created for contig: {contig_acc}.... skipping.")
+                    continue
+
+                if PASA_SALRAA_Globals.DEBUG:
+                    sg.write_intron_exon_splice_graph_bed_files("{}/__prereconstruct.{}.{}.pad1".format(prereconstruct_info_dir, contig_acc, contig_strand), pad=1)
+
+
+
+                pasa_salraa_obj = PASA_SALRAA(sg, CPU)
+                logger.debug("\n//SECTION QUANT: Assigning input transcript paths in graph")
+                pasa_salraa_obj.assign_transcripts_paths_in_graph(input_transcripts)
+
+                logger.debug("\n//SECTION QUANT: Assigning reads to paths in graph.")
+                mp_counter = pasa_salraa_obj._populate_read_multi_paths(contig_acc, contig_seq_str, bam_file_for_quant, allow_spacers)
+
+                q = Quantify(sg)
+                logger.debug("\n//SECTION QUANT: Quantifying transcripts according to read support.")
+                q.quantify(input_transcripts, mp_counter)
+                q.report_quant_results(input_transcripts, ofh, ofh_quant_read_tracker)
+
+
+            else:
+                ##---------------------
+                ## Assemble transcripts
+
+                sg.build_splice_graph_for_contig(contig_acc, contig_strand, contig_seq_str,
+                                                 bam_file_for_sg,
+                                                 restrict_region_lend, restrict_region_rend, input_transcripts)
+
+                if sg.is_empty():
+                    logger.info(f"-no splice graph created for contig: {contig_acc}.... skipping.")
+                    continue
+
+                if PASA_SALRAA_Globals.DEBUG:
+                    sg.write_intron_exon_splice_graph_bed_files("{}/__prereconstruct.{}.{}.pad1".format(prereconstruct_info_dir, contig_acc, contig_strand), pad=1)
+
+
+                pasa_salraa_obj = PASA_SALRAA(sg, CPU)
+                logger.info(f"-building splice graph for {contig_acc}")
+                pasa_salraa_obj.build_multipath_graph(contig_acc, contig_strand, contig_seq_str, bam_file_for_sg, allow_spacers)
+
+                logger.info(f"-begin reconstructing isoforms for {contig_acc}")
+                transcripts = pasa_salraa_obj.reconstruct_isoforms(single_best_only)
+
+                ## TODO://gene clustering
+
+                logger.info("writing gtf output for {} [{}] containing {} transcripts".format(contig_acc, contig_strand, len(transcripts)))
+                for transcript in transcripts:
+                    ofh.write(transcript.to_GTF_format() + "\n")
 
 
     ofh.close()
