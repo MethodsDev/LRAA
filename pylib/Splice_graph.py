@@ -82,6 +82,9 @@ class Splice_graph:
     def get_contig_acc(self):
         return self._contig_acc
 
+
+    def get_contig_strand(self):
+        return self._contig_strand
     
     def set_read_aln_gap_merge(self, read_aln_gap_merge_int):
 
@@ -405,9 +408,13 @@ class Splice_graph:
         
         genome_seq = self._contig_seq_str
 
+        contig_acc = self.get_contig_acc()
+        contig_strand = self.get_contig_strand()
+        
         top_strand_agreement_count = 0
         bottom_strand_agreement_count = 0
-
+        
+        
         introns_list = list()
         
         for i in range(len(alignment_segments) -1):
@@ -420,7 +427,10 @@ class Splice_graph:
             splice_type = Intron.check_canonical_splicing(intron_lend, intron_rend, genome_seq)
 
             if splice_type is not None:
-                introns_list.append( (intron_lend, intron_rend, splice_type) )
+                if splice_type == contig_strand:
+                    introns_list.append( (intron_lend, intron_rend, splice_type) )
+                else:
+                    logger.warning("Splice type for intron {}:{}-{}[{}] is not consistent with read alignment orientation: {}".format(contig_acc, intron_lend, intron_rend, splice_type, contig_strand))
 
         #
         #    if splice_type is None:
@@ -478,7 +488,7 @@ class Splice_graph:
 
             exon_mean_cov = self._get_mean_coverage(exon_lend, exon_rend)
             
-            exon_obj = Exon(self._contig_acc, exon_lend, exon_rend, exon_mean_cov)
+            exon_obj = Exon(self._contig_acc, exon_lend, exon_rend, self._contig_strand, exon_mean_cov)
 
             draft_splice_graph.add_node(exon_obj)
             

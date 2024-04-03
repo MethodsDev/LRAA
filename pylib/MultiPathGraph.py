@@ -73,7 +73,7 @@ class MultiPathGraph:
             self._mp_id_to_node[mp_graph_node_id] = mp_graph_node
 
             component_id = self._splice_graph._node_id_to_component[first_node_id]
-            print(f"{mp_graph_node_id} first node is {first_node_id} and assigned to component_id {component_id}")   
+            #print(f"{mp_graph_node_id} first node is {first_node_id} and assigned to component_id {component_id}")   
             sg_component_to_mp_id[component_id].add(mp_graph_node_id)
 
 

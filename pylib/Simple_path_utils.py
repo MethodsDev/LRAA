@@ -804,24 +804,24 @@ def  __get_dummy_splice_graph():
     #    [-----]     [--------]      [---------]         [--------]    [---------]
     #             
     
-    e1 = Exon("contig", 100, 200, 1)
+    e1 = Exon("contig", 100, 200, '+', 1)
     e1_ID = e1.get_id()
     sg._node_id_to_node[ e1_ID ] = e1
     
     
-    e2 = Exon("contig", 300, 400, 1)
+    e2 = Exon("contig", 300, 400, '+', 1)
     e2_ID = e2.get_id()
     sg._node_id_to_node[ e2_ID ] = e2
 
-    e3 = Exon("contig", 500, 600, 1)
+    e3 = Exon("contig", 500, 600, '+', 1)
     e3_ID = e3.get_id()
     sg._node_id_to_node[ e3_ID ] = e3
 
-    e4 = Exon("contig", 700, 800, 1)
+    e4 = Exon("contig", 700, 800, '+',  1)
     e4_ID = e4.get_id()
     sg._node_id_to_node[ e4_ID ] = e4
 
-    e5 = Exon("contig", 900, 1000, 1)
+    e5 = Exon("contig", 900, 1000, '+', 1)
     e5_ID = e5.get_id()
     sg._node_id_to_node[ e5_ID ] = e5
 
@@ -926,23 +926,23 @@ def test_merge_simple_paths_containing_spacers():
     sg = Splice_graph()
     Exon.reset_counter()
     
-    e1 = Exon("contig", 100, 200, 1)
+    e1 = Exon("contig", 100, 200, '+', 1)
     e1_ID = e1.get_id()
     sg._node_id_to_node[ e1_ID ] = e1
 
-    e2 = Exon("contig", 300, 400, 1)
+    e2 = Exon("contig", 300, 400, '+', 1)
     e2_ID = e2.get_id()
     sg._node_id_to_node[ e2_ID ] = e2
 
-    e3 = Exon("contig", 500, 600, 1)
+    e3 = Exon("contig", 500, 600, '+', 1)
     e3_ID = e3.get_id()
     sg._node_id_to_node[ e3_ID ] = e3
 
-    e4 = Exon("contig", 700, 800, 1)
+    e4 = Exon("contig", 700, 800, '+', 1)
     e4_ID = e4.get_id()
     sg._node_id_to_node[ e4_ID ] = e4
 
-    e5 = Exon("contig", 900, 1000, 1)
+    e5 = Exon("contig", 900, 1000, '+', 1)
     e5_ID = e5.get_id()
     sg._node_id_to_node[ e5_ID ] = e5
     

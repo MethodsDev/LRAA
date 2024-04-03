@@ -16,7 +16,7 @@ class Transcript (GenomeFeature):
         trans_lend = segment_coordinates_list[0][0]
         trans_rend = segment_coordinates_list[-1][1]
 
-        super().__init__(contig_acc, trans_lend, trans_rend)
+        super().__init__(contig_acc, trans_lend, trans_rend, orient)
 
         self._orient = orient
         self._exon_segments = segment_coordinates_list

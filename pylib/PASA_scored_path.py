@@ -146,6 +146,8 @@ class PASA_scored_path:
         
         splice_graph = mpgn_list[0].get_splice_graph()
 
+        orient = splice_graph.get_contig_strand()
+        
         read_names = self.get_all_represented_reads()
         
         # merge to a single multipath object
@@ -164,15 +166,20 @@ class PASA_scored_path:
         
         transcript_exon_segments = list()
         
-        orient = '.' # '?'
         contig_acc = exons_and_introns[0].get_contig_acc()
 
         for feature in exons_and_introns:
             if type(feature) == GenomeFeature.Exon:
                 transcript_exon_segments.append(feature.get_coords())
+                exon_orient = feature.get_orient()
+                if exon_orient != orient:
+                    logger.warn("Error, exon orient not matching up with contig strand")
             elif type(feature) == GenomeFeature.Intron:
-                orient = feature.get_orient()
+                intron_orient = feature.get_orient()
+                if intron_orient != orient:
+                    logger.warn("Error, intron orient not matching up with contig strand")
 
+                
         if len(transcript_exon_segments) == 0:
             logger.warning("bug - shouldn't have exonless transcript features: {}".format(transcript_path)) # //FIXME: bug
             return None

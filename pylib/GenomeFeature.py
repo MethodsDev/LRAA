@@ -13,10 +13,14 @@ logger = logging.getLogger(__name__)
 
 class GenomeFeature:
 
-    def __init__(self, contig_acc, lend, rend):
+    def __init__(self, contig_acc, lend, rend, orient):
+
+        assert orient in ('+','-'), "Error, orient must be set to + or - "
+        
         self._contig_acc = contig_acc
         self._lend = lend
         self._rend = rend
+        self._orient = orient
         self._id = "__id_not_set__"
         self._read_types = set()
         
@@ -55,6 +59,9 @@ class GenomeFeature:
     def get_read_types(self):
         return list(self._read_types)
 
+    def get_orient(self):
+        return self._orient
+
     
 class Intron(GenomeFeature):
 
@@ -64,8 +71,8 @@ class Intron(GenomeFeature):
     splice_dinucs_bottom_strand = {"CTAC", "CTGC", "GTAT" } # revcomp of top strand dinucs
     
     def __init__(self, contig_acc, lend, rend, orient, count):
-        super().__init__(contig_acc, lend, rend)
-        self._orient = orient
+        super().__init__(contig_acc, lend, rend, orient)
+
         self._count = count
 
         Intron.intron_id_counter += 1
@@ -77,10 +84,9 @@ class Intron(GenomeFeature):
         return self._count
     
     def __repr__(self):
-        return("Intron: {} {}-{} count:{} rtypes:{}".format(self._id, self._lend, self._rend, self._count, self.get_read_types()))
+        return("Intron: {} {}:{}-{} [{}] count:{} rtypes:{}".format(self._id, self._contig_acc, self._lend, self._rend, self._orient,
+                                                                    self._count, self.get_read_types()))
 
-    def get_orient(self):
-        return self._orient
         
 
     # static methods
@@ -111,8 +117,9 @@ class Exon(GenomeFeature):
 
     exon_id_counter = 0
 
-    def __init__(self, contig_acc, lend, rend, mean_coverage):
-        super().__init__(contig_acc, lend, rend)
+    def __init__(self, contig_acc, lend, rend, orient, mean_coverage):
+        super().__init__(contig_acc, lend, rend, orient)
+        
         self._mean_coverage = mean_coverage
 
         Exon.exon_id_counter += 1
@@ -124,7 +131,7 @@ class Exon(GenomeFeature):
         return self._mean_coverage
     
     def __repr__(self):
-        return("Exon: {} {}-{} mean_cov:{}".format(self._id, self._lend, self._rend, self._mean_coverage))
+        return("Exon: {} {}:{}-{} [{}] mean_cov:{}".format(self._id, self._contig_acc, self._lend, self._rend, self._orient, self._mean_coverage))
 
 
     @classmethod
