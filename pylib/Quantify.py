@@ -337,10 +337,20 @@ class Quantify:
                     transcript_read_count = transcript_to_read_count[ transcript_of_gene.get_transcript_id() ]
                     sum_gene_reads += transcript_read_count
 
+                logger.info("gene_id {} has total reads: {}".format(gene_id, sum_gene_reads))
+                
+                    
                 for transcript_of_gene in transcripts_of_gene:
-                    transcript_read_count = transcript_to_read_count[ transcript_of_gene.get_transcript_id() ]
+                    transcript_id =  transcript_of_gene.get_transcript_id()
+                    transcript_read_count = transcript_to_read_count[ transcript_id ]
                     isoform_frac = transcript_read_count / sum_gene_reads
-                    if isoform_frac < min_isoform_fraction:
+                    logger.info("\ttranscript_id {} has {} reads = {} isoform fraction of {}".format(
+                        transcript_id,
+                        transcript_read_count,
+                        isoform_frac,
+                        gene_id))
+                    
+                    if isoform_frac < min_isoform_fraction:                        
                         isoforms_were_filtered = True
                         num_filtered_isoforms += 1
                     else:

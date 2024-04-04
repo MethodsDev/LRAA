@@ -302,6 +302,8 @@ class PASA_SALRAA:
                 transcripts.append(transcript_obj)
                 logger.debug("-assembled: {}".format(str(transcript_obj)))
 
+        logger.info("-reconstructed {} transcripts from component {}".format(len(transcripts), transcript_counter))
+                
         if q is not None:
             # using MultiProcessing Queue
             q.put(transcripts)
