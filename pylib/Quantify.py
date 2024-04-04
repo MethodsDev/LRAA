@@ -109,6 +109,7 @@ class Quantify:
             if transcripts_assigned is None:
                 logger.debug("mp_count_pair {} maps to gene but no isoform(transcript)".format(mp_count_pair))
             else:
+                logger.debug("mp_count_pair {} maps to transcripts: {}".format(mp_count_pair, transcripts_assigned))
                 for transcript in transcripts_assigned:
                     transcript.add_read_names(mp.get_read_names())
                     
@@ -194,10 +195,8 @@ class Quantify:
             read_names = transcript.get_read_names()
             for read_name in read_names:
                 read_name_to_transcripts[read_name].add(transcript)
-
                 
         num_mapped_reads = len(read_name_to_transcripts)
-
 
         transcript_to_read_count = defaultdict(float)
 
@@ -216,15 +215,24 @@ class Quantify:
                 
             transcript_to_read_count[transcript_id] = transcript_read_count_total
             transcript_to_expr_val[transcript_id] = transcript_read_count_total / num_mapped_reads * 1e6
+            logger.debug(f"-assigning transcript {transcript_id} read count: {transcript_read_count_total}")
 
-
+            
+        ## DEBUGGING
+        logger.debug("# Isoform read assignments:\n")
+        for read_name in read_name_to_transcripts:
+            transcripts_read_assigned = read_name_to_transcripts[read_name]
+            logger.debug("read_name {} assigned to {}".format(read_name, transcripts_read_assigned))
+            if len(transcripts_read_assigned) > 1:
+                logger.debug("*** Splitting read: {} across {} transcripts: {}".format(read_name, len(transcripts_read_assigned), transcripts_read_assigned))
+            
      
         if run_EM:
 
             ## go through multiple rounds of EM
 
-            for i in range(1): #100):
-
+            for i in range(1, 100):
+                
                 logger.info("EM round {}".format(i))
 
                 ## fractionally assign reads based on expr values
@@ -262,7 +270,8 @@ class Quantify:
 
             readnames = transcript.get_read_names()
             readnames = sorted(readnames)
-            
+
+            logger.info("\t".join([gene_id, transcript_id, f"{counts:.1f}", f"{expr:.3f}"]))
             print("\t".join([gene_id, transcript_id, f"{counts:.1f}", f"{expr:.3f}"]), file=ofh_quant_vals)
 
             if (DEBUG):

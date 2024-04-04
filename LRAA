@@ -48,6 +48,8 @@ def main():
     parser.add_argument("--normalize_max_cov_level", type=int, default=1000, help="normalize to max read coverage level before assembly (default: 1000)")
 
     parser.add_argument("--quant_only", action='store_true', default=False, help="perform quantification only (must specify --gtf with targets for quant)")
+
+    parser.add_argument("--no_EM", action='store_true', default=False, help="do not run EM alg")
     
     ## debug params
     
@@ -99,6 +101,8 @@ def main():
     CPU = args.CPU
     QUANT_ONLY = args.quant_only
     input_gtf = args.gtf
+
+    run_EM = not args.no_EM
     
     if args.quant_only and input_gtf is None:
         sys.exit("If running --quant_only, must specify --gtf corresponding to targets of quantification")
@@ -110,6 +114,8 @@ def main():
     if args.mpm_monitor:
         mpm.set_debug()
 
+
+        
     
     if args.debug:
         logging.getLogger().setLevel(logging.DEBUG)
@@ -240,6 +246,7 @@ def main():
             
             contig_strand_token = "{}^{}".format(contig_acc, contig_strand)
             input_transcripts = contig_strand_to_input_transcripts[contig_strand_token]
+            logger.info("Have {} transcripts on {}".format(len(input_transcripts), contig_strand_token))
             
             if input_transcripts is not None and len(input_transcripts) == 0:
                 input_transcripts = None
@@ -280,7 +287,7 @@ def main():
                 q = Quantify(sg)
                 logger.debug("\n//SECTION QUANT: Quantifying transcripts according to read support.")
                 q.quantify(input_transcripts, mp_counter)
-                q.report_quant_results(input_transcripts, ofh, ofh_quant_read_tracker)
+                q.report_quant_results(input_transcripts, ofh, ofh_quant_read_tracker, run_EM)
 
 
             else:
