@@ -35,7 +35,7 @@ logger = logging.getLogger(__name__)
 
 class PASA_SALRAA:
 
-    min_transcript_length = 200
+    min_transcript_length = PASA_SALRAA_Globals.config['min_transcript_length']
     min_mpgn_read_count = 1
 
     max_contained_to_be_a_pasa_vertex = 10
@@ -184,6 +184,11 @@ class PASA_SALRAA:
     def _reconstruct_isoforms_single_component(self, q, mpg_component, component_counter, mpg_token, single_best_only=False):
 
 
+        contig_acc = self._splice_graph.get_contig_acc()
+        contig_strand = self._splice_graph.get_contig_strand()
+
+        gene_id_use = "|".join(['g', contig_acc, contig_strand, "comp-" + str(component_counter)])
+        
         ## exclude those mpgn's that are contained by many transcripts to reduce the trellis size.
         contained_mpg_counter = defaultdict(int)
         for mpgn in mpg_component:
@@ -280,8 +285,8 @@ class PASA_SALRAA:
             assert(type(transcript_path) == PASA_scored_path)
 
             transcript_obj = transcript_path.toTranscript()
-
-            #print(transcript_obj)
+            transcript_obj.set_gene_id(gene_id_use)
+            
             if transcript_obj is not None:
                 transcripts.append(transcript_obj)
                 logger.debug("-assembled: {}".format(str(transcript_obj)))
