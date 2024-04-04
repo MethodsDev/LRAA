@@ -205,10 +205,10 @@ def main():
 
 
     prereconstruct_info_dir = "__prereconstruct"
-    if not os.path.exists(prereconstruct_info_dir):
-        os.makedirs(prereconstruct_info_dir)
-
-
+    if PASA_SALRAA_Globals.DEBUG: 
+        if not os.path.exists(prereconstruct_info_dir):
+            os.makedirs(prereconstruct_info_dir)
+    
     contig_strand_to_input_transcripts = defaultdict(list)
     if input_gtf:
         logger.info(f"-capturing input transcripts from gtf {input_gtf}")
