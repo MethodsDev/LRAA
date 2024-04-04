@@ -13,7 +13,9 @@ config = {
     # misc settings
     'min_path_score' : 1,
 
-    'min_transcript_length' : 175
+    'min_transcript_length' : 200,
+
+    'min_isoform_fraction' : 0.01
         
     }
 

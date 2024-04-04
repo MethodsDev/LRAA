@@ -29,7 +29,7 @@ class Quantify:
         return
 
 
-    def quantify(self, transcripts, mp_counter):
+    def quantify(self, transcripts, mp_counter, run_EM=True):
 
         assert type(transcripts) == list
         assert type(transcripts[0]) == Transcript.Transcript
@@ -42,7 +42,11 @@ class Quantify:
 
         self._assign_reads_to_transcripts(mp_counter)
 
+        transcript_to_read_count = self._estimate_isoform_read_support(transcripts, run_EM)
 
+        return transcript_to_read_count
+
+        
     def _assign_path_nodes_to_gene(self, transcripts):
 
         for transcript in transcripts:
@@ -184,9 +188,9 @@ class Quantify:
                         
         return transcripts_compatible_with_read
 
-    
-                
-    def report_quant_results(self, transcripts, ofh_quant_vals, ofh_read_tracking, run_EM=True):
+
+
+    def _estimate_isoform_read_support(self, transcripts, run_EM):
 
 
         read_name_to_transcripts = defaultdict(set)
@@ -260,19 +264,25 @@ class Quantify:
                     transcript_read_count = transcript_to_read_count[transcript_id]
                     transcript_to_expr_val[transcript_id] = transcript_read_count/num_mapped_reads * 1e6
             
+
+        return transcript_to_read_count
+        
+    
+                
+    def report_quant_results(self, transcripts, transcript_to_read_count, ofh_quant_vals, ofh_read_tracking):
+
                 
         ## generate final report.
         for transcript in transcripts:
             transcript_id = transcript.get_transcript_id()
             gene_id = transcript.get_gene_id()
             counts = transcript_to_read_count[transcript_id]
-            expr = transcript_to_expr_val[transcript_id]
 
             readnames = transcript.get_read_names()
             readnames = sorted(readnames)
 
-            logger.info("\t".join([gene_id, transcript_id, f"{counts:.1f}", f"{expr:.3f}"]))
-            print("\t".join([gene_id, transcript_id, f"{counts:.1f}", f"{expr:.3f}"]), file=ofh_quant_vals)
+            logger.info("\t".join([gene_id, transcript_id, f"{counts:.1f}"]))
+            print("\t".join([gene_id, transcript_id, f"{counts:.1f}"]), file=ofh_quant_vals)
 
             if (DEBUG):
                 print("transcript_id\t{}\n{}".format(transcript_id, transcript._simplepath), file=ofh_read_tracking)

@@ -52,6 +52,7 @@ def main():
     parser.add_argument("--quant_only", action='store_true', default=False, help="perform quantification only (must specify --gtf with targets for quant)")
 
     parser.add_argument("--no_EM", action='store_true', default=False, help="do not run EM alg")
+
     
     ## debug params
     
@@ -74,8 +75,10 @@ def main():
     config_group.add_argument("--min_path_score", type=float, default=PASA_SALRAA_Globals.config['min_path_score'], help="minimum score for an isoform to be reported")
 
     config_group.add_argument("--min_per_id", type=float, default=PASA_SALRAA_Globals.config['min_per_id'], help='min per_id for pacbio read alignments')
-    
 
+    config_group.add_argument("--min_isoform_fraction", type=float, default=PASA_SALRAA_Globals.config['min_isoform_fraction'],
+                              help='exclude reconstructed isoforms that have read support less than this fraction of all isoforms at each gene (no impact on --quant_only)')
+    
     ## alt splice settings
 
     config_group_altsplice = parser.add_argument_group("alt splice settings")
@@ -234,13 +237,11 @@ def main():
     
     for contig_acc in genome_contigs_list:
 
-
         contig_seq_str = Util_funcs.retrieve_contig_seq_from_fasta_file(contig_acc, genome_fasta_filename)
         
         for contig_strand in ('+','-'):
         
             logger.info(f"-processing contig: {contig_acc} {contig_strand}")
-            
 
             ##-------------------
             ## build splice graph
@@ -289,8 +290,8 @@ def main():
 
                 q = Quantify(sg)
                 logger.debug("\n//SECTION QUANT: Quantifying transcripts according to read support.")
-                q.quantify(input_transcripts, mp_counter)
-                q.report_quant_results(input_transcripts, ofh, ofh_quant_read_tracker, run_EM)
+                transcript_to_read_count = q.quantify(input_transcripts, mp_counter, run_EM)
+                q.report_quant_results(input_transcripts, transcript_to_read_count, ofh, ofh_quant_read_tracker)
 
 
             else:
