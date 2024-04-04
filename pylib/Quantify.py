@@ -235,7 +235,7 @@ class Quantify:
 
             for i in range(1, 100):
                 
-                logger.info("EM round {}".format(i))
+                logger.debug("EM round {}".format(i))
 
                 ## fractionally assign reads based on expr values
                 transcript_to_read_count.clear()
@@ -279,7 +279,7 @@ class Quantify:
             readnames = sorted(readnames)
 
             logger.info("\t".join([gene_id, transcript_id, f"{counts:.1f}"]))
-            print("\t".join([gene_id, transcript_id, f"{counts:.1f}"]), file=ofh_quant_vals)
+            #print("\t".join([gene_id, transcript_id, f"{counts:.1f}"]), file=ofh_quant_vals)
 
             if (DEBUG):
                 print("transcript_id\t{}\n{}".format(transcript_id, transcript._simplepath), file=ofh_read_tracking)
@@ -337,14 +337,14 @@ class Quantify:
                     transcript_read_count = transcript_to_read_count[ transcript_of_gene.get_transcript_id() ]
                     sum_gene_reads += transcript_read_count
 
-                logger.info("gene_id {} has total reads: {}".format(gene_id, sum_gene_reads))
+                logger.debug("gene_id {} has total reads: {}".format(gene_id, sum_gene_reads))
                 
                     
                 for transcript_of_gene in transcripts_of_gene:
                     transcript_id =  transcript_of_gene.get_transcript_id()
                     transcript_read_count = transcript_to_read_count[ transcript_id ]
                     isoform_frac = transcript_read_count / sum_gene_reads
-                    logger.info("\ttranscript_id {} has {} reads = {} isoform fraction of {}".format(
+                    logger.debug("\ttranscript_id {} has {} reads = {} isoform fraction of {}".format(
                         transcript_id,
                         transcript_read_count,
                         isoform_frac,
@@ -357,7 +357,7 @@ class Quantify:
                         transcripts_retained.append(transcript_of_gene)
 
 
-            logger.info("isoform filtering round {} involved filtering of {} isoforms / {} total isoforms of {} genes".format(
+            logger.debug("isoform filtering round {} involved filtering of {} isoforms / {} total isoforms of {} genes".format(
                 filtering_round,
                 num_filtered_isoforms,
                 num_total_isoforms,

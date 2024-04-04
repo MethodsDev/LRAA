@@ -416,6 +416,9 @@ class Splice_graph:
         
         
         introns_list = list()
+
+        num_introns_with_splice_signals = 0
+        num_introns_conflicting_splice_signals = 0
         
         for i in range(len(alignment_segments) -1):
             seg_left_rend = alignment_segments[i][1]  # exon coord not inclusive
@@ -427,30 +430,19 @@ class Splice_graph:
             splice_type = Intron.check_canonical_splicing(intron_lend, intron_rend, genome_seq)
 
             if splice_type is not None:
+                num_introns_with_splice_signals += 1
                 if splice_type == contig_strand:
                     introns_list.append( (intron_lend, intron_rend, splice_type) )
-                else:
-                    logger.warning("Splice type for intron {}:{}-{}[{}] is not consistent with read alignment orientation: {}".format(contig_acc, intron_lend, intron_rend, splice_type, contig_strand))
 
-        #
-        #    if splice_type is None:
-        #        continue
-        #    elif splice_type == '+':
-        #        top_strand_agreement_count += 1
-        #    elif splice_type == '-':
-        #        bottom_strand_agreement_count += 1
-        #    else:
-        #        raise RuntimeError("not sure what splice type we have here...")
-        #    
-        # 
-        #if top_strand_agreement_count > 0 and bottom_strand_agreement_count > 0:
-        #    # inconsistent orientation of splicing events
-        #    return None
-        #elif top_strand_agreement_count > 0 or bottom_strand_agreement_count > 0:
-        #    # all consistent splicing orientations
-        #    return introns_list
-        #else:
-        #    raise RuntimeError("splicing analysis error... shouldn't happen")
+                else:
+                    num_introns_conflicting_splice_signals += 1
+                    logger.debug("Splice type for intron {}:{}-{}[{}] is not consistent with read alignment orientation: {}".format(contig_acc, intron_lend, intron_rend, splice_type, contig_strand))
+
+
+        logger.debug("Of the {} intron candidates, {} = {:.1f} % have conflicting orientation to contig.".format(
+            num_introns_with_splice_signals,
+            num_introns_conflicting_splice_signals,
+            num_introns_conflicting_splice_signals/(num_introns_with_splice_signals+0.001)*100))
 
         return introns_list
 
