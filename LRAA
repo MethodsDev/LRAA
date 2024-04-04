@@ -107,7 +107,7 @@ def main():
     QUANT_ONLY = args.quant_only
     input_gtf = args.gtf
     NO_NORM = args.no_norm
-    
+    min_isoform_fraction = args.min_isoform_fraction
     run_EM = not args.no_EM
     
     if args.quant_only and input_gtf is None:
@@ -120,8 +120,6 @@ def main():
     if args.mpm_monitor:
         mpm.set_debug()
 
-
-        
     
     if args.debug:
         logging.getLogger().setLevel(logging.DEBUG)
@@ -135,7 +133,6 @@ def main():
         logger.info("-missing index for bam {}, will try to make it...".format(bam_filename))
         subprocess.check_call("samtools index " + bam_filename, shell=True)
         
-
     
     ## perform normalization prior to assembly
     pre_norm_bam_filename = bam_filename
@@ -191,8 +188,6 @@ def main():
     # ultimately exons and introns
     # build from reads.
     # define coverage intervals and introns as graph components.
-
-
 
     if args.restrict_to_contig:
         genome_contigs_list = [args.restrict_to_contig]
@@ -288,9 +283,9 @@ def main():
                 logger.debug("\n//SECTION QUANT: Assigning reads to paths in graph.")
                 mp_counter = pasa_salraa_obj._populate_read_multi_paths(contig_acc, contig_strand, contig_seq_str, bam_file_for_quant, allow_spacers)
 
-                q = Quantify(sg)
+                q = Quantify()
                 logger.debug("\n//SECTION QUANT: Quantifying transcripts according to read support.")
-                transcript_to_read_count = q.quantify(input_transcripts, mp_counter, run_EM)
+                transcript_to_read_count = q.quantify(sg, input_transcripts, mp_counter, run_EM)
                 q.report_quant_results(input_transcripts, transcript_to_read_count, ofh, ofh_quant_read_tracker)
 
 
@@ -317,7 +312,8 @@ def main():
                 logger.info(f"-begin reconstructing isoforms for {contig_acc}")
                 transcripts = pasa_salraa_obj.reconstruct_isoforms(single_best_only)
 
-                ## TODO://gene clustering
+                if min_isoform_fraction > 0:
+                    transcripts = Quantify.filter_isoforms_by_min_isoform_fraction(transcripts, min_isoform_fraction, run_EM)
 
                 logger.info("writing gtf output for {} [{}] containing {} transcripts".format(contig_acc, contig_strand, len(transcripts)))
                 for transcript in transcripts:

@@ -187,7 +187,7 @@ class PASA_SALRAA:
         contig_acc = self._splice_graph.get_contig_acc()
         contig_strand = self._splice_graph.get_contig_strand()
 
-        gene_id_use = "|".join(['g', contig_acc, contig_strand, "comp-" + str(component_counter)])
+        gene_id_use = ":".join(['g', contig_acc, contig_strand, "comp-" + str(component_counter)])
         
         ## exclude those mpgn's that are contained by many transcripts to reduce the trellis size.
         contained_mpg_counter = defaultdict(int)
@@ -285,12 +285,18 @@ class PASA_SALRAA:
         
         transcripts = list() 
 
+        transcript_counter = 0
 
         for transcript_path in best_transcript_paths:
             assert(type(transcript_path) == PASA_scored_path)
 
+            transcript_counter += 1
+            
             transcript_obj = transcript_path.toTranscript()
             transcript_obj.set_gene_id(gene_id_use)
+
+            transcript_id_use = ":".join(['t', contig_acc, contig_strand, "comp-" + str(component_counter), "iso-" + str(transcript_counter)])
+            transcript_obj.set_transcript_id(transcript_id_use)
             
             if transcript_obj is not None:
                 transcripts.append(transcript_obj)

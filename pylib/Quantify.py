@@ -16,10 +16,8 @@ logger = logging.getLogger(__name__)
 
 class Quantify:
 
-    def __init__(self, splice_graph):
+    def __init__(self):
 
-        self._splice_graph = splice_graph
-        
         self._path_node_id_to_gene_ids = defaultdict(set)
 
         self._gene_id_to_transcript_objs = defaultdict(set)
@@ -29,7 +27,7 @@ class Quantify:
         return
 
 
-    def quantify(self, transcripts, mp_counter, run_EM=True):
+    def quantify(self, splice_graph, transcripts, mp_counter, run_EM=True):
 
         assert type(transcripts) == list
         assert type(transcripts[0]) == Transcript.Transcript
@@ -40,7 +38,7 @@ class Quantify:
         # also assign gene_id to transcript objs
         self._assign_path_nodes_to_gene(transcripts)
 
-        self._assign_reads_to_transcripts(mp_counter)
+        self._assign_reads_to_transcripts(splice_graph, mp_counter)
 
         transcript_to_read_count = self._estimate_isoform_read_support(transcripts, run_EM)
 
@@ -66,7 +64,7 @@ class Quantify:
 
 
 
-    def _assign_reads_to_transcripts(self, mp_counter, fraction_read_align_overlap=0.75):
+    def _assign_reads_to_transcripts(self, splice_graph, mp_counter, fraction_read_align_overlap=0.75):
 
         # assign to gene based on majority voting of nodes.
         # TODO:// might want or need this to involve length and/or feature type weighted shared node voting
@@ -109,7 +107,7 @@ class Quantify:
             
             ## assign reads to transcripts
             gene_isoforms = self._gene_id_to_transcript_objs[top_gene]
-            transcripts_assigned = self._assign_path_to_transcript(mp, gene_isoforms, fraction_read_align_overlap)
+            transcripts_assigned = self._assign_path_to_transcript(splice_graph, mp, gene_isoforms, fraction_read_align_overlap)
             if transcripts_assigned is None:
                 logger.debug("mp_count_pair {} maps to gene but no isoform(transcript)".format(mp_count_pair))
             else:
@@ -158,7 +156,7 @@ class Quantify:
         
 
         
-    def _assign_path_to_transcript(self, mp, transcripts, fraction_read_align_overlap):
+    def _assign_path_to_transcript(self, splice_graph, mp, transcripts, fraction_read_align_overlap):
         
         assert type(mp) == MultiPath.MultiPath
         assert type(transcripts) == set, "Error, type(transcripts) is {} not set ".format(type(transcripts))
@@ -180,7 +178,7 @@ class Quantify:
 
             if (SPU.are_overlapping_and_compatible_NO_gaps_in_overlap(transcript_sp, read_sp)
                 and
-                SPU.fraction_read_overlap(self._splice_graph, read_sp, transcript_sp) >= fraction_read_align_overlap):
+                SPU.fraction_read_overlap(splice_graph, read_sp, transcript_sp) >= fraction_read_align_overlap):
                 
                 #print("Read {} compatible with transcript {}".format(read_sp, transcript_sp))
                 transcripts_compatible_with_read.append(transcript)
@@ -270,7 +268,6 @@ class Quantify:
     
                 
     def report_quant_results(self, transcripts, transcript_to_read_count, ofh_quant_vals, ofh_read_tracking):
-
                 
         ## generate final report.
         for transcript in transcripts:
@@ -287,7 +284,6 @@ class Quantify:
             if (DEBUG):
                 print("transcript_id\t{}\n{}".format(transcript_id, transcript._simplepath), file=ofh_read_tracking)
                 for readname in readnames:
-
                     print("read:\t{}\n{}".format(readname, self._read_name_to_multipath[readname].get_simple_path()), file=ofh_read_tracking)
                 print("\n", file=ofh_read_tracking)
             else:
@@ -295,3 +291,77 @@ class Quantify:
             
         return 
     
+
+
+    @staticmethod
+    def filter_isoforms_by_min_isoform_fraction(transcripts, min_isoform_fraction, run_EM):
+
+        logger.info("Filtering transcripts according to min isoform fraction: {}".format(min_isoform_fraction))
+        
+        isoforms_were_filtered = True # init for loop
+
+        q = Quantify()
+
+
+        filtering_round = 0
+        
+        while isoforms_were_filtered:
+
+            filtering_round += 1
+
+            num_filtered_isoforms = 0
+            num_total_isoforms = len(transcripts)
+            
+            transcripts_retained = list()
+            
+            isoforms_were_filtered = False # update to True if we do filter an isoform out.
+            
+            # run (or rerun) quant
+            transcript_to_read_count = q._estimate_isoform_read_support(transcripts, run_EM)
+
+
+            gene_to_transcripts = defaultdict(list)
+            for transcript in transcripts:
+                gene_id = transcript.get_gene_id()
+                gene_to_transcripts[gene_id].append(transcript)
+
+            for gene_id in gene_to_transcripts:
+                transcripts_of_gene = gene_to_transcripts[gene_id]
+                if len(transcripts_of_gene) == 1:
+                    transcripts_retained.extend(transcripts_of_gene)
+                    continue
+
+                # evaluate isoform fraction
+                sum_gene_reads = 0
+                for transcript_of_gene in transcripts_of_gene:
+                    transcript_read_count = transcript_to_read_count[ transcript_of_gene.get_transcript_id() ]
+                    sum_gene_reads += transcript_read_count
+
+                for transcript_of_gene in transcripts_of_gene:
+                    transcript_read_count = transcript_to_read_count[ transcript_of_gene.get_transcript_id() ]
+                    isoform_frac = transcript_read_count / sum_gene_reads
+                    if isoform_frac < min_isoform_fraction:
+                        isoforms_were_filtered = True
+                        num_filtered_isoforms += 1
+                    else:
+                        transcripts_retained.append(transcript_of_gene)
+
+
+            logger.info("isoform filtering round {} involved filtering of {} isoforms / {} total isoforms of {} genes".format(
+                filtering_round,
+                num_filtered_isoforms,
+                num_total_isoforms,
+                len(gene_to_transcripts)) )
+            
+            # reset list of transcripts
+            transcripts = transcripts_retained
+
+
+            
+        return transcripts
+
+
+
+
+
+        

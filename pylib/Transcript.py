@@ -27,7 +27,7 @@ class Transcript (GenomeFeature):
 
         self._gene_id = "g.{}".format(self._id)
 
-        self._meta = None
+        self._meta = dict()
 
         self._scored_path_obj = None #optional - useful if transcript obj was built based on a scored path
 
@@ -52,16 +52,26 @@ class Transcript (GenomeFeature):
    
 
     def get_transcript_id(self):
-        if 'transcript_id' in self._meta:
+        if self._transcript_id is not None:
+            return self._transcript_id
+        
+        elif 'transcript_id' in self._meta:
             return(self._meta['transcript_id'])
+
         else:
             return(self._id)
 
+    
     def get_gene_id(self):
-        if 'gene_id' in self._meta:
+
+        if self._gene_id is not None:
+            return self._gene_id
+        
+        elif 'gene_id' in self._meta:
             return(self._meta['gene_id'])
         else:
-            return(self._gene_id)
+            raise RuntimeError("gene_id not set for Transcript obj")
+        
 
     
     def __repr__(self):
@@ -86,6 +96,9 @@ class Transcript (GenomeFeature):
     def set_gene_id(self, gene_id):
         self._gene_id = gene_id
 
+    def set_transcript_id(self, transcript_id):
+        self._transcript_id = transcript_id
+        
 
     def add_meta(self, meta_key, meta_val=None):
         
