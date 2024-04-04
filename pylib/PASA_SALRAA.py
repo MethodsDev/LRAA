@@ -237,6 +237,8 @@ class PASA_SALRAA:
         all_scored_paths = self._retrieve_all_scored_paths(pasa_vertices)
 
         all_scored_paths = sorted(all_scored_paths, key=lambda x: x.get_score())
+
+        all_represented_reads = set()
         
         while len(mpgns_require_representation) > 0 and len(all_scored_paths) > 0:
 
@@ -263,10 +265,13 @@ class PASA_SALRAA:
             
                 best_transcript_paths.append(top_scored_path)
 
+                all_represented_reads.update(top_scored_path.get_all_represented_read_names())
+                
                 # adjust weights
-                self._decrement_transcript_path_vertices(top_scored_path, pasa_vertices)
+                #self._decrement_transcript_path_vertices(top_scored_path, pasa_vertices)
+
                 for path in all_scored_paths:
-                    path.rescore()
+                    path.rescore(all_represented_reads)
 
                 # reprioritize
                 all_scored_paths = sorted(all_scored_paths, key=lambda x: x.get_score())

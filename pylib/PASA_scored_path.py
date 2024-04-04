@@ -29,7 +29,11 @@ class PASA_scored_path:
         for mpgn in path_list_of_multipath_graph_nodes:
             recursively_capture_nodes(mpgn)
 
-                
+
+        self._all_represented_read_names = set()
+        for mpgn in self._all_represented_mpgns:
+            self._all_represented_read_names.update(mpgn.get_read_names())
+        
         self._mpgn_list_path = path_list_of_multipath_graph_nodes
         
         self._multiPath_obj = MultiPath.MultiPath.multiPath_from_mpgn_list(self._mpgn_list_path)
@@ -113,8 +117,8 @@ class PASA_scored_path:
         return extension_scored_path
 
 
-    def rescore(self):
-        self._score = self.compute_path_score()
+    def rescore(self, exclude_read_names = set()):
+        self._score = self.compute_path_score(exclude_read_names)
 
         if self._score > self._initial_score:
             raise RuntimeError("Error, rescored path exceeds initial score for path: " + str(self))
@@ -200,19 +204,33 @@ class PASA_scored_path:
         
         return transcript_obj
 
+
+
+    def get_all_represented_read_names(self):
+        # returns copy of set
+        return(self._all_represented_read_names.copy())
     
         
-    def compute_path_score(self):
+    def compute_path_score(self, exclude_read_names = set()):
 
         assert(self._cdna_len > 0 and self._contig_span_len > 0)
         
         score = 0
 
-        mpgn_list = self.get_all_represented_mpgns()
+        ## just count up the number of represented (and not excluded) read names:
+
+        for read_name in self._all_represented_read_names:
+            if read_name not in exclude_read_names:
+                score += 1
+                
+
         
+        
+        #mpgn_list = self.get_all_represented_mpgns()
+        #
         # sum up weights
-        for mpgn in mpgn_list:
-            score += mpgn.get_weight() * mpgn.get_count()
+        #for mpgn in mpgn_list:
+        #    score += mpgn.get_weight() * mpgn.get_count()
         
         """
 

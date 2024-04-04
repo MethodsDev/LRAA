@@ -63,8 +63,19 @@ class MultiPathGraphNode:
         return(self._multiPath.get_simple_path())
 
     def get_read_names(self):
-        return(self._multiPath.get_read_names())
-    
+
+        # return all read names in this mpgn and all contained mpgns
+        
+        all_read_names = set()
+        all_read_names.update(self._multiPath.get_read_names())
+
+        for contained_mpgn in self.get_containments():
+            all_read_names.update(contained_mpgn._multiPath.get_read_names())
+        
+        return(all_read_names)
+
+
+        
     def set_reweighted_flag(self, flag_setting):
         self._reweighted_flag = flag_setting
         return
