@@ -45,6 +45,8 @@ def main():
                         help="number of cores for multithreading")
 
 
+    parser.add_argument("--no_norm", action='store_true', default=False, help="do not run read coverage normalization before isoform reconstruction (equivalent to --normalize_max_cov_level 0)")
+    
     parser.add_argument("--normalize_max_cov_level", type=int, default=1000, help="normalize to max read coverage level before assembly (default: 1000)")
 
     parser.add_argument("--quant_only", action='store_true', default=False, help="perform quantification only (must specify --gtf with targets for quant)")
@@ -101,7 +103,8 @@ def main():
     CPU = args.CPU
     QUANT_ONLY = args.quant_only
     input_gtf = args.gtf
-
+    NO_NORM = args.no_norm
+    
     run_EM = not args.no_EM
     
     if args.quant_only and input_gtf is None:
@@ -137,7 +140,7 @@ def main():
     bam_file_for_quant = pre_norm_bam_filename
     bam_file_for_sg = pre_norm_bam_filename
     
-    if (not QUANT_ONLY) and (args.normalize_max_cov_level > 0):
+    if (not QUANT_ONLY) and (not NO_NORM) and (args.normalize_max_cov_level > 0):
 
         bamsifter_prog = os.path.sep.join([os.path.dirname(os.path.realpath(__file__)), "plugins/bamsifter/bamsifter"])
 
