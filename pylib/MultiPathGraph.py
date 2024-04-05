@@ -84,15 +84,16 @@ class MultiPathGraph:
 
         
 
-        if True: #PASA_SALRAA_Globals.DEBUG:
+        if PASA_SALRAA_Globals.DEBUG:
             mpg_build_dir = f"__mpg_building/{self._contig_acc}"
             if not os.path.exists(mpg_build_dir):
                 os.makedirs(mpg_build_dir)
             #build_file = os.path.join(mpg_build_dir, "build-{}.txt".format(self._contig_acc))
             #build_ofh = open(build_file, "wt")
-            
-        component_descr_file = "__MPGN_components_described.bed"
-        component_descr_ofh = open(component_descr_file, "wt")
+
+        if PASA_SALRAA_Globals.DEBUG:
+            component_descr_file = "__MPGN_components_described.bed"
+            component_descr_ofh = open(component_descr_file, "wt")
 
 
         sorted_component_ids = sorted(sg_component_to_mp_id.keys(), key=lambda x: len(sg_component_to_mp_id[x]), reverse=True)
@@ -101,7 +102,7 @@ class MultiPathGraph:
             #print(mp_node_set)
             num_paths = len(mp_node_set)
             logger.info(f"Component {component_id} has {num_paths} paths assigned.")
-            if True: #PASA_SALRAA_Globals.DEBUG:
+            if PASA_SALRAA_Globals.DEBUG:
                 component_description_file = os.path.join(mpg_build_dir, f"{component_id}.comp.descr.tsv")
                 mp_nodes = [self._mp_id_to_node[mp_node_id] for mp_node_id in mp_node_set]
                 mp_nodes = sorted(mp_nodes, key=lambda x: x._lend)
@@ -186,9 +187,8 @@ class MultiPathGraph:
 
         if PASA_SALRAA_Globals.DEBUG:
             build_ofh.close()
-
-        component_descr_ofh.close()
-
+            component_descr_ofh.close()
+        
         logger.info(f"DONE building MultiPathGraph for {contig_acc}")
             
         return

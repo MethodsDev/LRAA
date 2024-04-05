@@ -84,11 +84,15 @@ class PASA_SALRAA:
         mpg_components = mpg.define_disjoint_graph_components_via_shared_splice_graph_vertex()
 
         logger.info("{} connected components identified".format(len(mpg_components)))
-        mpg.write_mp_graph_nodes_to_gtf("__mpgns.pre.gtf")
+
+        if PASA_SALRAA_Globals.DEBUG:
+            mpg.write_mp_graph_nodes_to_gtf("__mpgns.pre.gtf")
 
         mpg_components = mpg.remove_small_components(mpg_components, PASA_SALRAA.min_transcript_length)
         logger.info("{} components surviving the min length {} criterion.".format(len(mpg_components), PASA_SALRAA.min_transcript_length))
-        mpg.write_mp_graph_nodes_to_gtf("__mpgns.post_length_filter.gtf")
+
+        if PASA_SALRAA_Globals.DEBUG:
+            mpg.write_mp_graph_nodes_to_gtf("__mpgns.post_length_filter.gtf")
         
         all_reconstructed_transcripts = list()
 
@@ -261,7 +265,8 @@ class PASA_SALRAA:
 
             if found_prev_unrepresented_mpgn:
                 logger.debug("Retrieved best (Score={})  transcript path for mpg {} : {}".format(top_scored_path.get_score(), mpg_token, top_scored_path))
-                self._write_best_score_path_info_to_file(top_scored_path, round_iter, mpg_token)
+                if PASA_SALRAA_Globals.DEBUG:
+                    self._write_best_score_path_info_to_file(top_scored_path, round_iter, mpg_token)
             
                 best_transcript_paths.append(top_scored_path)
 
