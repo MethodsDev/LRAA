@@ -37,6 +37,13 @@ class Pretty_alignment:
         return self._pretty_alignment_segments
 
 
+    def get_alignment_span(self):
+        lend = self._pretty_alignment_segments[0][0]
+        rend = self._pretty_alignment_segments[-1][1]
+
+        return(lend, rend)
+    
+
     def get_read_type(self):
         return self._read_type
 

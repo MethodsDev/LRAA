@@ -58,7 +58,9 @@ class Splice_graph:
         ## connected components (genes)
         self._components = list() # ordered list of graph components
         self._node_id_to_component = dict() # node_id -> component index
-        
+
+        self._TSS_objs = list() # TSS objects
+        self._PolyA_objs = list() # PolyA site objects
         
         return
 
@@ -276,6 +278,8 @@ class Splice_graph:
         intron_splice_site_support = defaultdict(int)
         
         bam_extractor = Bam_alignment_extractor(bam_filename)
+
+        
         
         # get read alignments
         # - illumina and pacbio reads filtered based on tech-specific min per_id
@@ -284,12 +288,26 @@ class Splice_graph:
                                                               contig_strand,
                                                               region_lend=self._region_lend, region_rend=self._region_rend,
                                                               pretty=True)
+
+        assert contig_strand in ('+','-')
+        
         logger.info("-got {} pretty alignments.".format(len(pretty_alignments)))
         
         total_read_alignments_used = 0
+
+
+        TSS_position_counter = defaultdict(int)
+        polyA_position_counter = defaultdict(int)
+        
         
         for pretty_alignment in pretty_alignments:
 
+            align_lend, align_rend = pretty_alignment.get_alignment_span()
+
+            TSS_pos, polyA_pos = (align_lend, align_rend) if contig_strand == '+' else (align_rend, align_lend)
+            TSS_position_counter[TSS_pos] += 1
+            polyA_position_counter[polyA_pos] += 1
+            
             alignment_segments = pretty_alignment.get_pretty_alignment_segments()
             #print("Pretty alignment segments: " + str(alignment_segments))
 
@@ -340,7 +358,22 @@ class Splice_graph:
                     self._intron_objs[intron_coords_key] = intron_obj
             
         
-                
+        # Define TSS and PolyA sites
+        if PASA_SALRAA_Globals.config['infer_TSS']:
+
+            TSS_grouped_positions = aggregate_sites_within_window(TSS_position_counter,
+                                                                  PASA_SALRAA_Globals.config['max_dist_between_alt_TSS_sites'],
+                                                                  PASA_SALRAA_Globals.config['min_alignments_define_TSS_site'])
+            
+            
+
+        if PASA_SALRAA_Globals.config['infer_PolyA']:
+
+            PolyA_grouped_positions = aggregate_sites_within_window(polyA_position_counter,
+                                                                    PASA_SALRAA_Globals.config['max_dist_between_alt_polyA_sites'],
+                                                                    PASA_SALRAA_Globals.config['min_alignments_define_polyA_site'])
+            
+                    
         return
 
 
@@ -1088,3 +1121,120 @@ class Splice_graph:
     def is_empty(self):
         return len(self._splice_graph) == 0
 
+
+
+
+
+## general utility functions used above.
+def aggregate_sites_within_window(pos_counter, max_distance_between_aggregated_sites, min_count_aggregated_site):
+
+    position_count_structs = list()
+
+    for position, count in pos_counter.items():
+
+        position_count_struct = {'position' : int(position),
+                                 'count' : count,
+                                 'selected' : False,
+                                 'aggregated_count' : count,
+                                 'index' : -1 # updated below after sorting
+                                 }
+
+        position_count_structs.append(position_count_struct)
+
+    # first sort by position and identify max within window distance
+    position_count_structs = sorted(position_count_structs, key=lambda x: x['position'])
+        
+    # aggregate counts within distance from each candidate site
+    num_structs = len(position_count_structs)
+    for i, i_struct in enumerate(position_count_structs):
+        i_struct['index'] = i
+        
+        # look left in window
+        j = i-1
+        while j >= 0:
+            j_struct = position_count_structs[j]
+            if i_struct['position'] - j_struct['position'] > max_distance_between_aggregated_sites:
+                break
+            i_struct['aggregated_count'] += j_struct['count']
+            j = j - 1
+            
+        # look right in window
+        k = i + 1
+        while k < num_structs:
+            k_struct = position_count_structs[k]
+            if k_struct['position'] - i_struct['position'] > max_distance_between_aggregated_sites:
+                break
+            i_struct['aggregated_count'] += k_struct['count']
+            k += 1
+
+
+    # now capture the peaks
+    peak_sites = list()
+    agg_count_sorted_position_count_structs = sorted(position_count_structs, key=lambda x: x['aggregated_count'], reverse=True)
+
+    ## reset aggregated counts
+    for i_struct in agg_count_sorted_position_count_structs:
+        if i_struct['selected']:
+            # already part of another defined peak
+            continue
+        
+        i_struct['aggregated_count'] = i_struct['count'] # reset
+        i = i_struct['index']
+        
+        # look left in window
+        j = i-1
+        while j >= 0:
+            j_struct = position_count_structs[j]
+
+            if i_struct['position'] - j_struct['position'] > max_distance_between_aggregated_sites:
+                break
+            if not j_struct['selected']:
+                i_struct['aggregated_count'] += j_struct['count']
+                j_struct['selected'] = True
+            j -= 1
+            
+        # look right in window
+        k = i + 1
+        while k < num_structs:
+            k_struct = position_count_structs[k]
+            if k_struct['position'] - i_struct['position'] > max_distance_between_aggregated_sites:
+                break
+            if not k_struct['selected']:
+                i_struct['aggregated_count'] += k_struct['count']
+                k_struct['selected'] = True
+            k += 1
+    
+        if i_struct['aggregated_count'] >= min_count_aggregated_site:
+            peak_sites.append( [i_struct['position'], i_struct['aggregated_count'] ] )
+            
+
+    return peak_sites
+
+
+            
+
+## some unit tests
+
+def test_aggregate_sites_within_window():
+
+    pos_counter = { 10 : 1,
+                   15 : 2,
+                   20 : 3,
+                   40 : 1,
+                   45 : 5,
+                   50 : 2,
+                   75 : 3 }
+
+
+    peaks = aggregate_sites_within_window(pos_counter, 5, 3)
+
+    expected_peaks = [[45, 8], [15, 6], [75, 3]]
+
+    assert peaks == expected_peaks, "Error, peaks {} differs from expected peaks {}".format(peaks, expected_peaks)
+    
+    
+
+
+test_aggregate_sites_within_window()
+
+    

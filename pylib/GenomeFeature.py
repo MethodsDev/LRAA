@@ -138,3 +138,36 @@ class Exon(GenomeFeature):
     def reset_counter(cls):
         cls.exon_id_counter = 0
 
+
+
+
+class TSS(GenomeFeature):
+
+    TSS_id_counter = 0
+
+    def __init__(self, contig_acc, lend, rend, orient, count):
+        super().__init__(contig_acc, lend, rend, orient)
+
+        self._count = count
+
+        TSS.TSS_id_counter += 1
+        self._id = "TSS:{}".format(TSS.TSS_id_counter)
+
+        return
+
+
+class PolyAsite(GenomeFeature):
+
+    polyA_counter = 0
+
+    def __init__(self, contig_acc, lend, rend, orient, count):
+        super().__init__(contig_acc, lend, rend, orient)
+
+        self._count = count
+
+        PolyAsite.polyA_counter += 1
+        self._id = "POLYA:{}".format(PolyAsite.polyA_counter)
+
+        return
+
+    
