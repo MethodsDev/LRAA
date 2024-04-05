@@ -365,17 +365,24 @@ class Splice_graph:
                                                                   PASA_SALRAA_Globals.config['max_dist_between_alt_TSS_sites'],
                                                                   PASA_SALRAA_Globals.config['min_alignments_define_TSS_site'])
             
-            
+            for TSS_peak in TSS_grouped_positions:
+                position, count = TSS_peak
+                self._TSS_objs.append(TSS(contig_acc, position, position, contig_strand, count))
 
         if PASA_SALRAA_Globals.config['infer_PolyA']:
 
             PolyA_grouped_positions = aggregate_sites_within_window(polyA_position_counter,
                                                                     PASA_SALRAA_Globals.config['max_dist_between_alt_polyA_sites'],
                                                                     PASA_SALRAA_Globals.config['min_alignments_define_polyA_site'])
+
+            for polyA_site_grouping in PolyA_grouped_positions:
+                position, count = polyA_site_grouping
+                self._PolyA_objs.append(PolyAsite(contig_acc, position, position, contig_strand, count))
+                
             
                     
         return
-
+    
 
     
     def _integrate_input_transcript_structures(self, transcripts, contig_strand):
