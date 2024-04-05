@@ -579,7 +579,7 @@ class Splice_graph:
 
         ofh = None
         if PASA_SALRAA_Globals.DEBUG:
-            ofh = open("__splice_neighbor_cov_ratios.dat", 'w')
+            ofh = open("__splice_neighbor_cov_ratios.dat", 'a')
         
         for intron in self._intron_objs.values():
             lend, rend = intron.get_coords()
@@ -675,11 +675,11 @@ class Splice_graph:
 
         if PASA_SALRAA_Globals.DEBUG:
             # write exon list to file
-            with open("__exon_regions.init.bed", 'w') as ofh:
+            with open("__exon_regions.init.bed", 'a') as ofh:
                 for segment in exon_segments:
                     ofh.write("\t".join([self._contig_acc, str(segment[0]-1), str(segment[1]+1)]) + "\n")
 
-            with open("__introns.init.bed", 'w') as ofh:
+            with open("__introns.init.bed", 'a') as ofh:
                 for intron in self._intron_objs.values():
                     intron_lend, intron_rend = intron.get_coords()
                     intron_support = intron.get_read_support()
@@ -763,7 +763,7 @@ class Splice_graph:
         if PASA_SALRAA_Globals.DEBUG:
             exons_to_purge = list(exons_to_purge)
             exons_to_purge = sorted(exons_to_purge, key=lambda x: x._lend)
-            with open("__exon_segments_to_purge.bed", 'w') as ofh:
+            with open("__exon_segments_to_purge.bed", 'a') as ofh:
                 for exon in exons_to_purge:
                     ofh.write(exon.get_bed_row(pad=1) + "\n")
 
@@ -788,7 +788,7 @@ class Splice_graph:
         logger.info("-pruning {} now disconnected introns".format(len(introns_to_remove)))
 
         if PASA_SALRAA_Globals.DEBUG:
-            with open("__pruned_disconnected_introns.bed", 'w') as ofh:
+            with open("__pruned_disconnected_introns.bed", 'a') as ofh:
                 for intron in introns_to_remove:
                     ofh.write(intron.get_bed_row(pad=1) + "\n")
 
@@ -808,8 +808,8 @@ class Splice_graph:
         exons_bed_file = "{}.exons.bed".format(output_prefix)
         introns_bed_file = "{}.introns.bed".format(output_prefix)
 
-        exons_ofh = open(exons_bed_file, 'w')
-        introns_ofh = open(introns_bed_file, 'w')
+        exons_ofh = open(exons_bed_file, 'a')
+        introns_ofh = open(introns_bed_file, 'a')
 
         exons_list = list()
         introns_list = list()
@@ -840,7 +840,7 @@ class Splice_graph:
 
     def describe_graph(self, outputfilename):
 
-        ofh = open(outputfilename, 'w')
+        ofh = open(outputfilename, 'a')
         
         nodes = list(self._splice_graph.nodes)
 
@@ -910,7 +910,7 @@ class Splice_graph:
                 prev_node = next_node
                 
         if PASA_SALRAA_Globals.DEBUG:
-            with open("__merged_exons.list", "wt") as ofh:
+            with open("__merged_exons.list", "a") as ofh:
                 print("\n".join(merged_node_ids), file=ofh)
 
         
@@ -992,7 +992,7 @@ class Splice_graph:
             logger.info("-removing {} exon spurs".format(len(exons_to_prune)))
 
             if PASA_SALRAA_Globals.DEBUG:
-                with open("__pruned_exon_spurs.list", "wt") as ofh:
+                with open("__pruned_exon_spurs.list", "a") as ofh:
                     for exon in exons_to_prune:
                         print(exon.get_id(), file=ofh)
 
