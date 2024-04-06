@@ -484,6 +484,8 @@ class PASA_SALRAA:
 
 
         path = Simple_path_utils.refine_TSS_simple_path(self.get_splice_graph(), path)
+
+        path = Simple_path_utils.refine_PolyA_simple_path(self.get_splice_graph(), path)
         
             
         if SPACER in path:

@@ -195,8 +195,6 @@ class Splice_graph:
 
         # populates self._itree_exon_segments for overlap queries
         self._finalize_splice_graph()
-
-
         
         ## incorporate TSS and PolyA features
         if len(self._TSS_objs) > 0:
@@ -475,7 +473,7 @@ class Splice_graph:
             
             TSS_coord, _ = TSS_obj.get_coords()
             exon_intervals = self.get_overlapping_exon_segments(TSS_coord, TSS_coord+1)
-            logger.debug("TSS {} overlaps {}".format(TSS_coord, exon_intervals))
+            logger.debug("TSS {} overlaps {}".format(TSS_obj, exon_intervals))
             assert len(exon_intervals) == 1, "Error, TSS {} overlaps not one interval: {}".format(TSS_obj, exon_intervals)
 
             exon_interval = exon_intervals[0]
@@ -536,7 +534,70 @@ class Splice_graph:
 
     def _incorporate_PolyAsites(self):
 
-        pass
+        contig_acc = self._contig_acc
+        contig_strand = self._contig_strand
+        assert contig_strand in ('+', '-')
+        sg = self._splice_graph
+
+        for polyA_obj in self._PolyA_objs:
+
+            sg.add_node(polyA_obj)
+            
+            polyA_coord, _ = polyA_obj.get_coords()
+            exon_intervals = self.get_overlapping_exon_segments(polyA_coord, polyA_coord+1)
+            logger.debug("PolyA {} overlaps {}".format(polyA_obj, exon_intervals))
+            assert len(exon_intervals) == 1, "Error, PolyA {} overlaps not one interval: {}".format(polyA_obj, exon_intervals)
+
+            exon_interval = exon_intervals[0]
+            # split exon interval at TSS
+            exon_lend, exon_rend = exon_interval.get_coords()
+
+            exon_coverage = exon_interval.get_read_support()
+            
+            exon_predecessors = sg.predecessors(exon_interval)
+            exon_successors = sg.successors(exon_interval)
+
+            if contig_strand == '+' and exon_rend == polyA_coord:
+                # just add edge
+                logger.debug("Postfixing polyA {} to exon {}".format(polyA_obj, exon_interval))
+                sg.add_edge(exon_interval, polyA_obj)
+
+            elif contig_strand == '-' and exon_lend == polyA_coord:
+                # just add edge
+                logger.debug("Prefixing polyA {} to exon {}".format(polyA_obj, exon_interval))
+                sg.add_edge(polyA_obj, exon_interval)
+            else:
+                # must split exon:
+            
+                if contig_strand == '+':
+                    break_lend, break_rend = polyA_coord, polyA_coord+1
+                else:
+                    break_lend, break_rend = polyA_coord-1, polyA_coord
+
+                new_split_exon_left = Exon(contig_acc, exon_lend, break_lend, contig_strand, exon_coverage)
+                for exon_predecessor in exon_predecessors:
+                    sg.add_edge(exon_predecessor, new_split_exon_left)
+
+                new_split_exon_right = Exon(contig_acc, break_rend, exon_rend, contig_strand, exon_coverage)
+                for exon_successor in exon_successors:
+                    sg.add_edge(new_split_exon_right, exon_successor)
+
+
+                sg.add_edge(new_split_exon_left, new_split_exon_right)
+
+                if contig_strand == '+':
+                    sg.add_edge(new_split_exon_left, polyA_obj)
+                else:
+                    sg.add_edge(polyA_obj, new_split_exon_right)
+
+                # remove interval that got split.
+                sg.remove_node(exon_interval)
+                self._itree_exon_segments.remove(itree.Interval(exon_lend, exon_rend+1, exon_interval))
+                self._itree_exon_segments[exon_lend:break_lend+1] = new_split_exon_left
+                self._itree_exon_segments[break_rend:exon_rend+1] = new_split_exon_right
+
+                logger.debug("PolyA incorporation: Split {} into {} and {}".format(exon_interval, new_split_exon_left, new_split_exon_right))
+
 
     
     def _get_introns_matching_splicing_consensus(self, alignment_segments):

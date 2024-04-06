@@ -666,7 +666,7 @@ def refine_TSS_simple_path(splice_graph, simple_path):
     elif contig_strand == '-' and TSS_indices[-1] != len(nodes_with_coords_list)-1:
         TSS_index = TSS_indices[-1]
         rend_coord = nodes_with_coods_list[-1][2]
-        TSS_coord = nodes_with_coords_list[TSS_index[-1]][2]
+        TSS_coord = nodes_with_coords_list[TSS_index][2]
         if rend_coord - TSS_coord <= PASA_SALRAA_Globals.config['max_dist_between_alt_TSS_sites']:
             nodes_with_coords_list = nodes_with_coords_list[0:TSS_index+1]
         
@@ -689,6 +689,70 @@ def refine_TSS_simple_path(splice_graph, simple_path):
     logger.debug("TRIMMED to TSS {} {}".format(contig_strand, simple_path))
     
     return simple_path
+
+
+
+def refine_PolyA_simple_path(splice_graph, simple_path):
+
+    #print("\nSimple path input: {}".format(simple_path))
+    contig_strand = splice_graph.get_contig_strand()
+
+    nodes_with_coords_list = _convert_path_to_nodes_with_coords_list(splice_graph, simple_path)
+
+    nodes_with_coords_list = sorted(nodes_with_coords_list, key=lambda x: (x[2], x[1]))
+        
+    polyA_indices = list()
+    for i, node_w_coords in enumerate(nodes_with_coords_list):
+        if re.match("POLYA:", node_w_coords[0]):
+            polyA_indices.append(i)
+
+    if len(polyA_indices) == 0:
+        return(simple_path)
+
+    logger.debug("Found POLYA in path {} at indices {}".format(nodes_with_coords_list, polyA_indices))
+
+    # trim off region beyond candidate polyA if within allowed distance
+
+    if contig_strand == '+' and polyA_indices[-1] != len(nodes_with_coords_list)-1:
+        polyA_index = polyA_indices[-1]
+        rend_coord = nodes_with_coords_list[-1][2]
+        polyA_coord = nodes_with_coords_list[polyA_index][2]
+        if rend_coord - polyA_coord <= PASA_SALRAA_Globals.config['max_dist_between_alt_polyA_sites']:
+            nodes_with_coords_list = nodes_with_coords_list[0:polyA_index+1]
+        
+    elif contig_strand == '-' and polyA_indices[0] != 0:
+        polyA_index = polyA_indices[0]
+        lend_coord =  nodes_with_coords_list[0][1]
+        polyA_coord = nodes_with_coords_list[polyA_index][1]
+        if polyA_coord - lend_coord <= PASA_SALRAA_Globals.config['max_dist_between_alt_polyA_sites']:
+            nodes_with_coords_list = nodes_with_coords_list[polyA_index:]
+    
+    # remove intervening polyAsite annotations
+    if contig_strand == '+':
+        idx_low = 0
+        idx_high = len(nodes_with_coords_list) -2
+    else: # (-)strand
+        idx_low = 1
+        idx_high = len(nodes_with_coords_list) -1
+        
+
+    for i in range(idx_high, idx_low-1, -1):
+        if re.match("POLYA:", nodes_with_coords_list[i][0]):
+            nodes_with_coords_list.pop(i)
+
+    print(nodes_with_coords_list)
+            
+    # regenerate the simple path
+    simple_path = [ x[0] for x in nodes_with_coords_list]
+
+    logger.debug("TRIMMED to POLYA {} {}".format(contig_strand, simple_path))
+
+    #print("\nSimple path output: {}".format(simple_path))
+    
+    return simple_path
+
+    
+
 
 
 def add_spacers_between_disconnected_nodes(splice_graph, simple_path):
