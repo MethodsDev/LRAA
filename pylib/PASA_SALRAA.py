@@ -58,7 +58,7 @@ class PASA_SALRAA:
         start_time = time.time()
         mp_counter = self._populate_read_multi_paths(contig_acc, contig_strand, contig_seq, bam_file, allow_spacers)
 
-        multipath_graph = MultiPathGraph(mp_counter, self._splice_graph, contig_acc, PASA_SALRAA.min_mpgn_read_count, allow_spacers)
+        multipath_graph = MultiPathGraph(mp_counter, self._splice_graph, contig_acc, contig_strand, PASA_SALRAA.min_mpgn_read_count, allow_spacers)
         self._multipath_graph = multipath_graph
         self._contig_acc = contig_acc
         
@@ -137,7 +137,7 @@ class PASA_SALRAA:
 
         def write_mpg_component_debug_file(mpgn_list, filename):
             logger.debug("-writing mpgn description file: {}".format(filename))
-            with open(filename, 'wt') as ofh:
+            with open(filename, 'a') as ofh:
                 for mpgn in mpgn_list:
                     print(str(mpgn), file=ofh)
         
@@ -345,7 +345,7 @@ class PASA_SALRAA:
 
         # capture the read->path assignments:
         if PASA_SALRAA_Globals.DEBUG:
-            read_graph_mappings_ofh = open("__read_graph_mappings.dat", "wt")
+            read_graph_mappings_ofh = open("__read_graph_mappings.dat", "a")
             
 
         logger.info("-start: mapping read alignments to the graph")
@@ -481,8 +481,17 @@ class PASA_SALRAA:
 
         if SPACER in path:
             path = Simple_path_utils.trim_terminal_spacers(path)
+
+
+        path = Simple_path_utils.refine_TSS_simple_path(self.get_splice_graph(), path)
+        
+            
+        if SPACER in path:
             path = self._remove_stutters(path)
 
+
+        
+            
         path = Simple_path_utils.add_spacers_between_disconnected_nodes(self.get_splice_graph(), path)
         
         if SPACER in path:
@@ -526,8 +535,8 @@ class PASA_SALRAA:
         
         for exon_segment in overlapping_segments:
             # check for overlap and not extending beyond feature rend
-            if (segment[0] < exon_segment._rend and
-                segment[1] > exon_segment._lend and
+            if (segment[0] <= exon_segment._rend and
+                segment[1] >= exon_segment._lend and
                 exon_segment._rend <= segment[1]):
 
                 path.append(exon_segment.get_id())
@@ -546,8 +555,8 @@ class PASA_SALRAA:
                 
         for exon_segment in overlapping_segments:
             # check for overlap and not extending beyond feature rend
-            if (segment[0] < exon_segment._rend and
-                segment[1] > exon_segment._lend and
+            if (segment[0] <= exon_segment._rend and
+                segment[1] >= exon_segment._lend and
                 exon_segment._lend >= segment[0]):
 
                 path.append(exon_segment.get_id())
@@ -735,7 +744,7 @@ class PASA_SALRAA:
 
         outputfilename = "{}/scored_paths.{}.R{}.gtf".format(outdirname, mpg_token, round_iter)
         
-        ofh = open(outputfilename, 'wt')
+        ofh = open(outputfilename, 'a')
 
         for pasa_vertex in pasa_vertices:
             print ("## pasa vertex:", file=ofh)
@@ -767,7 +776,7 @@ class PASA_SALRAA:
 
         outputfilename = "{}/selected_best_path.{}.R{}.gtf".format(outdirname, mpg_token, round_iter)
         
-        with open(outputfilename, 'wt') as ofh:
+        with open(outputfilename, 'a') as ofh:
             print("Transcript path: " + str(transcript_path), file=ofh)
 
  

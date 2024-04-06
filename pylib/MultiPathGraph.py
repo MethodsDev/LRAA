@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 class MultiPathGraph:
 
 
-    def __init__(self, multiPathCounter, splice_graph, contig_acc, min_mpgn_read_count=1, allow_spacers=False):
+    def __init__(self, multiPathCounter, splice_graph, contig_acc, contig_strand, min_mpgn_read_count=1, allow_spacers=False):
 
 
         logger.info(f"START building MultiPathGraph for {contig_acc}")
@@ -31,6 +31,7 @@ class MultiPathGraph:
         
         self._splice_graph = splice_graph
         self._contig_acc = contig_acc
+        self._contig_strand = contig_strand
 
         
         mp_graph = nx.DiGraph()
@@ -93,7 +94,7 @@ class MultiPathGraph:
 
         if PASA_SALRAA_Globals.DEBUG:
             component_descr_file = "__MPGN_components_described.bed"
-            component_descr_ofh = open(component_descr_file, "wt")
+            component_descr_ofh = open(component_descr_file, "a")
 
 
         sorted_component_ids = sorted(sg_component_to_mp_id.keys(), key=lambda x: len(sg_component_to_mp_id[x]), reverse=True)
@@ -106,20 +107,21 @@ class MultiPathGraph:
                 component_description_file = os.path.join(mpg_build_dir, f"{component_id}.comp.descr.tsv")
                 mp_nodes = [self._mp_id_to_node[mp_node_id] for mp_node_id in mp_node_set]
                 mp_nodes = sorted(mp_nodes, key=lambda x: x._lend)
-                with open(component_description_file, "wt") as ofh:
+                with open(component_description_file, "a") as ofh:
                     for mp_node in mp_nodes:
                         print("\t".join([contig_acc, str(mp_node._lend), str(mp_node._rend),
                                          str(component_id),
-                                         str(mp_node.get_count()),
+                                         str(mp_node.get_count()), contig_strand,
                                          str(mp_node.get_simple_path()), ",".join(mp_node.get_read_names())]), file=ofh)
     
                         print("\t".join([contig_acc, str(mp_node._lend), str(mp_node._rend),
-                                         "Comp:" + str(component_id) + ", count: " +  str(mp_node.get_count())]),
+                                         "Comp:" + str(component_id) + ", count: " +  str(mp_node.get_count()), contig_strand,
+                                         str(mp_node.get_simple_path()) ]),
                                         file=component_descr_ofh)
 
         if PASA_SALRAA_Globals.DEBUG:
             component_build_file = os.path.join(mpg_build_dir, f"{component_id}.comp.buildgraph.tsv")
-            build_ofh = open(component_build_file, "wt")
+            build_ofh = open(component_build_file, "a")
 
         for component_id in sorted_component_ids:
             mp_node_set = sg_component_to_mp_id[component_id]
@@ -342,7 +344,7 @@ class MultiPathGraph:
     
     def describe_graph(self, output_filename):
 
-        ofh = open(output_filename, 'wt')
+        ofh = open(output_filename, 'a')
 
         mpgn_list = self.get_ordered_nodes()
         for mpgn in mpgn_list:
@@ -360,7 +362,7 @@ class MultiPathGraph:
 
         contig_acc = self._splice_graph.get_contig_acc()
         
-        ofh = open(gtf_output_filename, 'wt')
+        ofh = open(gtf_output_filename, 'a')
 
         mpgn_list = self.get_ordered_nodes()
         for mpgn in mpgn_list:

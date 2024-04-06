@@ -40,7 +40,7 @@ class GenomeFeature:
         return(self._rend - self._lend + 1)
 
     def get_bed_row(self, pad=0):
-        return("\t".join([ str(x) for x in [self._contig_acc, self._lend - pad, self._rend + pad, self._id, self.get_read_support()] ])) 
+        return("\t".join([ str(x) for x in [self._contig_acc, self._lend - pad -1, self._rend + pad, self._id, self.get_read_support(), self._orient] ])) 
     
     def get_id(self):
         return self._id
@@ -155,7 +155,13 @@ class TSS(GenomeFeature):
 
         return
 
+    def get_read_support(self):
+        # implement your own!
+        return self._count
 
+    def __repr__(self):
+        return("TSS: {} {}:{}-{} [{}] read_count:{}".format(self._id, self._contig_acc, self._lend, self._rend, self._orient, self._count))
+    
 class PolyAsite(GenomeFeature):
 
     polyA_counter = 0
@@ -171,3 +177,9 @@ class PolyAsite(GenomeFeature):
         return
 
     
+    def get_read_support(self):
+        # implement your own!
+        return self._count
+    
+    def __repr__(self):
+        return("PolyAsite: {} {}:{}-{} [{}] read_count:{}".format(self._id, self._contig_acc, self._lend, self._rend, self._orient, self._count))

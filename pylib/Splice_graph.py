@@ -52,7 +52,7 @@ class Splice_graph:
         self._splice_graph = None  # becomes networkx digraph TODO://rename this var as confusing when using _splice_graph as this obj in other modules
         
         self._node_id_to_node = dict()
-        self._itree_exon_segments = itree.IntervalTree()
+        self._itree_exon_segments = None #itree.IntervalTree()
         self._intron_objs = dict() # "lend:rend" => intron_obj
 
         ## connected components (genes)
@@ -140,7 +140,6 @@ class Splice_graph:
         self._contig_strand = contig_strand
         self._contig_seq_str = contig_seq_str
         self._contig_seq_len = len(contig_seq_str)
-        #self._alignments_bam_filename = alignments_bam_file
         self._region_lend = region_lend
         self._region_rend = region_rend
         
@@ -154,7 +153,8 @@ class Splice_graph:
         # -excludes introns w/ heavily unbalanced splice site support (via Splice_graph._min_alt_splice_freq setting)
         # - stores intron objs in self._intron_objs
         # - base coverage incremented under self._contig_base_cov
-
+        # - defines and stores TSS and PolyA objects
+        
         if alignments_bam_file is not None:
             self._populate_exon_coverage_and_extract_introns(alignments_bam_file, contig_acc, contig_strand)
 
@@ -191,9 +191,24 @@ class Splice_graph:
             self._prune_unspliced_introns()
         
         self._prune_disconnected_introns()
-                
+
+
+        # populates self._itree_exon_segments for overlap queries
         self._finalize_splice_graph()
 
+
+        
+        ## incorporate TSS and PolyA features
+        if len(self._TSS_objs) > 0:
+            self._incorporate_TSS()
+
+        if len(self._PolyA_objs) > 0:
+               self._incorporate_PolyAsites()
+        
+        
+        self._finalize_splice_graph() # do again after TSS and PolyA integration
+
+               
         if PASA_SALRAA_Globals.DEBUG:
             self.write_intron_exon_splice_graph_bed_files("__final_graph", pad=0)
             self.describe_graph("__final.graph")
@@ -369,6 +384,9 @@ class Splice_graph:
                 position, count = TSS_peak
                 self._TSS_objs.append(TSS(contig_acc, position, position, contig_strand, count))
 
+            if PASA_SALRAA_Globals.DEBUG:
+                append_log_file("__TSS_info.bed", self._TSS_objs)
+                
         if PASA_SALRAA_Globals.config['infer_PolyA']:
 
             PolyA_grouped_positions = aggregate_sites_within_window(polyA_position_counter,
@@ -379,7 +397,8 @@ class Splice_graph:
                 position, count = polyA_site_grouping
                 self._PolyA_objs.append(PolyAsite(contig_acc, position, position, contig_strand, count))
                 
-            
+            if PASA_SALRAA_Globals.DEBUG:
+                append_log_file("__PolyAsite_info.bed", self._PolyA_objs)
                     
         return
     
@@ -442,6 +461,82 @@ class Splice_graph:
         return
 
 
+
+    def _incorporate_TSS(self):
+
+        contig_acc = self._contig_acc
+        contig_strand = self._contig_strand
+        assert contig_strand in ('+', '-')
+        sg = self._splice_graph
+
+        for TSS_obj in self._TSS_objs:
+
+            sg.add_node(TSS_obj)
+            
+            TSS_coord, _ = TSS_obj.get_coords()
+            exon_intervals = self.get_overlapping_exon_segments(TSS_coord, TSS_coord+1)
+            logger.debug("TSS {} overlaps {}".format(TSS_coord, exon_intervals))
+            assert len(exon_intervals) == 1, "Error, TSS {} overlaps not one interval: {}".format(TSS_obj, exon_intervals)
+
+            exon_interval = exon_intervals[0]
+            # split exon interval at TSS
+            exon_lend, exon_rend = exon_interval.get_coords()
+
+            exon_coverage = exon_interval.get_read_support()
+            
+            exon_predecessors = sg.predecessors(exon_interval)
+            exon_successors = sg.successors(exon_interval)
+
+            if contig_strand == '+' and exon_lend == TSS_coord:
+                # just add edge
+                logger.debug("Prefixing TSS {} to exon {}".format(TSS_obj, exon_interval))
+                sg.add_edge(TSS_obj, exon_interval)
+
+            elif contig_strand == '-' and exon_rend == TSS_coord:
+                # just add edge
+                logger.debug("Postfixing TSS {} to exon {}".format(TSS_obj, exon_interval))
+                sg.add_edge(exon_interval, TSS_obj)
+            else:
+                # must split exon:
+            
+                if contig_strand == '+':
+                    break_lend, break_rend = TSS_coord-1, TSS_coord
+                else:
+                    break_lend, break_rend = TSS_coord, TSS_coord+1
+
+                new_split_exon_left = Exon(contig_acc, exon_lend, break_lend, contig_strand, exon_coverage)
+                for exon_predecessor in exon_predecessors:
+                    sg.add_edge(exon_predecessor, new_split_exon_left)
+
+                new_split_exon_right = Exon(contig_acc, break_rend, exon_rend, contig_strand, exon_coverage)
+                for exon_successor in exon_successors:
+                    sg.add_edge(new_split_exon_right, exon_successor)
+
+
+                sg.add_edge(new_split_exon_left, new_split_exon_right)
+
+                if contig_strand == '+':
+                    sg.add_edge(TSS_obj, new_split_exon_right)
+                else:
+                    sg.add_edge(new_split_exon_left, TSS_obj)
+
+
+                # remove interval that got split.
+                sg.remove_node(exon_interval)
+                self._itree_exon_segments.remove(itree.Interval(exon_lend, exon_rend+1, exon_interval))
+                self._itree_exon_segments[exon_lend:break_lend+1] = new_split_exon_left
+                self._itree_exon_segments[break_rend:exon_rend+1] = new_split_exon_right
+
+                logger.debug("TSS incorporation: Split {} into {} and {}".format(exon_interval, new_split_exon_left, new_split_exon_right))
+
+
+        
+        return
+
+
+    def _incorporate_PolyAsites(self):
+
+        pass
 
     
     def _get_introns_matching_splicing_consensus(self, alignment_segments):
@@ -860,7 +955,9 @@ class Splice_graph:
             elif type(node) == Intron:
                 introns_list.append(node)
             else:
-                raise RuntimeError("not intron or exon object... bug... ")
+                # could be TSS or PolyA
+                pass
+                #raise RuntimeError("not intron or exon object... bug... ")
 
 
         exons_list = sorted(exons_list, key=lambda x: x._lend)
@@ -1042,15 +1139,30 @@ class Splice_graph:
 
 
     def _finalize_splice_graph(self):
-        
+
+        self._itree_exon_segments = itree.IntervalTree()
+               
         ## store node ID to node object
         for node in self._splice_graph:
             self._node_id_to_node[ node.get_id() ] = node
             if type(node) == Exon:
-                # store exon segments in itree for overlap queries
+                # store exon, TSS, and PolyA features in itree for overlap queries
                 lend, rend = node.get_coords()
                 self._itree_exon_segments[lend:rend+1] = node
-            
+
+            elif type(node) == TSS:
+                TSS_coord, _ = node.get_coords()
+                max_dist_between_alt_TSS_sites = PASA_SALRAA_Globals.config['max_dist_between_alt_TSS_sites']
+                half_dist = int(max_dist_between_alt_TSS_sites/2)
+                self._itree_exon_segments[TSS_coord-half_dist : TSS_coord+half_dist+1] = node
+
+            elif type(node) == PolyAsite:
+                polyAsite_coord, _ = node.get_coords()
+                max_dist_between_alt_polyA_sites = PASA_SALRAA_Globals.config['max_dist_between_alt_polyA_sites']
+                half_dist = int(max_dist_between_alt_polyA_sites/2)
+                self._itree_exon_segments[polyAsite_coord-half_dist : polyAsite_coord+half_dist+1] = node
+
+                            
         return
 
 
@@ -1218,10 +1330,18 @@ def aggregate_sites_within_window(pos_counter, max_distance_between_aggregated_s
     return peak_sites
 
 
+def append_log_file(filename, genome_features_list):
+
+    with open(filename, "a") as ofh:
+        for feature in genome_features_list:
+            print(feature.get_bed_row(), file=ofh)
+
+
             
-
-## some unit tests
-
+#############
+## unit tests
+#############
+    
 def test_aggregate_sites_within_window():
 
     pos_counter = { 10 : 1,
@@ -1242,6 +1362,6 @@ def test_aggregate_sites_within_window():
     
 
 
-test_aggregate_sites_within_window()
+
 
     

@@ -3,9 +3,10 @@
 
 import sys, os, re
 from collections import defaultdict
+import PASA_SALRAA_Globals
 from PASA_SALRAA_Globals import SPACER
 from Splice_graph import Splice_graph
-from GenomeFeature import Exon
+from GenomeFeature import *
 from Util_funcs import coordpairs_overlap
 import logging
 
@@ -180,7 +181,7 @@ def merge_adjacent_segments(segment_list):
 
 
 
-def _convert_path_to_nodes_with_coords_list(sg:Splice_graph, simple_path:list) -> list:
+def _convert_path_to_nodes_with_coords_list(sg:Splice_graph, simple_path:list, ret_node_objs=False) -> list:
 
     simple_path = trim_terminal_spacers(simple_path.copy())
     
@@ -188,10 +189,14 @@ def _convert_path_to_nodes_with_coords_list(sg:Splice_graph, simple_path:list) -
     found_spacer = False
     for i, node_id in enumerate(simple_path):
         if node_id != SPACER:
-            lend, rend = sg.get_node_obj_via_id(node_id).get_coords()
-            node_id_w_coords = [node_id, lend, rend]
-            node_ids_with_coords = node_id_w_coords
-            node_ids_with_coords_list.append(node_ids_with_coords)
+            node_obj = sg.get_node_obj_via_id(node_id)
+            lend, rend = node_obj.get_coords()
+            if ret_node_objs:
+                node_id_with_coords = [node_obj, lend, rend]
+            else:
+                node_id_with_coords = [node_id, lend, rend]
+                
+            node_ids_with_coords_list.append(node_id_with_coords)
         else:
             found_spacer = True
             node_ids_with_coords_list.append([SPACER, -1, -1])
@@ -627,6 +632,63 @@ def remove_spacers_from_path(simple_path):
             new_path.append(node_id)
 
     return new_path
+
+
+
+def refine_TSS_simple_path(splice_graph, simple_path):
+
+    print("Simple path: {}".format(simple_path))
+    contig_strand = splice_graph.get_contig_strand()
+
+    nodes_with_coords_list = _convert_path_to_nodes_with_coords_list(splice_graph, simple_path)
+
+    nodes_with_coords_list = sorted(nodes_with_coords_list, key=lambda x: (x[1], x[2]))
+    
+    
+    TSS_indices = list()
+    for i, node_w_coords in enumerate(nodes_with_coords_list):
+        if re.match("TSS:", node_w_coords[0]):
+            TSS_indices.append(i)
+
+    if len(TSS_indices) == 0:
+        return(simple_path)
+
+    logger.debug("Found TSS in path {} at indices {}".format(nodes_with_coords_list, TSS_indices))
+
+    # trim off region beyond candidate TSS if within allowed distance
+    if contig_strand == '+' and TSS_indices[0] != 0:
+        TSS_index = TSS_indices[0]
+        lend_coord =  nodes_with_coords_list[0][1]
+        TSS_coord = nodes_with_coords_list[TSS_index][1]
+        if TSS_coord - lend_coord <= PASA_SALRAA_Globals.config['max_dist_between_alt_TSS_sites']:
+            nodes_with_coords_list = nodes_with_coords_list[TSS_index:]
+
+    elif contig_strand == '-' and TSS_indices[-1] != len(nodes_with_coords_list)-1:
+        TSS_index = TSS_indices[-1]
+        rend_coord = nodes_with_coods_list[-1][2]
+        TSS_coord = nodes_with_coords_list[TSS_index[-1]][2]
+        if rend_coord - TSS_coord <= PASA_SALRAA_Globals.config['max_dist_between_alt_TSS_sites']:
+            nodes_with_coords_list = nodes_with_coords_list[0:TSS_index+1]
+        
+            
+    # remove intervening TSS annotations
+    if contig_strand == '+':
+        idx_low = 1
+        idx_high = len(nodes_with_coords_list) -1
+    else: # (-)strand
+        idx_low = 0
+        idx_high = len(nodes_with_coords_list) -2
+
+    for i in range(idx_high, idx_low-1, -1):
+        if re.match("TSS:", nodes_with_coords_list[i][0]):
+            nodes_with_coords_list.pop(i)
+
+    # regenerate the simple path
+    simple_path = [ x[0] for x in nodes_with_coords_list]
+
+    logger.debug("TRIMMED to TSS {} {}".format(contig_strand, simple_path))
+    
+    return simple_path
 
 
 def add_spacers_between_disconnected_nodes(splice_graph, simple_path):
