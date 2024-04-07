@@ -119,9 +119,6 @@ class MultiPathGraph:
                                          str(mp_node.get_simple_path()) ]),
                                         file=component_descr_ofh)
 
-        if PASA_SALRAA_Globals.DEBUG:
-            component_build_file = os.path.join(mpg_build_dir, f"{component_id}.comp.buildgraph.tsv")
-            build_ofh = open(component_build_file, "a")
 
         for component_id in sorted_component_ids:
             mp_node_set = sg_component_to_mp_id[component_id]
@@ -137,7 +134,10 @@ class MultiPathGraph:
             num_ordered_nodes = len(ordered_nodes)
             logger.info(f"Building MP Graph for component_id {component_id} with {num_ordered_nodes} multipaths")
 
-            
+            if PASA_SALRAA_Globals.DEBUG:
+                component_build_file = os.path.join(mpg_build_dir, f"{component_id}.comp.buildgraph.tsv")
+                build_ofh = open(component_build_file, "a")
+
             
             ## define edges, containments, and incompatibilities
             for i in range(0, len(ordered_nodes)):
@@ -188,7 +188,6 @@ class MultiPathGraph:
                     
 
         if PASA_SALRAA_Globals.DEBUG:
-            build_ofh.close()
             component_descr_ofh.close()
         
         logger.info(f"DONE building MultiPathGraph for {contig_acc}")

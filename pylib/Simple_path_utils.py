@@ -659,15 +659,30 @@ def refine_TSS_simple_path(splice_graph, simple_path):
     if contig_strand == '+' and TSS_indices[0] != 0:
         TSS_index = TSS_indices[0]
         lend_coord =  nodes_with_coords_list[0][1]
+        rend_coord =  nodes_with_coords_list[0][2]
         TSS_coord = nodes_with_coords_list[TSS_index][1]
-        if TSS_coord - lend_coord <= PASA_SALRAA_Globals.config['max_dist_between_alt_TSS_sites']:
+
+        # special case where first exon is a single base segment and aligns to TSS
+        if lend_coord == rend_coord and lend_coord == TSS_coord and TSS_index == 1:
+            # swap order
+            (nodes_with_coords_list[0], nodes_with_coords_list[1]) = (nodes_with_coords_list[1], nodes_with_coords_list[0])
+        
+        elif TSS_coord - lend_coord <= PASA_SALRAA_Globals.config['max_dist_between_alt_TSS_sites']:
             nodes_with_coords_list = nodes_with_coords_list[TSS_index:]
 
     elif contig_strand == '-' and TSS_indices[-1] != len(nodes_with_coords_list)-1:
         TSS_index = TSS_indices[-1]
+        lend_coord = nodes_with_coords_list[-1][1]
         rend_coord = nodes_with_coords_list[-1][2]
         TSS_coord = nodes_with_coords_list[TSS_index][2]
-        if rend_coord - TSS_coord <= PASA_SALRAA_Globals.config['max_dist_between_alt_TSS_sites']:
+
+        # special case where last exon is a single base segment and overlaps TSS
+        if lend_coord == rend_coord and rend_coord == TSS_coord and TSS_index == len(node_w_coords)-2:
+            # swap
+            (nodes_with_coords_list[-2], nodes_with_coords_list[-1]) = (nodes_with_coords_list[-1], nodes_with_coords_list[-2])
+        
+        
+        elif rend_coord - TSS_coord <= PASA_SALRAA_Globals.config['max_dist_between_alt_TSS_sites']:
             nodes_with_coords_list = nodes_with_coords_list[0:TSS_index+1]
         
             
