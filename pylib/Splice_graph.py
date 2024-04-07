@@ -474,8 +474,13 @@ class Splice_graph:
             TSS_coord, _ = TSS_obj.get_coords()
             exon_intervals = self.get_overlapping_exon_segments(TSS_coord, TSS_coord+1)
             logger.debug("TSS {} overlaps {}".format(TSS_obj, exon_intervals))
-            assert len(exon_intervals) == 1, "Error, TSS {} overlaps not one interval: {}".format(TSS_obj, exon_intervals)
+            assert len(exon_intervals) <= 1, "Error, TSS {} overlaps multiple intervals: {}".format(TSS_obj, exon_intervals)
 
+            if len(exon_intervals) == 0:
+                logger.warning("TSS {} candidate has no exon overlap in the splice graph.")
+                continue
+
+            
             exon_interval = exon_intervals[0]
             # split exon interval at TSS
             exon_lend, exon_rend = exon_interval.get_coords()
@@ -546,8 +551,12 @@ class Splice_graph:
             polyA_coord, _ = polyA_obj.get_coords()
             exon_intervals = self.get_overlapping_exon_segments(polyA_coord, polyA_coord+1)
             logger.debug("PolyA {} overlaps {}".format(polyA_obj, exon_intervals))
-            assert len(exon_intervals) == 1, "Error, PolyA {} overlaps not one interval: {}".format(polyA_obj, exon_intervals)
+            assert len(exon_intervals) <= 1, "Error, PolyA {} overlaps multiple exon intervals: {}".format(polyA_obj, exon_intervals)
 
+            if len(exon_intervals) == 0:
+                logger.warning("Warning, polyA site {} no longer overlaps an exon candidate in the graph".format(polyA_obj))
+                continue
+            
             exon_interval = exon_intervals[0]
             # split exon interval at TSS
             exon_lend, exon_rend = exon_interval.get_coords()

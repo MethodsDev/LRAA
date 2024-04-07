@@ -78,6 +78,11 @@ def main():
 
     config_group.add_argument("--min_isoform_fraction", type=float, default=PASA_SALRAA_Globals.config['min_isoform_fraction'],
                               help='exclude reconstructed isoforms that have read support less than this fraction of all isoforms at each gene (no impact on --quant_only)')
+
+    config_group.add_argument("--no_infer_TSS", action='store_true', default=False, help='do not infer TSS')
+    config_group.add_argument("--no_infer_PolyA", action='store_true', default=False, help='do not infer_PolyA')
+    
+    
     
     ## alt splice settings
 
@@ -109,6 +114,9 @@ def main():
     NO_NORM = args.no_norm
     min_isoform_fraction = args.min_isoform_fraction
     run_EM = not args.no_EM
+
+   
+
     
     if args.quant_only and input_gtf is None:
         sys.exit("If running --quant_only, must specify --gtf corresponding to targets of quantification")
@@ -116,7 +124,11 @@ def main():
     # update config
     PASA_SALRAA_Globals.config['min_path_score'] = args.min_path_score
     PASA_SALRAA_Globals.config['min_per_id'] = args.min_per_id
-        
+    PASA_SALRAA_Globals.config['min_isoform_fraction'] = args.min_isoform_fraction
+    PASA_SALRAA_Globals.config['infer_TSS'] = not args.no_infer_TSS
+    PASA_SALRAA_Globals.config['infer_PolyA'] = not args.no_infer_PolyA
+    
+    
     if args.mpm_monitor:
         mpm.set_debug()
 

@@ -665,7 +665,7 @@ def refine_TSS_simple_path(splice_graph, simple_path):
 
     elif contig_strand == '-' and TSS_indices[-1] != len(nodes_with_coords_list)-1:
         TSS_index = TSS_indices[-1]
-        rend_coord = nodes_with_coods_list[-1][2]
+        rend_coord = nodes_with_coords_list[-1][2]
         TSS_coord = nodes_with_coords_list[TSS_index][2]
         if rend_coord - TSS_coord <= PASA_SALRAA_Globals.config['max_dist_between_alt_TSS_sites']:
             nodes_with_coords_list = nodes_with_coords_list[0:TSS_index+1]
