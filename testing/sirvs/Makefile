@@ -7,4 +7,7 @@ test:
 	diff gffcompare.LRAA.gtf.refmap.full.summary.tsv data/latest_summary.tsv
 
 
+clean:
+	rm -f ./gffcompare* ./LRAA.gtf
+
 
