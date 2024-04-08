@@ -1408,7 +1408,7 @@ class Splice_graph:
                         have_connected = True
                         connected_exon = connected_exons[0]
                         # examine potential alt TSS candidate
-                        alt_TSS_candidates = self._splice_graph.predecessors(connected_exon) if self._contig_strand == '+' else self._splice_graph.scucessors(connected_exon)
+                        alt_TSS_candidates = self._splice_graph.predecessors(connected_exon) if self._contig_strand == '+' else self._splice_graph.successors(connected_exon)
                         alt_TSS_candidates = [x for x in alt_TSS_candidates if type(x) == TSS]
                         if len(alt_TSS_candidates) == 1:
                             alt_TSS_candidate = alt_TSS_candidates[0]
