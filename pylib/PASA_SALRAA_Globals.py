@@ -21,6 +21,8 @@ config = {
 
     'min_alignments_define_TSS_site' : 3,
     'min_alignments_define_polyA_site' : 3,
+
+    'max_frac_alt_TSS_from_degradation' : 0.20,
     
     # misc settings
     'min_path_score' : 1,

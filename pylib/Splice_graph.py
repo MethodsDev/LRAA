@@ -216,6 +216,27 @@ class Splice_graph:
 
         connected_components = list(nx.connected_components(self._splice_graph.to_undirected()))
 
+        # filter out TSS and PolyA features based on min isoform fraction
+        if len(self._TSS_objs) > 0 or len(self._PolyA_objs) > 0:
+
+            for connected_component in connected_components:
+                if len(self._TSS_objs) > 0:
+                    connected_component = self._eliminate_low_support_TSS(connected_component)
+                if len(self._PolyA_objs) > 0:
+                    connected_component = self._eliminate_low_support_PolyA(connected_component)
+
+            # revise again
+            self._finalize_splice_graph() # do again after TSS and PolyA integration
+            connected_components = list(nx.connected_components(self._splice_graph.to_undirected()))
+            
+               
+        if PASA_SALRAA_Globals.DEBUG:
+            self.write_intron_exon_splice_graph_bed_files("__final_graph", pad=0)
+            self.describe_graph("__final.graph")
+            append_log_file("__TSS_info.bed", self._TSS_objs) 
+            append_log_file("__PolyAsite_info.bed", self._PolyA_objs)
+
+        
         self._components = connected_components
         for i,component in enumerate(self._components):
             for node in component:
@@ -383,7 +404,7 @@ class Splice_graph:
                 self._TSS_objs.append(TSS(contig_acc, position, position, contig_strand, count))
 
             if PASA_SALRAA_Globals.DEBUG:
-                append_log_file("__TSS_info.bed", self._TSS_objs)
+                append_log_file("__prefilter_TSS_info.bed", self._TSS_objs)
                 
         if PASA_SALRAA_Globals.config['infer_PolyA']:
 
@@ -396,7 +417,7 @@ class Splice_graph:
                 self._PolyA_objs.append(PolyAsite(contig_acc, position, position, contig_strand, count))
                 
             if PASA_SALRAA_Globals.DEBUG:
-                append_log_file("__PolyAsite_info.bed", self._PolyA_objs)
+                append_log_file("__prefilter_PolyAsite_info.bed", self._PolyA_objs)
                     
         return
     
@@ -1312,6 +1333,103 @@ class Splice_graph:
 
 
 
+    def _eliminate_low_support_TSS(self, node_list):
+
+        TSS_list = list()
+        
+        for node in node_list:
+            if type(node) == TSS:
+                TSS_list.append(node)
+
+        if TSS_list:
+
+            def get_sum_read_support():
+                sum_read_support = 0
+                for TSS_obj in TSS_list:
+                    sum_read_support += TSS_obj.get_read_support()
+                return sum_read_support
+            
+            min_iso_fraction = PASA_SALRAA_Globals.config['min_isoform_fraction']
+
+            TSS_to_purge = set()
+            
+            filtering = True
+            while len(TSS_list) > 0 and filtering:
+                filtering = False # reinit
+                TSS_list = sorted(TSS_list, key=lambda x: x.get_read_support(), reverse=True)
+                sum_read_support = get_sum_read_support()
+                for i, TSS_obj in enumerate(TSS_list):
+                    frac_read_support = TSS_obj.get_read_support() / sum_read_support
+                    if frac_read_support < min_iso_fraction:
+                        TSS_to_purge.update(TSS_list[i:])
+                        if i == 0:
+                            # all gone
+                            TSS_list.clear()
+                        else:
+                            TSS_list = TSS_list[0:i]
+
+                        filtering = True
+
+                        
+            if TSS_to_purge:
+                logger.debug("Purging TSSs due to min isoform fraction requirements: {}".format(TSS_to_purge))
+                for TSS_obj in TSS_to_purge:
+                    self._TSS_objs.remove(TSS_obj)
+                self._splice_graph.remove_nodes_from(TSS_to_purge)
+                TSS_to_purge.clear()
+
+            # remove remaining potential degradation products
+            # walk the splice graph along linear exon connections and prune alt TSSs that have lower than the frac dominant support
+            max_frac_TSS_is_degradation = PASA_SALRAA_Globals.config['max_frac_alt_TSS_from_degradation'] # if neighboring TSS has this frac or less, gets purged as degradation product 
+            for TSS_obj in TSS_list:
+                if TSS_obj in TSS_to_purge:
+                    continue
+
+                # check if not connected
+                if len( list(self._splice_graph.successors(TSS_obj)) ) == 0 and len( list(self._splice_graph.predecessors(TSS_obj)) ) == 0:
+                    TSS_to_purge.add(TSS_obj)
+                    logger.warning("TSS_obj wasnt connected in the graph... removing it. {}".format(TSS_obj))
+                    continue
+                
+                this_TSS_support = TSS_obj.get_read_support()
+                
+                connected_exons = self._splice_graph.successors(TSS_obj) if self._contig_strand == '+' else self._splice_graph.predecessors(TSS_obj)
+                connected_exons = [x for x in connected_exons if type(x) == Exon]
+                
+                assert len(connected_exons) == 1, "Error, TSS_obj is not connected to a single exon: {}, connected_exons: {} ".format(TSS_obj, connected_exons)
+                connected_exon = connected_exons[0]
+                have_connected = True
+                while have_connected:
+                    logger.debug("Walking exon segments looking for alt TSSs from {}".format(connected_exon))
+                    have_connected = False
+                    connected_exons = self._splice_graph.successors(connected_exon) if self._contig_strand == '+' else self._splice_graph.predecessors(connected_exon)
+                    connected_exons = [x for x in connected_exons if type(x) == Exon]
+                    if len(connected_exons) == 1:
+                        have_connected = True
+                        connected_exon = connected_exons[0]
+                        # examine potential alt TSS candidate
+                        alt_TSS_candidates = self._splice_graph.predecessors(connected_exon) if self._contig_strand == '+' else self._splice_graph.scucessors(connected_exon)
+                        alt_TSS_candidates = [x for x in alt_TSS_candidates if type(x) == TSS]
+                        if len(alt_TSS_candidates) == 1:
+                            alt_TSS_candidate = alt_TSS_candidates[0]
+                            if alt_TSS_candidate not in TSS_to_purge and alt_TSS_candidate.get_read_support()/this_TSS_support <= max_frac_TSS_is_degradation:
+                                TSS_to_purge.add(alt_TSS_candidate)
+                                logger.debug("-purging degradation TSS: {}".format(alt_TSS_candidate))
+
+                    
+                        
+            if TSS_to_purge:
+                logger.debug("Purging TSSs due to max frac degradation requirements: {}".format(TSS_to_purge))
+                for TSS_obj in TSS_to_purge:
+                    self._TSS_objs.remove(TSS_obj)
+                self._splice_graph.remove_nodes_from(TSS_to_purge)
+
+        return
+    
+
+    def _eliminate_low_support_PolyA(self, node_list):
+        pass
+    
 
 
 ## general utility functions used above.
