@@ -53,6 +53,7 @@ def main():
 
     parser.add_argument("--no_EM", action='store_true', default=False, help="do not run EM alg")
 
+    parser.add_argument("--include_asm_draft_quant", action='store_true', default=False, help="include the draft (not real... based on norm reads) quant values at assembly. Potentially useful for isoform fraction info only")
     
     ## debug params
     
@@ -334,7 +335,7 @@ def main():
                 for transcript in transcripts:
                     ofh.write(transcript.to_GTF_format() + "\n")
 
-                if PASA_SALRAA_Globals.DEBUG:
+                if PASA_SALRAA_Globals.DEBUG or args.include_asm_draft_quant:
                     debug_quant_ofh = open("__quant_info.tsv", "at")
                     debug_quant_read_tracking_ofh = open("__quant_info.reads_tracked.tsv", "at")
                     q = Quantify()
