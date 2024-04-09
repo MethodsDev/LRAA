@@ -637,7 +637,7 @@ def remove_spacers_from_path(simple_path):
 
 def refine_TSS_simple_path(splice_graph, simple_path):
 
-    print("Simple path: {}".format(simple_path))
+    #print("Simple path: {}".format(simple_path))
     contig_strand = splice_graph.get_contig_strand()
 
     nodes_with_coords_list = _convert_path_to_nodes_with_coords_list(splice_graph, simple_path)
