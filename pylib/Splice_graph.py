@@ -498,7 +498,7 @@ class Splice_graph:
             assert len(exon_intervals) <= 1, "Error, TSS {} overlaps multiple intervals: {}".format(TSS_obj, exon_intervals)
 
             if len(exon_intervals) == 0:
-                logger.warning("TSS {} candidate has no exon overlap in the splice graph.")
+                logger.warning("TSS {} candidate has no exon overlap in the splice graph.".format(TSS_obj))
                 continue
 
             
