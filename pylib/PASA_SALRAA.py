@@ -486,6 +486,11 @@ class PASA_SALRAA:
         path = Simple_path_utils.refine_TSS_simple_path(self.get_splice_graph(), path)
 
         path = Simple_path_utils.refine_PolyA_simple_path(self.get_splice_graph(), path)
+
+        if Simple_path_utils.count_exons_in_simple_path(path) == 0:
+            logger.debug("path {} has no exons. Ignoring path.".format(path))
+            return None
+        
         
             
         if SPACER in path:

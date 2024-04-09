@@ -152,6 +152,16 @@ def merge_simple_paths(simple_path_A, simple_path_B):
 
 
 
+def count_exons_in_simple_path(simple_path):
+    num_exons = 0
+
+    for node_id in simple_path:
+        if re.match("E:", node_id):
+            num_exons += 1
+
+    return num_exons
+
+
 def merge_adjacent_segments(segment_list):
 
     segment_list = sorted(segment_list, key=lambda x: x[0])
