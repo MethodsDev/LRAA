@@ -77,6 +77,10 @@ class PASA_scored_path:
     def get_path_mpgn_list(self):
         return list(self._mpgn_list_path)
 
+
+    def get_simple_path(self):
+        return self.get_multiPath_obj().get_simple_path()
+    
     def get_all_represented_mpgns(self, additional_mpgns_to_check=None):
         
         represented_mpgns = set(self._all_represented_mpgns)
@@ -261,7 +265,7 @@ class PASA_scored_path:
            
         """
 
-        logger.debug(str(self) + "\n^^^ computed with score = {}".format(score))
+        logger.debug(str(self.get_simple_path()) + "\n^^^ computed with score = {}".format(score))
             
         return score
     

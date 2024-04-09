@@ -802,7 +802,12 @@ class PASA_SALRAA:
                 mp_B = pasa_scored_paths[j].get_multiPath_obj()
                 sp_B = mp_B.get_simple_path()
 
-                if Simple_path_utils.simple_paths_overlap_and_compatible_spacer_aware_both_paths(sg, sp_A, sp_B):
+                if PASA_SALRAA_Globals.config['restrict_asm_to_collapse']:
+                    if Simple_path_utils.path_A_contains_path_B(sp_A, sp_B) or Simple_path_utils.path_A_contains_path_B(sp_B, sp_A):
+                        raise RuntimeError("Error, transcript paths contain each other:\n{}\n{}".format(sp_A, sp_B))
+                    
+                
+                elif Simple_path_utils.simple_paths_overlap_and_compatible_spacer_aware_both_paths(sg, sp_A, sp_B):
                     raise RuntimeError("\n\n\n##****************************************************************************\n" +
                                        "Error, final paths:\n{} and \n{}\noverlap and are compatible - should have gotten assembled together".format(pasa_scored_paths[i], pasa_scored_paths[j]) + 
                                        "\n##***************************************************************************************\n\n")

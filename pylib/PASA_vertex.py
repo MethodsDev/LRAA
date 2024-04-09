@@ -28,7 +28,7 @@ class PASA_vertex:
 
     
     def __repr__(self):
-        return("PASA_vertex for {}".format(self._multipath_graph_node))
+        return("PASA_vertex for {}".format(self._multipath_graph_node.get_simple_path()))
         
     
     def get_multipath_graph_node(self):
@@ -92,7 +92,7 @@ class PASA_vertex:
                     
         if best_prev_scored_path is not None:
             self._fromPaths.append(best_prev_scored_path)
-            logger.debug("Added best extension path: {} to {}".format(best_prev_scored_path, self))
+            logger.debug("Added best extension path: {} to {}".format(best_prev_scored_path.get_simple_path(), self))
 
             if PASA_SALRAA_Globals.DEBUG:
                 print("**  best selected extension path: {}".format(best_prev_scored_path), file=extension_audit_ofh)

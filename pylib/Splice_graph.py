@@ -665,10 +665,10 @@ class Splice_graph:
                     logger.debug("Splice type for intron {}:{}-{}[{}] is not consistent with read alignment orientation: {}".format(contig_acc, intron_lend, intron_rend, splice_type, contig_strand))
 
 
-        logger.debug("Of the {} intron candidates, {} = {:.1f} % have conflicting orientation to contig.".format(
-            num_introns_with_splice_signals,
-            num_introns_conflicting_splice_signals,
-            num_introns_conflicting_splice_signals/(num_introns_with_splice_signals+0.001)*100))
+        #logger.debug("Of the {} intron candidates, {} = {:.1f} % have conflicting orientation to contig.".format(
+        #    num_introns_with_splice_signals,
+        #    num_introns_conflicting_splice_signals,
+        #    num_introns_conflicting_splice_signals/(num_introns_with_splice_signals+0.001)*100))
 
         return introns_list
 
@@ -1492,7 +1492,7 @@ def aggregate_sites_within_window(pos_counter, max_distance_between_aggregated_s
         j = i-1
         while j >= 0:
             j_struct = position_count_structs[j]
-
+            assert i_struct['position'] > j_struct['position']
             if i_struct['position'] - j_struct['position'] > max_distance_between_aggregated_sites:
                 break
             if not j_struct['selected']:
@@ -1504,6 +1504,7 @@ def aggregate_sites_within_window(pos_counter, max_distance_between_aggregated_s
         k = i + 1
         while k < num_structs:
             k_struct = position_count_structs[k]
+            assert k_struct['position'] > i_struct['position']
             if k_struct['position'] - i_struct['position'] > max_distance_between_aggregated_sites:
                 break
             if not k_struct['selected']:

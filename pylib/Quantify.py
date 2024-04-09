@@ -6,6 +6,7 @@ import MultiPath
 import MultiPathCounter
 import Simple_path_utils as SPU
 from collections import defaultdict
+import PASA_SALRAA_Globals
 from PASA_SALRAA_Globals import SPACER, DEBUG
 import logging
 
@@ -40,9 +41,11 @@ class Quantify:
 
         self._assign_reads_to_transcripts(splice_graph, mp_counter)
 
-        transcript_to_read_count = self._estimate_isoform_read_support(transcripts, run_EM)
+        transcript_to_fractional_read_assignment = self._estimate_isoform_read_support(transcripts, run_EM)
 
-        return transcript_to_read_count
+        # see documentation for _estimate_isoform_read_support() below
+        
+        return transcript_to_fractional_read_assignment
 
         
     def _assign_path_nodes_to_gene(self, transcripts):
@@ -190,8 +193,25 @@ class Quantify:
 
     def _estimate_isoform_read_support(self, transcripts, run_EM):
 
+        """
 
+        Given the reads assigned to the transcript (accessed with transcript.get_read_names() ) 
+            Read counts are assigned to transcripts taking into account multiple read mappings
+            Without EM (run_EM is False), read counts are equally divided among the isoforms they're assigned.
+            With EM, they're assigned fractionally according to inferred isoform expression levels in EM cycles.
+
+            Final read counts and isoform fraction values are stored in the transcript objects themselves, and accessed as:
+                transcript.get_read_counts_assigned() and transcript.get_isoform_fraction()
+                
+        returns transcript_to_fractional_read_assignment
+             with structure [transcript_id][read_name] = frac_read_assigned
+
+        """
+
+        
         read_name_to_transcripts = defaultdict(set)
+
+        transcript_to_fractional_read_assignment = defaultdict(dict)
         
         for transcript in transcripts:
             read_names = transcript.get_read_names()
@@ -213,7 +233,9 @@ class Quantify:
             read_names = transcript.get_read_names()
             for read_name in read_names:
                 num_transcripts_with_assigned_read = len(read_name_to_transcripts[read_name])
-                transcript_read_count_total += 1 / num_transcripts_with_assigned_read
+                frac_read_assignment = 1 / num_transcripts_with_assigned_read
+                transcript_read_count_total += frac_read_assignment
+                transcript_to_fractional_read_assignment[transcript_id][read_name] = frac_read_assignment
                 
             transcript_to_read_count[transcript_id] = transcript_read_count_total
             transcript_to_expr_val[transcript_id] = transcript_read_count_total / num_mapped_reads * 1e6
@@ -253,6 +275,7 @@ class Quantify:
                             sum_expr += transcript_to_expr_val[tran_with_read_id]
                         frac_read_assignment = transcript_expr / sum_expr
                         transcript_to_read_count[transcript_id] += frac_read_assignment
+                        transcript_to_fractional_read_assignment[transcript_id][read_name] = frac_read_assignment
 
                 ## recompute expr_vals
                 transcript_to_expr_val.clear()
@@ -263,32 +286,75 @@ class Quantify:
                     transcript_to_expr_val[transcript_id] = transcript_read_count/num_mapped_reads * 1e6
             
 
-        return transcript_to_read_count
+
+        ## assign final read counts to each transcript object.
+        gene_to_transcripts = defaultdict(list)
+        for transcript in transcripts:
+            transcript_id = transcript.get_transcript_id()
+            transcript_read_count = transcript_to_read_count[transcript_id]
+            transcript.set_read_counts_assigned(transcript_read_count)
+            gene_id = transcript.get_gene_id()
+            gene_to_transcripts[gene_id].append(transcript)
+
+        
+        ## isoform isoform fraction
+        for gene_id in gene_to_transcripts:
+            transcripts_of_gene = gene_to_transcripts[gene_id]
+
+            # evaluate isoform fraction
+            sum_gene_reads = 0
+            for transcript_of_gene in transcripts_of_gene:
+                transcript_read_count = transcript_of_gene.get_read_counts_assigned()
+                sum_gene_reads += transcript_read_count
+
+            logger.debug("gene_id {} has total reads: {}".format(gene_id, sum_gene_reads))
+
+            for transcript_of_gene in transcripts_of_gene:
+                transcript_id =  transcript_of_gene.get_transcript_id()
+                transcript_read_count = transcript_of_gene.get_read_counts_assigned()
+                isoform_frac = transcript_read_count / sum_gene_reads
+                logger.debug("\ttranscript_id {} has {} reads = {} isoform fraction of {}".format(
+                    transcript_id,
+                    transcript_read_count,
+                    isoform_frac,
+                    gene_id))
+                transcript_of_gene.set_isoform_fraction(isoform_frac)
+                    
+        return transcript_to_fractional_read_assignment
         
     
                 
-    def report_quant_results(self, transcripts, transcript_to_read_count, ofh_quant_vals, ofh_read_tracking):
+    def report_quant_results(self, transcripts, transcript_to_fractional_read_assignment, ofh_quant_vals, ofh_read_tracking):
                 
         ## generate final report.
         for transcript in transcripts:
             transcript_id = transcript.get_transcript_id()
             gene_id = transcript.get_gene_id()
-            counts = transcript_to_read_count[transcript_id]
-
+            counts = transcript.get_read_counts_assigned()
+            isoform_frac = transcript.get_isoform_fraction()
+            
             readnames = transcript.get_read_names()
             readnames = sorted(readnames)
 
-            logger.info("\t".join([gene_id, transcript_id, f"{counts:.1f}"]))
-            #print("\t".join([gene_id, transcript_id, f"{counts:.1f}"]), file=ofh_quant_vals)
-
+            logger.info("\t".join([gene_id, transcript_id, f"{counts:.1f}", f"{isoform_frac:.3f}"]))
+            print("\t".join([gene_id, transcript_id, f"{counts:.1f}", f"{isoform_frac:.3f}"]), file=ofh_quant_vals)
+            
+            for readname in readnames:
+                frac_read_assigned = transcript_to_fractional_read_assignment[transcript_id][readname]
+                print("\t".join([gene_id, transcript_id, readname, "{:.3f}".format(frac_read_assigned)]), file=ofh_read_tracking)
+            
+            """
             if (DEBUG):
                 print("transcript_id\t{}\n{}".format(transcript_id, transcript._simplepath), file=ofh_read_tracking)
                 for readname in readnames:
-                    print("read:\t{}\n{}".format(readname, self._read_name_to_multipath[readname].get_simple_path()), file=ofh_read_tracking)
+                    print("read:\t{}\n{}".format(readname,
+                                                 self._read_name_to_multipath[readname].get_simple_path()),
+                          file=ofh_read_tracking)
                 print("\n", file=ofh_read_tracking)
             else:
                 print("\t".join([gene_id, transcript_id, ",".join(readnames)]), file=ofh_read_tracking)
-            
+            """
+
         return 
     
 
@@ -304,74 +370,129 @@ class Quantify:
 
 
         filtering_round = 0
+
+        frac_read_assignments = None
         
         while isoforms_were_filtered:
 
             filtering_round += 1
-
+            num_total_isoforms = 0
             num_filtered_isoforms = 0
-            num_total_isoforms = len(transcripts)
-            
             transcripts_retained = list()
-            
             isoforms_were_filtered = False # update to True if we do filter an isoform out.
-            
-            # run (or rerun) quant
-            transcript_to_read_count = q._estimate_isoform_read_support(transcripts, run_EM)
 
+            frac_read_assignments = q._estimate_isoform_read_support(transcripts, run_EM)
 
-            gene_to_transcripts = defaultdict(list)
+            genes_represented = set()
             for transcript in transcripts:
+                num_total_isoforms += 1
                 gene_id = transcript.get_gene_id()
-                gene_to_transcripts[gene_id].append(transcript)
+                genes_represented.add(gene_id)
+                if transcript.get_isoform_fraction() < min_isoform_fraction:
+                    isoforms_were_filtered = True
+                    num_filtered_isoforms += 1
+                else:
+                    transcripts_retained.append(transcript)
 
-            for gene_id in gene_to_transcripts:
-                transcripts_of_gene = gene_to_transcripts[gene_id]
-                if len(transcripts_of_gene) == 1:
-                    transcripts_retained.extend(transcripts_of_gene)
-                    continue
-
-                # evaluate isoform fraction
-                sum_gene_reads = 0
-                for transcript_of_gene in transcripts_of_gene:
-                    transcript_read_count = transcript_to_read_count[ transcript_of_gene.get_transcript_id() ]
-                    sum_gene_reads += transcript_read_count
-
-                logger.debug("gene_id {} has total reads: {}".format(gene_id, sum_gene_reads))
-                
-                    
-                for transcript_of_gene in transcripts_of_gene:
-                    transcript_id =  transcript_of_gene.get_transcript_id()
-                    transcript_read_count = transcript_to_read_count[ transcript_id ]
-                    isoform_frac = transcript_read_count / sum_gene_reads
-                    logger.debug("\ttranscript_id {} has {} reads = {} isoform fraction of {}".format(
-                        transcript_id,
-                        transcript_read_count,
-                        isoform_frac,
-                        gene_id))
-                    
-                    if isoform_frac < min_isoform_fraction:                        
-                        isoforms_were_filtered = True
-                        num_filtered_isoforms += 1
-                    else:
-                        transcripts_retained.append(transcript_of_gene)
-
-
+            
             logger.debug("isoform filtering round {} involved filtering of {} isoforms / {} total isoforms of {} genes".format(
                 filtering_round,
                 num_filtered_isoforms,
                 num_total_isoforms,
-                len(gene_to_transcripts)) )
+                len(genes_represented)) )
             
             # reset list of transcripts
             transcripts = transcripts_retained
-
-
             
-        return transcripts
+        return (transcripts, frac_read_assignments)
 
 
+    @staticmethod
+    def prune_likely_degradation_products(transcripts, splice_graph, run_EM):
 
-
-
+        sg = splice_graph
         
+        # run an initial quant.
+        q = Quantify()
+        q._estimate_isoform_read_support(transcripts, run_EM)
+
+        transcripts_ret = list() # transcripts not pruned and returned.
+                
+        # first organize by gene_id
+        gene_id_to_transcripts = defaultdict(set)
+        for transcript in transcripts:
+            gene_id = transcript.get_gene_id()
+            gene_id_to_transcripts[gene_id].add(transcript)
+
+
+        for gene_id, transcript_set in gene_id_to_transcripts.items():
+
+            if len(transcript_set) == 1:
+                transcripts_ret.extend(list(transcript_set))
+                continue
+            
+            # compare isoforms for compatibility ignoring TSS and PolyA sites
+            # if an isoform is fully contained by another and has substantially less expression, prune it.
+
+            transcript_list = list(transcript_set)
+            contig_strand = transcript_list[0].get_strand()
+
+            transcript_list = sorted(transcript_list, key=lambda x: x.get_coords())
+            if contig_strand == '-':
+                transcript_list = list(reversed( sorted(transcript_list, key=lambda x: (x.get_coords()[1], x.get_coords()[0]) ) ) )
+
+            transcript_prune_as_degradation = set()
+            for i in range(len(transcript_list)-1):
+                transcript_i = transcript_list[i]
+                transcript_i_simple_path = transcript_i.get_simple_path()
+                i_path_trimmed, i_TSS_id, i_polyA_id = SPU.trim_TSS_and_PolyA(transcript_i_simple_path, contig_strand)
+                transcript_i_read_counts_assigned = transcript_i.get_read_counts_assigned()
+                
+                for j in range(i+1, len(transcript_list)):
+                    transcript_j = transcript_list[j]
+                    transcript_j_simple_path = transcript_j.get_simple_path()
+                    j_path_trimmed, j_TSS_id, j_polyA_id = SPU.trim_TSS_and_PolyA(transcript_j_simple_path, contig_strand)
+                    transcript_j_read_counts_assigned = transcript_j.get_read_counts_assigned()
+                    
+                    # Simple_path_utils.simple_paths_overlap_and_compatible_spacefree_region_path_A(self.get_splice_graph(), my_path, other_path)
+                    frac_expression_i = transcript_j_read_counts_assigned / transcript_i_read_counts_assigned
+
+                    if SPU.path_A_contains_path_B(i_path_trimmed, j_path_trimmed):
+
+                        # TODO:// need sensible logic for exlcuding likely degradation products.
+                        
+                        subsume_J = False
+                        
+                        if i_TSS_id is not None:
+                            if j_TSS_id is not None:
+                                i_TSS_read_count = sg.get_node_obj_via_id(i_TSS_id).get_read_support()
+                                j_TSS_read_count = sg.get_node_obj_via_id(j_TSS_id).get_read_support()
+                                if j_TSS_read_count/i_TSS_read_count < PASA_SALRAA_Globals.config['max_frac_alt_TSS_from_degradation']:
+                                    subsume_J = True
+                            else:
+                                # no j_TSS but have i_TSS
+                                subsume_J = True
+                        else: #if frac_expression_i <= PASA_SALRAA_Globals.config['max_frac_alt_TSS_from_degradation']:
+                            subsume_J = True
+
+                        if not subsume_J:
+                            # see if just a polyA difference
+                            if i_TSS_id == j_TSS_id:
+                                subsume_J = True
+                            
+
+                        if subsume_J:
+                            logger.debug("Pruning {} as likely degradation product of {}".format(transcript_j, transcript_i))
+                            transcript_prune_as_degradation.add(transcript_j)
+
+            # retain the ones not pruned
+            for transcript in transcript_set:
+                if transcript not in transcript_prune_as_degradation:
+                    transcripts_ret.append(transcript)
+
+
+        # after pruning transcripts, rerun quant
+        frac_read_assignments = q._estimate_isoform_read_support(transcripts_ret, run_EM)
+        
+        return (transcripts_ret, frac_read_assignments)
+

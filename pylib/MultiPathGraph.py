@@ -175,8 +175,10 @@ class MultiPathGraph:
                         # draw edge between overlapping and compatible nodes.
                         if PASA_SALRAA_Globals.DEBUG:
                             print("i-COMPATIBLE-j", file=build_ofh)
-                            logger.debug("adding edge: {},{}".format(node_j, node_i))
-                        self._mp_graph.add_edge(node_j, node_i)
+                            #logger.debug("adding edge: {},{}".format(node_j, node_i))
+
+                        if not PASA_SALRAA_Globals.config['restrict_asm_to_collapse']:
+                            self._mp_graph.add_edge(node_j, node_i)
 
 
                     else:

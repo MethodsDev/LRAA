@@ -768,6 +768,32 @@ def refine_PolyA_simple_path(splice_graph, simple_path):
 
     
 
+def trim_TSS_and_PolyA(simple_path, strand):
+
+    assert strand in ('+','-')
+
+    TSS_id = None
+    polyA_id = None
+    
+    if strand == '+':
+        if re.match("TSS:", simple_path[0]):
+            TSS_id = simple_path[0]
+            simple_path = simple_path[1:]
+        if re.match("POLYA:", simple_path[-1]):
+            polyA_id = simple_path[-1]
+            simple_path = simple_path[0:-1]
+
+    else:
+        # - strand
+        if re.match("POLYA:", simple_path[0]):
+            polyA_id = simple_path[0]
+            simple_path = simple_path[1:]
+        if re.match("TSS:", simple_path[-1]):
+            TSS_id = simple_path[-1]
+            simple_path = simple_path[0:-1]
+        
+    return (simple_path, TSS_id, polyA_id)
+
 
 
 def add_spacers_between_disconnected_nodes(splice_graph, simple_path):

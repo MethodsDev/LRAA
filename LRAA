@@ -114,9 +114,7 @@ def main():
     NO_NORM = args.no_norm
     min_isoform_fraction = args.min_isoform_fraction
     run_EM = not args.no_EM
-
-   
-
+    
     
     if args.quant_only and input_gtf is None:
         sys.exit("If running --quant_only, must specify --gtf corresponding to targets of quantification")
@@ -297,8 +295,8 @@ def main():
 
                 q = Quantify()
                 logger.debug("\n//SECTION QUANT: Quantifying transcripts according to read support.")
-                transcript_to_read_count = q.quantify(sg, input_transcripts, mp_counter, run_EM)
-                q.report_quant_results(input_transcripts, transcript_to_read_count, ofh, ofh_quant_read_tracker)
+                read_name_to_fractional_transcript_assignment = q.quantify(sg, input_transcripts, mp_counter, run_EM)
+                q.report_quant_results(input_transcripts, read_name_to_fractional_transcript_assignment, ofh, ofh_quant_read_tracker)
 
 
             else:
@@ -324,14 +322,27 @@ def main():
                 logger.info(f"-begin reconstructing isoforms for {contig_acc}")
                 transcripts = pasa_salraa_obj.reconstruct_isoforms(single_best_only)
 
+
+                transcripts, frac_read_assignments = Quantify.prune_likely_degradation_products(transcripts, sg, run_EM)
+                
                 if min_isoform_fraction > 0:
-                    transcripts = Quantify.filter_isoforms_by_min_isoform_fraction(transcripts, min_isoform_fraction, run_EM)
+                    transcripts, frac_read_assignments = Quantify.filter_isoforms_by_min_isoform_fraction(transcripts, min_isoform_fraction, run_EM)
 
                 logger.info("writing gtf output for {} [{}] containing {} transcripts".format(contig_acc, contig_strand, len(transcripts)))
+                
+                    
                 for transcript in transcripts:
                     ofh.write(transcript.to_GTF_format() + "\n")
 
+                if PASA_SALRAA_Globals.DEBUG:
+                    debug_quant_ofh = open("__quant_info.tsv", "at")
+                    debug_quant_read_tracking_ofh = open("__quant_info.reads_tracked.tsv", "at")
+                    q = Quantify()
+                    q.report_quant_results(transcripts, frac_read_assignments, debug_quant_ofh, debug_quant_read_tracking_ofh)
+                    debug_quant_ofh.close()
+                    debug_quant_read_tracking_ofh.close()
 
+                    
     ofh.close()
     if QUANT_ONLY:
         ofh_quant_read_tracker.close()

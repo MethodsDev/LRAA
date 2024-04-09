@@ -25,7 +25,8 @@ class Transcript (GenomeFeature):
         
         self._id = ":".join([contig_acc, str(trans_lend), str(trans_rend), "N:{}".format(Transcript.trans_id_counter), orient])
 
-        self._gene_id = "g.{}".format(self._id)
+        self._transcript_id = "t.{}".format(self._id) # should reset to something more useful
+        self._gene_id = "g.{}".format(self._id) # ditto above
 
         self._meta = dict()
 
@@ -36,6 +37,10 @@ class Transcript (GenomeFeature):
         self._multipath = None # multipath obj
 
         self._simplepath = None
+
+        self._read_counts_assigned = None # set during expression quantification
+
+        self._isoform_fraction = None # set during expression quantification
         
         return
 
@@ -63,7 +68,6 @@ class Transcript (GenomeFeature):
 
     
     def get_gene_id(self):
-
         if self._gene_id is not None:
             return self._gene_id
         
@@ -73,14 +77,20 @@ class Transcript (GenomeFeature):
             raise RuntimeError("gene_id not set for Transcript obj")
         
 
+    def get_simple_path(self):
+        assert self._simplepath is not None
+        return self._simplepath
+        
     
     def __repr__(self):
 
-        text = "Transcript: {} {}-{} [{}] segs: {}".format(self._contig_acc,
-                                                           self._lend,
-                                                           self._rend,
-                                                           self._orient,
-                                                           self._exon_segments)
+        text = "Transcript: {} {}-{} [{}] {} {} segs: {}".format(self._contig_acc,
+                                                                 self._lend,
+                                                                 self._rend,
+                                                                 self._orient,
+                                                                 self.get_transcript_id(),
+                                                                 self.get_gene_id(),
+                                                                 self._exon_segments)
 
         if self._meta is not None:
             text += "\t" + str(self._meta)
@@ -129,6 +139,20 @@ class Transcript (GenomeFeature):
         else:
             self.read_names.append(read_names)
         
+
+    def set_read_counts_assigned(self, read_counts):
+        self._read_counts_assigned = read_counts
+
+    def get_read_counts_assigned(self):
+        assert self._read_counts_assigned is not None, "Error, read counts assigned is None - maybe quant not run yet?"
+        return self._read_counts_assigned
+
+    def set_isoform_fraction(self, frac):
+        self._isoform_fraction = frac
+
+    def get_isoform_fraction(self):
+        assert self._isoform_fraction is not None, "Error, isoform fraction is None - maybe quant not run yet?"
+        return self._isoform_fraction
     
 
     def to_GTF_format(self):
@@ -148,7 +172,7 @@ class Transcript (GenomeFeature):
                               ".",
                               self._orient,
                               ".",
-                              "gene_id \"{}\"; transcript_id \"{}\";".format(self._gene_id, self._id)])
+                              "gene_id \"{}\"; transcript_id \"{}\";".format(self.get_gene_id(), self.get_transcript_id())])
 
         if self._meta:
             for meta_key in sorted(self._meta.keys()):
@@ -165,7 +189,7 @@ class Transcript (GenomeFeature):
                                    ".",
                                    self._orient,
                                    ".",
-                                   "gene_id \"{}\"; transcript_id \"{}\";".format(self._gene_id, self._id)]) + "\n"
+                                   "gene_id \"{}\"; transcript_id \"{}\";".format(self.get_gene_id(), self.get_transcript_id())]) + "\n"
 
 
         if self._scored_path_obj:
