@@ -111,6 +111,12 @@ class Quantify:
             ## assign reads to transcripts
             gene_isoforms = self._gene_id_to_transcript_objs[top_gene]
             transcripts_assigned = self._assign_path_to_transcript(splice_graph, mp, gene_isoforms, fraction_read_align_overlap)
+
+            if transcripts_assigned is None:
+                # try again with TSS and PolyA trimmed off
+                transcripts_assigned = self._assign_path_to_transcript(splice_graph, mp, gene_isoforms, fraction_read_align_overlap, trim_TSS_PolyA = True)
+
+
             if transcripts_assigned is None:
                 logger.debug("mp_count_pair {} maps to gene but no isoform(transcript)".format(mp_count_pair))
             else:
@@ -159,14 +165,18 @@ class Quantify:
         
 
         
-    def _assign_path_to_transcript(self, splice_graph, mp, transcripts, fraction_read_align_overlap):
+    def _assign_path_to_transcript(self, splice_graph, mp, transcripts, fraction_read_align_overlap, trim_TSS_polyA = False):
         
         assert type(mp) == MultiPath.MultiPath
         assert type(transcripts) == set, "Error, type(transcripts) is {} not set ".format(type(transcripts))
         assert type(list(transcripts)[0]) == Transcript.Transcript
         assert fraction_read_align_overlap >= 0 and fraction_read_align_overlap <= 1.0, "Error, fraction_read_align_overlap must be between 0 and 1.0"
+
+        contig_strand = splice_graph.get_contig_strand()
         
         read_sp = mp.get_simple_path()
+        if trim_TSS_polyA:
+            read_sp = SPU.trim_TSS_and_PolyA(read_sp, contig_strand)
 
         # store read name to mp for later debugging.
         for read_name in mp.get_read_names():
@@ -177,8 +187,13 @@ class Quantify:
         
         for transcript in transcripts:
             transcript_sp = transcript._simplepath
+                        
             assert transcript_sp is not None
 
+            if trim_TSS_polyA:
+                transcript_sp = SPU.trim_TSS_and_PolyA(transcript_sp, contig_strand)
+                
+            
             if (SPU.are_overlapping_and_compatible_NO_gaps_in_overlap(transcript_sp, read_sp)
                 and
                 SPU.fraction_read_overlap(splice_graph, read_sp, transcript_sp) >= fraction_read_align_overlap):
