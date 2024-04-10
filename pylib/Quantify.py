@@ -444,12 +444,21 @@ class Quantify:
             transcript_prune_as_degradation = set()
             for i in range(len(transcript_list)-1):
                 transcript_i = transcript_list[i]
+
+                if transcript_i in transcript_prune_as_degradation:
+                    continue
+
+                
                 transcript_i_simple_path = transcript_i.get_simple_path()
                 i_path_trimmed, i_TSS_id, i_polyA_id = SPU.trim_TSS_and_PolyA(transcript_i_simple_path, contig_strand)
                 transcript_i_read_counts_assigned = transcript_i.get_read_counts_assigned()
                 
                 for j in range(i+1, len(transcript_list)):
                     transcript_j = transcript_list[j]
+
+                    if transcript_j in transcript_prune_as_degradation:
+                        continue
+                    
                     transcript_j_simple_path = transcript_j.get_simple_path()
                     j_path_trimmed, j_TSS_id, j_polyA_id = SPU.trim_TSS_and_PolyA(transcript_j_simple_path, contig_strand)
                     transcript_j_read_counts_assigned = transcript_j.get_read_counts_assigned()
@@ -484,6 +493,7 @@ class Quantify:
                         if subsume_J:
                             logger.debug("Pruning {} as likely degradation product of {}".format(transcript_j, transcript_i))
                             transcript_prune_as_degradation.add(transcript_j)
+                            transcript_i.add_read_names(transcript_j.get_read_names())
 
             # retain the ones not pruned
             for transcript in transcript_set:
