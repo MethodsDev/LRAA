@@ -276,7 +276,10 @@ class GTF_contig_to_transcripts:
             
             transcript_obj = Transcript(contig, coords_list, strand)
             transcript_obj.add_meta(transcript_meta)
-
+            
+            transcript_obj.set_gene_id(gene_id)
+            transcript_obj.set_transcript_id(transcript_id)
+            
             contig_to_transcripts[contig].append(transcript_obj)
 
             
