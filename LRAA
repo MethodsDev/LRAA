@@ -276,7 +276,7 @@ def main():
                 # for quant only, build sg only based on the input gtf and not the alignments in the bam
                 sg.build_splice_graph_for_contig(contig_acc, contig_strand, contig_seq_str,
                                                  bam_file_for_sg,
-                                                 restrict_region_lend, restrict_region_rend, input_transcripts)
+                                                 restrict_region_lend, restrict_region_rend, input_transcripts, QUANT_ONLY)
 
                 if sg.is_empty():
                     logger.info(f"-no splice graph created for contig: {contig_acc}.... skipping.")
@@ -306,7 +306,7 @@ def main():
 
                 sg.build_splice_graph_for_contig(contig_acc, contig_strand, contig_seq_str,
                                                  bam_file_for_sg,
-                                                 restrict_region_lend, restrict_region_rend, input_transcripts)
+                                                 restrict_region_lend, restrict_region_rend, input_transcripts, QUANT_ONLY)
 
                 if sg.is_empty():
                     logger.info(f"-no splice graph created for contig: {contig_acc}.... skipping.")

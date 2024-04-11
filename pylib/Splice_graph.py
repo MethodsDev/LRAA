@@ -131,7 +131,7 @@ class Splice_graph:
     
 
     def build_splice_graph_for_contig(self, contig_acc, contig_strand, contig_seq_str, alignments_bam_file,
-                                      region_lend, region_rend, input_transcripts=None):
+                                      region_lend, region_rend, input_transcripts=None, quant_mode=False):
 
         logger.info("creating splice graph for {} leveraging bam {}".format(contig_acc,
                                                                             alignments_bam_file))
@@ -181,13 +181,14 @@ class Splice_graph:
         ## Refine the splice graph
         ## removes exon segments, not introns, also removes unspliced introns if Splice_graph._remove_unspliced_introns flag is set.
 
-        self._prune_lowly_expressed_intron_overlapping_exon_segments()  
+        if not quant_mode:
+            self._prune_lowly_expressed_intron_overlapping_exon_segments()  
         
         self._merge_neighboring_proximal_unbranched_exon_segments()
         
         # self._prune_exon_spurs_at_introns() ## TODO:// implement this in a data-driven way.
 
-        if Splice_graph._remove_unspliced_introns:
+        if Splice_graph._remove_unspliced_introns and not quant_mode:
             self._prune_unspliced_introns()
         
         self._prune_disconnected_introns()

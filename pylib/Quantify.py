@@ -199,10 +199,13 @@ class Quantify:
             if (SPU.are_overlapping_and_compatible_NO_gaps_in_overlap(transcript_sp, read_sp)
                 and
                 SPU.fraction_read_overlap(splice_graph, read_sp, transcript_sp) >= fraction_read_align_overlap):
-                
+
+                logger.debug("[trim_TSS_polyA={}]  Read {} COMPATIBLE with transcript {}".format(trim_TSS_polyA, read_sp, transcript_sp))
                 #print("Read {} compatible with transcript {}".format(read_sp, transcript_sp))
                 transcripts_compatible_with_read.append(transcript)
-                
+
+            else:
+                logger.debug("[trim_TSS_polyA={}]  Read {} NOT_compatible with transcript {}".format(trim_TSS_polyA, read_sp, transcript_sp))
                         
         return transcripts_compatible_with_read
 
