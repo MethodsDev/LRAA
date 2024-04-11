@@ -9,7 +9,7 @@ from collections import defaultdict
 import PASA_SALRAA_Globals
 from PASA_SALRAA_Globals import SPACER, DEBUG
 import logging
-
+from math import log
 
 logger = logging.getLogger(__name__)
 
@@ -253,8 +253,8 @@ class Quantify:
                 transcript_to_fractional_read_assignment[transcript_id][read_name] = frac_read_assignment
                 
             transcript_to_read_count[transcript_id] = transcript_read_count_total
-            transcript_to_expr_val[transcript_id] = transcript_read_count_total / num_mapped_reads * 1e6
-            logger.debug(f"-assigning transcript {transcript_id} read count: {transcript_read_count_total}")
+            transcript_to_expr_val[transcript_id] = transcript_read_count_total / num_mapped_reads # * 1e6
+            logger.debug(f"-assigning transcript {transcript_id} read count: {transcript_read_count_total} and expr val {transcript_read_count_total}/{num_mapped_reads} = {transcript_to_expr_val[transcript_id]}")
 
             
         ## DEBUGGING
@@ -265,14 +265,33 @@ class Quantify:
             if len(transcripts_read_assigned) > 1:
                 logger.debug("*** Splitting read: {} across {} transcripts: {}".format(read_name, len(transcripts_read_assigned), transcripts_read_assigned))
             
-     
+
+
+
+                
         if run_EM:
+
+            def compute_log_likelihood():
+                # compute log likelihood
+                log_likelihood = 0
+                for transcript_id, reads_to_fracs  in transcript_to_fractional_read_assignment.items():
+                    transcript_expr = transcript_to_expr_val[transcript_id]
+                    for read, frac in reads_to_fracs.items():
+                        log_likelihood += frac * log(transcript_expr)
+
+                return log_likelihood
+            
+
+            ## compute likelihood.
 
             ## go through multiple rounds of EM
 
-            for i in range(1, 100):
+            prev_log_likelihood = compute_log_likelihood()
+            logger.debug("Log likelihood before starting EM: {:.5E}".format(prev_log_likelihood))
+            
+            for EM_round in range(1, 1000):
                 
-                logger.debug("EM round {}".format(i))
+                logger.debug("EM round {}".format(EM_round))
 
                 ## fractionally assign reads based on expr values
                 transcript_to_read_count.clear()
@@ -298,9 +317,22 @@ class Quantify:
                 for transcript in transcripts:
                     transcript_id = transcript.get_transcript_id()
                     transcript_read_count = transcript_to_read_count[transcript_id]
-                    transcript_to_expr_val[transcript_id] = transcript_read_count/num_mapped_reads * 1e6
-            
+                    transcript_to_expr_val[transcript_id] = transcript_read_count/num_mapped_reads # * 1e6
+                    logger.debug(f"-assigning transcript {transcript_id} read count: {transcript_read_count_total} and expr val {transcript_read_count}/{num_mapped_reads} = {transcript_to_expr_val[transcript_id]}")
+                    
 
+                log_likelihood = compute_log_likelihood()
+                    
+                logger.debug("\tlog_likelihood: {:.5E}".format(log_likelihood))
+                if prev_log_likelihood is not None:
+                    delta = log_likelihood - prev_log_likelihood
+                    logger.debug(f"\t\tEM_round[{EM_round}] delta = {delta:.5E}")
+                    if delta < 1e-5:
+                        logger.debug(f"\t\tEM_round[{EM_round}] delta = {delta:.5E} ...  max likelihood reached. Stopping EM.")
+                        break
+                    
+                prev_log_likelihood = log_likelihood
+                
 
         ## assign final read counts to each transcript object.
         gene_to_transcripts = defaultdict(list)
