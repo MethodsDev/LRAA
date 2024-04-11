@@ -378,6 +378,8 @@ class PASA_SALRAA:
                     mp_list = mp.split_multipath_at_spacers()
                     if len(mp_list) > 1:
                         logger.debug("-SKIPPING read path that contains a SPACER: {}".format(mp))
+                        if PASA_SALRAA_Globals.DEBUG:
+                            read_graph_mappings_ofh.write("\t".join([read_name, str(grouped_alignments[read_name]), str(mp_list), "DISCARDED"]) + "\n")
                         continue
 
                 logger.debug("paths_list: {} -> mp: {}".format(paths_list, mp_list))
@@ -582,8 +584,8 @@ class PASA_SALRAA:
         
         for exon_segment in overlapping_segments:
             # check for overlap only  (prev: and not extending beyond feature rend)
-            if (segment[0] < exon_segment._rend and
-                segment[1] > exon_segment._lend):
+            if (segment[0] <= exon_segment._rend and
+                segment[1] >= exon_segment._lend):
                 #and
                 #segment[0] <= exon_segment._lend and
                 #exon_segment._rend <= segment[1]):

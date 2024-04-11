@@ -69,6 +69,8 @@ class Quantify:
 
     def _assign_reads_to_transcripts(self, splice_graph, mp_counter, fraction_read_align_overlap=0.75):
 
+        logger.info("# Assigning reads to transcripts")
+        
         # assign to gene based on majority voting of nodes.
         # TODO:// might want or need this to involve length and/or feature type weighted shared node voting
 

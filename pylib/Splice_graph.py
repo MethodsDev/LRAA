@@ -1253,9 +1253,34 @@ class Splice_graph:
                 half_dist = int(max_dist_between_alt_polyA_sites/2)
                 self._itree_exon_segments[polyAsite_coord-half_dist : polyAsite_coord+half_dist+1] = node
 
+
+        self._validate_itree()
                             
         return
 
+
+    def _validate_itree(self):
+
+        itree = self._itree_exon_segments
+
+        if PASA_SALRAA_Globals.DEBUG:
+            with open("__itree_contents.txt", "wt") as ofh:
+                for interval in itree:
+                    print(str(interval), file=ofh)
+                
+        
+        for node in self._splice_graph:
+            if type(node) != Intron:
+                # ensure we find it when querying the itree
+                lend, rend = node.get_coords()
+
+                overlapping_intervals = itree[lend:rend+1]
+                overlapping_interval_nodes = [i.data for i in overlapping_intervals]
+                if node not in overlapping_interval_nodes:
+                    raise RuntimeError("Error, node {} not found among overlapping intervals in itree: {}".format(node, overlapping_intervals))
+
+        logger.info("itree validates.")
+    
 
     def _is_unspliced_exon_segment_artifact(self, exon, intron):
 
