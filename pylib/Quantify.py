@@ -359,7 +359,7 @@ class Quantify:
             for transcript_of_gene in transcripts_of_gene:
                 transcript_id =  transcript_of_gene.get_transcript_id()
                 transcript_read_count = transcript_of_gene.get_read_counts_assigned()
-                isoform_frac = transcript_read_count / sum_gene_reads
+                isoform_frac = transcript_read_count / sum_gene_reads if sum_gene_reads > 0 else 0
                 logger.debug("\ttranscript_id {} has {} reads = {} isoform fraction of {}".format(
                     transcript_id,
                     transcript_read_count,
