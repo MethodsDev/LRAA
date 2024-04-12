@@ -35,7 +35,7 @@ def main():
     # first separate input bam into strand-specific files
     SS_output_prefix = os.path.basename(input_bam_filename) + ".SS"
 
-    scriptdir = os.path.dirname(__name__)
+    scriptdir = os.path.abspath(os.path.dirname(__file__))
     cmd = " ".join([os.path.join(scriptdir, "separate_bam_by_strand.py"),
                     "--bam {}".format(input_bam_filename),
                     "--output_prefix {}".format(SS_output_prefix)])
@@ -44,7 +44,7 @@ def main():
     pipeliner.add_commands([Command(cmd, "sep_by_strand.ok")])
 
     ## run normalizations
-    bamsifter_prog = os.path.join(os.path.dirname(__name__), "../plugins/bamsifter/bamsifter")
+    bamsifter_prog = os.path.join(os.path.abspath(os.path.dirname(__file__)), "../plugins/bamsifter/bamsifter")
     SS_bam_files = [SS_output_prefix + x for x in (".+.bam", ".-.bam") ]
 
     SS_norm_bam_files = list()
@@ -66,12 +66,18 @@ def main():
 
     # merge the norm SS bam filenames into the final output file
 
-    cmd = f"samtools merge -o {output_bam_filename} " + " ".join(SS_norm_bam_files)
+    cmd = f"samtools merge {output_bam_filename} " + " ".join(SS_norm_bam_files)
     pipeliner.add_commands([Command(cmd, "SS_merge.ok")])
 
 
+    cmd = f"samtools index {output_bam_filename}"
+    pipeliner.add_commands([Command(cmd, "index_merged.ok")])
+
     pipeliner.run()
 
+    logger.info("Done.  See SS-normalized bam: {}".format(output_bam_filename))
+
+    sys.exit(0)
 
     
 if __name__=='__main__':

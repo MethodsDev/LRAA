@@ -153,23 +153,20 @@ def main():
     
     if (not QUANT_ONLY) and (not NO_NORM) and (args.normalize_max_cov_level > 0):
 
-        bamsifter_prog = os.path.sep.join([os.path.dirname(os.path.realpath(__file__)), "plugins/bamsifter/bamsifter"])
+        SS_bamsifter_prog = os.path.sep.join([os.path.dirname(os.path.realpath(__file__)), "util/normalize_bam_by_strand.py"])
 
         norm_bam_filename = os.path.basename(bam_filename) + f".norm_{args.normalize_max_cov_level}.bam"
         
-        cmd = " ".join([bamsifter_prog,
-                        f" -c {args.normalize_max_cov_level} ",
-                        f" -o {norm_bam_filename} ",
-                        bam_filename])
-                        
+        cmd = " ".join([SS_bamsifter_prog,
+                        f" --input_bam {bam_filename}",
+                        f" --normalize_max_cov_level {args.normalize_max_cov_level} ",
+                        f" --output_bam {norm_bam_filename} " ] )
+                                
         norm_bam_checkpoint = norm_bam_filename + ".ok"
         if not os.path.exists(norm_bam_checkpoint):
             logger.info("generating normalized bam file")
             logger.info(cmd)
             subprocess.check_call(cmd, shell=True)
-
-            samtools_index_cmd = f"samtools index {norm_bam_filename}" 
-            subprocess.check_call(samtools_index_cmd, shell=True)
 
             subprocess.check_call(f"touch {norm_bam_checkpoint}", shell=True)
 
