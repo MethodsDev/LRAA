@@ -337,6 +337,7 @@ class Splice_graph:
         
         for pretty_alignment in pretty_alignments:
 
+            read_name = pretty_alignment.get_read_name()
             align_lend, align_rend = pretty_alignment.get_alignment_span()
 
             TSS_pos, polyA_pos = (align_lend, align_rend) if contig_strand == '+' else (align_rend, align_lend)
@@ -345,13 +346,16 @@ class Splice_graph:
             
             alignment_segments = pretty_alignment.get_pretty_alignment_segments()
             #print("Pretty alignment segments: " + str(alignment_segments))
-
+            logger.debug("Pretty alignment for read {} : {}".format(read_name, str(alignment_segments)))
+            
+            
             read_type = pretty_alignment.get_read_type()
             
             if len(alignment_segments) > 1:
                 # ensure proper consensus splice sites.
                 introns_list = self._get_introns_matching_splicing_consensus(alignment_segments)
                 #print("introns list: " + str(introns_list))
+                logger.debug("\tread {} : introns found: {}".format(read_name, str(introns_list)))
                 for intron in introns_list:
                     intron_counter[intron] += 1
                     intron_to_read_types[intron].add(read_type)
@@ -385,13 +389,18 @@ class Splice_graph:
                 min_support = min(splice_support_left, splice_support_right)
                 max_support = max(splice_support_left, splice_support_right)
 
-                if min_support/max_support >= Splice_graph._min_alt_splice_freq:
+                frac_intron_support = min_support/max_support
+                intron_coords_key = "{}:{}".format(intron_lend, intron_rend)
+                if frac_intron_support >= Splice_graph._min_alt_splice_freq:
                     intron_obj = Intron(self._contig_acc, intron_lend, intron_rend, intron_orient, count)
                     intron_obj.add_read_types(list(read_types))
                     
-                    intron_coords_key = "{}:{}".format(intron_lend, intron_rend)
+                    logger.debug("Adding intron {} with frac_intron_support {}".format(intron_coords_key, frac_intron_support))
                     self._intron_objs[intron_coords_key] = intron_obj
-            
+                else:
+                    logger.debug("Excluding intron {} with insufficient frac_intron_support {} (below threshold Splice_graph._min_alt_splice_freq {})".format(intron_coords_key, frac_intron_support, Splice_graph._min_alt_splice_freq))
+
+
         
         # Define TSS and PolyA sites
         if PASA_SALRAA_Globals.config['infer_TSS']:

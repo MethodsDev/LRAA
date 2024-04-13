@@ -29,6 +29,9 @@ class Pretty_alignment:
     def __repr__(self):
         return str(self._pretty_alignment_segments)
 
+    def get_read_name(self):
+        return self._pysam_alignment.query_name
+    
         
     def get_pysam_alignment(self):
         return self._pysam_alignment

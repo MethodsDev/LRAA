@@ -12,8 +12,9 @@ config = {
 
 
     # splice graph construction criteria
-
-
+    'min_alt_splice_freq' : 0.01,
+    'min_alt_unspliced_freq' : 0.05,
+    
     ## TSS config
     'infer_TSS' : True, # include TSS feature in read path assignments
     'max_dist_between_alt_TSS_sites' : 5,
@@ -35,8 +36,10 @@ config = {
     # transcript criteria
     'min_transcript_length' : 200,
     'min_isoform_fraction' : 0.01,
-
+    
+    
     # assembly
+    'normalize_max_cov_level' : 1000,
     'restrict_asm_to_collapse' : True
     
     }
