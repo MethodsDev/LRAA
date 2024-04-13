@@ -591,6 +591,8 @@ class PASA_SALRAA:
         overlapping_segments = self._splice_graph.get_overlapping_exon_segments(segment[0], segment[1])
         overlapping_segments = sorted(overlapping_segments, key=lambda x: x._lend)
         
+        logger.debug("{} overlaps segments: {}".format(segment, overlapping_segments))
+        
         for exon_segment in overlapping_segments:
             # check for overlap only  (prev: and not extending beyond feature rend)
             if (segment[0] <= exon_segment._rend and
@@ -601,6 +603,8 @@ class PASA_SALRAA:
 
                 path.append(exon_segment.get_id())
 
+        logger.debug("\t{} restricted to overlapping segments: {}".format(segment, overlapping_segments))
+                     
         return path
 
 

@@ -124,8 +124,12 @@ class Splice_graph:
 
         overlapping_exon_segments = list()
 
-        for overlapping_interval in self._itree_exon_segments[range_lend:range_rend]:
-            overlapping_exon_segments.append(overlapping_interval.data)
+        for overlapping_interval in self._itree_exon_segments[range_lend:range_rend+1]:
+
+            node = overlapping_interval.data
+            lend, rend = node.get_coords()
+            if lend <= range_rend and rend >= range_lend:
+                overlapping_exon_segments.append(overlapping_interval.data)
 
         return overlapping_exon_segments
     
@@ -503,7 +507,7 @@ class Splice_graph:
             sg.add_node(TSS_obj)
             
             TSS_coord, _ = TSS_obj.get_coords()
-            exon_intervals = self.get_overlapping_exon_segments(TSS_coord, TSS_coord+1)
+            exon_intervals = self.get_overlapping_exon_segments(TSS_coord, TSS_coord)
             logger.debug("TSS {} overlaps {}".format(TSS_obj, exon_intervals))
             assert len(exon_intervals) <= 1, "Error, TSS {} overlaps multiple intervals: {}".format(TSS_obj, exon_intervals)
 
@@ -580,7 +584,7 @@ class Splice_graph:
             sg.add_node(polyA_obj)
             
             polyA_coord, _ = polyA_obj.get_coords()
-            exon_intervals = self.get_overlapping_exon_segments(polyA_coord, polyA_coord+1)
+            exon_intervals = self.get_overlapping_exon_segments(polyA_coord, polyA_coord)
             logger.debug("PolyA {} overlaps {}".format(polyA_obj, exon_intervals))
             assert len(exon_intervals) <= 1, "Error, PolyA {} overlaps multiple exon intervals: {}".format(polyA_obj, exon_intervals)
 
