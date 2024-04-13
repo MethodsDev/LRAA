@@ -347,15 +347,30 @@ class MultiPathGraph:
 
         ofh = open(output_filename, 'a')
 
+        ofh2 = open(output_filename + ".tsv", 'a') # tabulated output
+        
         mpgn_list = self.get_ordered_nodes()
         for mpgn in mpgn_list:
             ofh.write(str(mpgn) + "\n")
+            all_mpgn_read_names = mpgn.get_read_names()
+            all_contained_read_names = set()
+            
             for containment in mpgn.get_containments():
                 ofh.write("\t" + str(containment) + "\n")
+                containment_read_names = containment.get_read_names()
+                all_contained_read_names.update(containment_read_names)
             ofh.write("\n")
 
+            read_names_not_from_containments = all_mpgn_read_names - all_contained_read_names
+            mpgn_id = mpgn.get_id()
+            for read_name in read_names_not_from_containments:
+                print("\t".join([mpgn_id, "primary", read_name]), file=ofh2)
+            for read_name in all_contained_read_names:
+                print("\t".join([mpgn_id, "contained", read_name]), file=ofh2)
+            
         ofh.close()
-
+        ofh2.close()
+        
         return
     
 

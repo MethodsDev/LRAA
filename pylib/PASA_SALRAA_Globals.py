@@ -14,6 +14,7 @@ config = {
     # splice graph construction criteria
     'min_alt_splice_freq' : 0.01,
     'min_alt_unspliced_freq' : 0.05,
+    'min_feature_frac_overlap' : 0.50,
     
     ## TSS config
     'infer_TSS' : True, # include TSS feature in read path assignments

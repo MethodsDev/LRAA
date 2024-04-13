@@ -533,7 +533,7 @@ class PASA_SALRAA:
 
     def _map_segment_to_graph_SINGLE(self, segment):
 
-        overlapping_segments = self._splice_graph.get_overlapping_exon_segments(segment[0], segment[1])
+        overlapping_segments = self._splice_graph.get_overlapping_exon_segments(segment[0], segment[1], min_frac_feature_overlap=PASA_SALRAA_Globals.config['min_feature_frac_overlap'])
 
         overlapping_segments = sorted(overlapping_segments, key=lambda x: x._lend)
 
@@ -548,7 +548,7 @@ class PASA_SALRAA:
 
         path = list()
 
-        overlapping_segments = self._splice_graph.get_overlapping_exon_segments(segment[0], segment[1])
+        overlapping_segments = self._splice_graph.get_overlapping_exon_segments(segment[0], segment[1], min_frac_feature_overlap=PASA_SALRAA_Globals.config['min_feature_frac_overlap'])
         overlapping_segments = sorted(overlapping_segments, key=lambda x: x._lend)
         
         for exon_segment in overlapping_segments:
@@ -567,7 +567,7 @@ class PASA_SALRAA:
 
         path = list()
 
-        overlapping_segments = self._splice_graph.get_overlapping_exon_segments(segment[0], segment[1])
+        overlapping_segments = self._splice_graph.get_overlapping_exon_segments(segment[0], segment[1], min_frac_feature_overlap=PASA_SALRAA_Globals.config['min_feature_frac_overlap'])
         overlapping_segments = sorted(overlapping_segments, key=lambda x: x._lend)
 
                 
@@ -588,7 +588,7 @@ class PASA_SALRAA:
         
         path = list()
 
-        overlapping_segments = self._splice_graph.get_overlapping_exon_segments(segment[0], segment[1])
+        overlapping_segments = self._splice_graph.get_overlapping_exon_segments(segment[0], segment[1], min_frac_feature_overlap=PASA_SALRAA_Globals.config['min_feature_frac_overlap'])
         overlapping_segments = sorted(overlapping_segments, key=lambda x: x._lend)
         
         logger.debug("{} overlaps segments: {}".format(segment, overlapping_segments))

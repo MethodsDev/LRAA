@@ -120,7 +120,7 @@ class Splice_graph:
         return list(self._splice_graph.predecessors(node))
             
     
-    def get_overlapping_exon_segments(self, range_lend, range_rend):
+    def get_overlapping_exon_segments(self, range_lend, range_rend, min_frac_feature_overlap = 0.0):
 
         overlapping_exon_segments = list()
 
@@ -128,9 +128,24 @@ class Splice_graph:
 
             node = overlapping_interval.data
             lend, rend = node.get_coords()
-            if lend <= range_rend and rend >= range_lend:
-                overlapping_exon_segments.append(overlapping_interval.data)
+            feature_len = rend - lend + 1
 
+            if lend <= range_rend and rend >= range_lend:
+                # require substantial feature overlap
+
+                if min_frac_feature_overlap > 0:
+                    coords = sorted([lend, rend, range_lend, range_rend])
+                    overlap_len = coords[2] - coords[1] + 1
+                    frac_feature_len_overlap = overlap_len / feature_len
+
+                    logger.debug("\t\tRange {}-{} overlaps {}, overlap_len = {}, frac_overlap = {}".format(range_lend, range_rend, node, overlap_len, frac_feature_len_overlap))
+                
+                    if frac_feature_len_overlap >= min_frac_feature_overlap:  #PASA_SALRAA_Globals.config['min_feature_frac_overlap']:
+                        overlapping_exon_segments.append(node)
+
+                else:
+                    overlapping_exon_segments.append(node)
+                        
         return overlapping_exon_segments
     
 
@@ -507,7 +522,7 @@ class Splice_graph:
             sg.add_node(TSS_obj)
             
             TSS_coord, _ = TSS_obj.get_coords()
-            exon_intervals = self.get_overlapping_exon_segments(TSS_coord, TSS_coord)
+            exon_intervals = self.get_overlapping_exon_segments(TSS_coord, TSS_coord, min_frac_feature_overlap=0.0)
             logger.debug("TSS {} overlaps {}".format(TSS_obj, exon_intervals))
             assert len(exon_intervals) <= 1, "Error, TSS {} overlaps multiple intervals: {}".format(TSS_obj, exon_intervals)
 
@@ -584,7 +599,7 @@ class Splice_graph:
             sg.add_node(polyA_obj)
             
             polyA_coord, _ = polyA_obj.get_coords()
-            exon_intervals = self.get_overlapping_exon_segments(polyA_coord, polyA_coord)
+            exon_intervals = self.get_overlapping_exon_segments(polyA_coord, polyA_coord, min_frac_feature_overlap=0.0)
             logger.debug("PolyA {} overlaps {}".format(polyA_obj, exon_intervals))
             assert len(exon_intervals) <= 1, "Error, PolyA {} overlaps multiple exon intervals: {}".format(polyA_obj, exon_intervals)
 
