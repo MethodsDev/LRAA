@@ -207,10 +207,10 @@ class Splice_graph:
         
         self._finalize_splice_graph() # do again after TSS and PolyA integration
 
-               
-        if PASA_SALRAA_Globals.DEBUG:
-            self.write_intron_exon_splice_graph_bed_files("__final_graph", pad=0)
-            self.describe_graph("__final.graph")
+        
+        #if PASA_SALRAA_Globals.DEBUG:
+        #    self.write_intron_exon_splice_graph_bed_files("__final_graph", pad=0)
+        #    self.describe_graph("__final.graph")
 
         #print(self._itree_exon_segments )
 

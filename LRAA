@@ -282,12 +282,17 @@ def main():
                 if PASA_SALRAA_Globals.DEBUG:
                     sg.write_intron_exon_splice_graph_bed_files("{}/__prereconstruct.{}.{}.pad1".format(prereconstruct_info_dir, contig_acc, contig_strand), pad=1)
 
-
+                
 
                 pasa_salraa_obj = PASA_SALRAA(sg, CPU)
                 logger.debug("\n//SECTION QUANT: Assigning input transcript paths in graph")
                 pasa_salraa_obj.assign_transcripts_paths_in_graph(input_transcripts)
 
+                if PASA_SALRAA_Globals.DEBUG:
+                    report_transcript_paths_in_graph(input_transcripts)
+
+                    
+                
                 logger.debug("\n//SECTION QUANT: Assigning reads to paths in graph.")
                 mp_counter = pasa_salraa_obj._populate_read_multi_paths(contig_acc, contig_strand, contig_seq_str, bam_file_for_quant, allow_spacers)
 
@@ -317,6 +322,10 @@ def main():
                 logger.info(f"-building splice graph for {contig_acc}")
                 pasa_salraa_obj.build_multipath_graph(contig_acc, contig_strand, contig_seq_str, bam_file_for_sg, allow_spacers)
 
+                if input_transcripts and PASA_SALRAA_Globals.DEBUG:
+                    pasa_salraa_obj.assign_transcripts_paths_in_graph(input_transcripts)
+                    report_transcript_paths_in_graph(input_transcripts)
+                
                 logger.info(f"-begin reconstructing isoforms for {contig_acc}")
                 transcripts = pasa_salraa_obj.reconstruct_isoforms(single_best_only)
 
@@ -365,6 +374,18 @@ def get_genome_contigs_listing(genome_fasta_filename):
             contigs_list.append(contig_acc)
 
     return contigs_list
+
+
+def report_transcript_paths_in_graph(input_transcripts):
+
+    with open("__input_transcripts_path_in_graph", "at") as ofh:
+        for transcript in input_transcripts:
+            sp = transcript.get_simple_path()
+            exon_segments = transcript.get_exon_segments()
+            transcript_id = transcript.get_transcript_id()
+            print("\t".join([transcript_id, str(exon_segments), str(sp)]), file=ofh)
+
+    return
     
             
 if __name__ == '__main__':

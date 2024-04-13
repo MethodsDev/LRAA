@@ -370,6 +370,15 @@ class PASA_SALRAA:
                     assert path[-1] != SPACER, "path[-1] is SPACER, not allowed"
                     paths_list.append(path)
 
+
+            
+                    
+            ## not allowing spacers in paths
+            if paths_list and SPACER in paths_list[0]:
+                if PASA_SALRAA_Globals.DEBUG:
+                    read_graph_mappings_ofh.write("\t".join([read_name, str(grouped_alignments[read_name]), str(paths_list), "DISCARDED-SPACER"]) + "\n")
+                continue
+                
             mp_list = None
             if paths_list:
                 mp = MultiPath(self._splice_graph, paths_list, read_types = { read_type, }, read_names = { read_name, } )
@@ -503,8 +512,8 @@ class PASA_SALRAA:
             
         path = Simple_path_utils.add_spacers_between_disconnected_nodes(self.get_splice_graph(), path)
         
-        if SPACER in path:
-            path = self._try_easy_fill_spacers(path)
+        #if SPACER in path:
+        #    path = self._try_easy_fill_spacers(path)
             
             
         return path
