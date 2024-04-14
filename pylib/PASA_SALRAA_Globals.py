@@ -40,7 +40,7 @@ config = {
     
     
     # assembly
-    'normalize_max_cov_level' : 1000,
+    'normalize_max_cov_level' : 10000,
     'restrict_asm_to_collapse' : True
     
     }
