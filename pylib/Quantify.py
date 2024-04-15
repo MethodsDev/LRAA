@@ -53,7 +53,7 @@ class Quantify:
         for transcript in transcripts:
             
             simplepath = transcript._simplepath
-            assert simplepath is not None, "Error, simplepath not set for transcript obj"
+            assert simplepath is not None, "Error, simplepath not set for transcript obj: {}".format(transcript)
 
             transcript_id = transcript.get_transcript_id()
             gene_id = transcript.get_gene_id()
@@ -281,8 +281,9 @@ class Quantify:
                 log_likelihood = 0
                 for transcript_id, reads_to_fracs  in transcript_to_fractional_read_assignment.items():
                     transcript_expr = transcript_to_expr_val[transcript_id]
-                    for read, frac in reads_to_fracs.items():
-                        log_likelihood += frac * log(transcript_expr)
+                    if transcript_expr > 0:
+                        for read, frac in reads_to_fracs.items():
+                            log_likelihood += frac * log(transcript_expr)
 
                 return log_likelihood
             

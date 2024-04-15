@@ -81,6 +81,10 @@ class Transcript (GenomeFeature):
         assert self._simplepath is not None
         return self._simplepath
         
+
+    def set_simple_path(self, simple_path):
+        self._simplepath = simple_path
+
     
     def __repr__(self):
 
