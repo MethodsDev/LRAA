@@ -53,7 +53,12 @@ class Quantify:
         for transcript in transcripts:
             
             simplepath = transcript._simplepath
-            assert simplepath is not None, "Error, simplepath not set for transcript obj: {}".format(transcript)
+
+            if simplepath is None:
+                logger.warn("simplepath is not avaialble for transcript: {}".format(transcript))
+                continue
+            
+            #assert simplepath is not None, "Error, simplepath not set for transcript obj: {}".format(transcript)
 
             transcript_id = transcript.get_transcript_id()
             gene_id = transcript.get_gene_id()

@@ -765,7 +765,7 @@ def refine_PolyA_simple_path(splice_graph, simple_path):
         if re.match("POLYA:", nodes_with_coords_list[i][0]):
             nodes_with_coords_list.pop(i)
 
-    print(nodes_with_coords_list)
+    #print(nodes_with_coords_list)
             
     # regenerate the simple path
     simple_path = [ x[0] for x in nodes_with_coords_list]
