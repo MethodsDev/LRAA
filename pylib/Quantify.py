@@ -263,7 +263,7 @@ class Quantify:
                 transcript_to_fractional_read_assignment[transcript_id][read_name] = frac_read_assignment
                 
             transcript_to_read_count[transcript_id] = transcript_read_count_total
-            transcript_to_expr_val[transcript_id] = transcript_read_count_total / num_mapped_reads # * 1e6
+            transcript_to_expr_val[transcript_id] = transcript_read_count_total / num_mapped_reads if num_mapped_reads > 0 else 0 # * 1e6
             logger.debug(f"-assigning transcript {transcript_id} read count: {transcript_read_count_total} and expr val {transcript_read_count_total}/{num_mapped_reads} = {transcript_to_expr_val[transcript_id]}")
 
             
@@ -328,7 +328,7 @@ class Quantify:
                 for transcript in transcripts:
                     transcript_id = transcript.get_transcript_id()
                     transcript_read_count = transcript_to_read_count[transcript_id]
-                    transcript_to_expr_val[transcript_id] = transcript_read_count/num_mapped_reads # * 1e6
+                    transcript_to_expr_val[transcript_id] = transcript_read_count/num_mapped_reads if num_mapped_reads > 0 else 0 # * 1e6
                     logger.debug(f"-assigning transcript {transcript_id} read count: {transcript_read_count_total} and expr val {transcript_read_count}/{num_mapped_reads} = {transcript_to_expr_val[transcript_id]}")
                     
 

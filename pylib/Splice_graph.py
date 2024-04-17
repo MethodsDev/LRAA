@@ -424,6 +424,9 @@ class Splice_graph:
         # Define TSS and PolyA sites
         if PASA_SALRAA_Globals.config['infer_TSS']:
 
+            if PASA_SALRAA_Globals.DEBUG:
+                write_pos_counter_info("__prelim_TSS_raw_counts.tsv", polyA_position_counter, contig_acc, contig_strand)
+            
             TSS_grouped_positions = aggregate_sites_within_window(TSS_position_counter,
                                                                   PASA_SALRAA_Globals.config['max_dist_between_alt_TSS_sites'],
                                                                   PASA_SALRAA_Globals.config['min_alignments_define_TSS_site'])
@@ -437,6 +440,9 @@ class Splice_graph:
                 
         if PASA_SALRAA_Globals.config['infer_PolyA']:
 
+            if PASA_SALRAA_Globals.DEBUG:
+                write_pos_counter_info("__prelim_polyA_raw_counts.tsv", polyA_position_counter, contig_acc, contig_strand)
+            
             PolyA_grouped_positions = aggregate_sites_within_window(polyA_position_counter,
                                                                     PASA_SALRAA_Globals.config['max_dist_between_alt_polyA_sites'],
                                                                     PASA_SALRAA_Globals.config['min_alignments_define_polyA_site'])
@@ -1531,8 +1537,8 @@ def aggregate_sites_within_window(pos_counter, max_distance_between_aggregated_s
 
     # now capture the peaks
     peak_sites = list()
-    agg_count_sorted_position_count_structs = sorted(position_count_structs, key=lambda x: x['aggregated_count'], reverse=True)
-
+    agg_count_sorted_position_count_structs = sorted(position_count_structs, key=lambda x: (x['count'], x['aggregated_count']), reverse=True)
+    
     ## reset aggregated counts
     for i_struct in agg_count_sorted_position_count_structs:
         if i_struct['selected']:
@@ -1580,6 +1586,18 @@ def append_log_file(filename, genome_features_list):
             print(feature.get_bed_row(), file=ofh)
 
 
+
+def write_pos_counter_info(filename, position_counter, contig_acc, contig_strand):
+
+    position_counts = list(position_counter.items())
+    position_counts = sorted(position_counts, key=lambda x: x[0])
+
+    with open(filename, "at") as ofh:
+        for position, count in position_counts:
+            print("\t".join([contig_acc, str(position), contig_strand, str(count)]), file=ofh)
+
+    return
+            
             
 #############
 ## unit tests
