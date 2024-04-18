@@ -288,7 +288,13 @@ class MultiPath:
 
 
     def __repr__(self):
-        return(str(self._simple_path) + " rtypes:" + str(self._read_types) + " rnames: " + str(self._read_names))
+
+        if len(self._read_names) > 10:
+            read_names_show = str(list(self._read_names)[0:10]) + "....{} num reads".format(len(self._read_names))
+        else:
+            read_names_show = str(self._read_names)
+        
+        return(str(self._simple_path) + " rtypes:" + str(self._read_types) + " rnames: " + read_names_show)
     
 
     

@@ -121,7 +121,7 @@ class Quantify:
 
             if transcripts_assigned is None:
                 # try again with TSS and PolyA trimmed off
-                transcripts_assigned = self._assign_path_to_transcript(splice_graph, mp, gene_isoforms, fraction_read_align_overlap, trim_TSS_PolyA = True)
+                transcripts_assigned = self._assign_path_to_transcript(splice_graph, mp, gene_isoforms, fraction_read_align_overlap, trim_TSS_polyA = True)
 
 
             if transcripts_assigned is None:
@@ -183,7 +183,7 @@ class Quantify:
         
         read_sp = mp.get_simple_path()
         if trim_TSS_polyA:
-            read_sp = SPU.trim_TSS_and_PolyA(read_sp, contig_strand)
+            read_sp, read_TSS_id, read_polyA_id = SPU.trim_TSS_and_PolyA(read_sp, contig_strand)
 
         # store read name to mp for later debugging.
         for read_name in mp.get_read_names():
@@ -198,7 +198,7 @@ class Quantify:
             assert transcript_sp is not None
 
             if trim_TSS_polyA:
-                transcript_sp = SPU.trim_TSS_and_PolyA(transcript_sp, contig_strand)
+                transcript_sp, transcript_TSS_id, transcript_polyA_id = SPU.trim_TSS_and_PolyA(transcript_sp, contig_strand)
                 
             
             if (SPU.are_overlapping_and_compatible_NO_gaps_in_overlap(transcript_sp, read_sp)
@@ -212,9 +212,13 @@ class Quantify:
             else:
                 logger.debug("[trim_TSS_polyA={}]  Read {} NOT_compatible with transcript {}".format(trim_TSS_polyA, read_sp, transcript_sp))
                         
-        return transcripts_compatible_with_read
 
+        if len(transcripts_compatible_with_read) == 0:
+            return None
+        else:
+            return transcripts_compatible_with_read
 
+        
 
     def _estimate_isoform_read_support(self, transcripts, run_EM):
 
