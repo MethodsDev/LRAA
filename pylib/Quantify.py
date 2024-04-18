@@ -134,6 +134,12 @@ class Quantify:
                 num_paths_assigned += 1
                 num_read_counts_assigned += count
 
+        if num_paths_total == 0:
+            num_paths_total = 1e-5 # make nonzero to avoid div-by-zero below
+
+        if num_read_counts_total == 0:
+            num_read_counts_total = 1e-5 # ditto above
+            
         ## audit summary
         audit_txt = "\n".join(
             [
