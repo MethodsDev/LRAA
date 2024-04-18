@@ -21,14 +21,14 @@ config = {
     'max_dist_between_alt_TSS_sites' : 5,
     'min_alignments_define_TSS_site' : 3,
     'max_frac_compatible_expression' : 0.5, # if 2 transcripts (A,B) are compatible and A contains B, and B < this fraction expression, B excluded as likely degradation product
-
+    'max_frac_alt_TSS_from_degradation' : 0.20,
     
     ## polyA site config
     'infer_PolyA' : True, # include PolyA site feature in read path assignments
     'max_dist_between_alt_polyA_sites' : 50,
     'min_alignments_define_polyA_site' : 3,
     
-    'max_frac_alt_TSS_from_degradation' : 0.80,
+
     
     # misc settings
     'min_path_score' : 1,

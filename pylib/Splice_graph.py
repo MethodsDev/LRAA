@@ -246,6 +246,7 @@ class Splice_graph:
                     connected_component = self._eliminate_low_support_PolyA(connected_component)
 
             # revise again
+            self._merge_neighboring_proximal_unbranched_exon_segments()
             self._finalize_splice_graph() # do again after TSS and PolyA integration
             connected_components = list(nx.connected_components(self._splice_graph.to_undirected()))
             
@@ -294,6 +295,9 @@ class Splice_graph:
                 intron_objs.append(node)
             elif type(node) == Exon:
                 exon_segment_objs.append(node)
+            elif type(node) in (TSS, PolyAsite):
+                pass
+                
             else:
                 raise RuntimeError("Error, not identifying node: {} as Exon or Intron type - instead {} ".format(node, type(node)))
 
@@ -1110,29 +1114,8 @@ class Splice_graph:
         nodes = sorted(nodes, key=lambda x: x._lend)
 
         for node in nodes:
-            node_descr = ""
-            preds = list(self._splice_graph.predecessors(node))
-            if preds:
-                pred_strs = list()
-                for pred in preds:
-                    #print(pred)
-                    pred_strs.append(str(pred))
-                node_descr += ">;<".join(pred_strs)
-            else:
-                node_descr += "."
 
-            node_descr += "\t<" + str(node) + ">\t"
-
-            succs = list(self._splice_graph.successors(node))
-            if succs:
-                succs_strs = list()
-                for succ in succs:
-                    succs_strs.append(str(succ))
-                node_descr += ">;<".join(succs_strs)
-            else:
-                node_descr += "."
-
-
+            node_descr = self.describe_node(node)
             ofh.write(node_descr + "\n")
 
 
@@ -1141,16 +1124,131 @@ class Splice_graph:
 
         return
 
+
+    def describe_node(self, node):
+        
+        node_descr = ""
+        preds = list(self._splice_graph.predecessors(node))
+        if preds:
+            pred_strs = list()
+            for pred in preds:
+                #print(pred)
+                pred_strs.append(str(pred))
+            node_descr += ">;<".join(pred_strs)
+        else:
+            node_descr += "."
+
+        node_descr += "\t<" + str(node) + ">\t"
+
+        succs = list(self._splice_graph.successors(node))
+        if succs:
+            succs_strs = list()
+            for succ in succs:
+                succs_strs.append(str(succ))
+            node_descr += ">;<".join(succs_strs)
+        else:
+            node_descr += "."
+
+
+        return node_descr
+
+
+
+    
     
     def _merge_neighboring_proximal_unbranched_exon_segments(self):
 
 
         merged_node_ids = list()
+
+
+        #
+        #   \
+        #    ------ --------- ------------
+        #   /
+
+        # start at a left-branched exon segment or no predecessors.
+
+        
+        ## identify all exon segments that are not preceded by exon segments
+        def branched_or_nothing_left(node):
+            has_pred_exon = False
+            has_non_exon_pred = False
+            
+            for pred_node in self._splice_graph.predecessors(node):
+                
+                if type(pred_node) == Exon:
+                    has_pred_exon = True
+                else:
+                    has_non_exon_pred = True
+
+            branched_left = has_non_exon_pred
+            nothing_left = (not has_pred_exon) and (not has_non_exon_pred)
+                    
+            return branched_left or nothing_left
+
+        
+        def has_only_exon_successor(node):
+            has_exon_successor = False
+            has_non_exon_successor = False
+            for succ_node in self._splice_graph.successors(node):
+                if type(succ_node) == Exon:
+                    has_exon_successor = True
+                else:
+                    has_non_exon_successor = True
+
+            return has_exon_successor and not has_non_exon_successor
+
         
         exon_segment_objs, intron_objs = self._get_exon_and_intron_nodes()
         
         prev_node = exon_segment_objs[0]
 
+        init_exons = list()
+        for exon_segment in exon_segment_objs:
+            has_exon_only_succ = has_only_exon_successor(exon_segment)
+            branched_or_nothing_left_flag =  branched_or_nothing_left(exon_segment)
+            
+            if has_exon_only_succ and branched_or_nothing_left_flag:
+                init_exons.append(exon_segment)
+
+                
+        def get_unbranched_exon_segments(init_node):
+            exon_seg_list = [init_node]
+
+            node = init_node
+            while has_only_exon_successor(node):
+                node = next(self._splice_graph.successors(node))
+                assert type(node) == Exon
+                if branched_or_nothing_left(node):
+                    break
+                exon_seg_list.append(node)
+
+            return exon_seg_list
+
+        for init_exon in init_exons:
+            logger.debug("Init exon candidate: {}".format(self.describe_node(init_exon)))
+            
+            exons_to_merge_list = get_unbranched_exon_segments(init_exon)
+            if len(exons_to_merge_list) < 2:
+                continue
+            
+            # do merge (keep first exon, update attributes, then delete the others.
+            exons_to_merge_list[0]._rend = exons_to_merge_list[-1]._rend
+            exons_to_merge_list[0]._mean_coverage =  self._get_mean_coverage(prev_node._lend, prev_node._rend)
+            
+            logger.debug("Exons to merge: {}".format("\n".join([self.describe_node(exon) for exon in exons_to_merge_list])))
+
+            # direct first node to successors of last node.
+            for succ_node in self._splice_graph.successors(exons_to_merge_list[-1]):
+                self._splice_graph.add_edge(exons_to_merge_list[0], succ_node)
+
+            # prune the intervening nodes.
+            self._splice_graph.remove_nodes_from(exons_to_merge_list[1:])
+        
+        
+        """
+            
         for i in range(1, len(exon_segment_objs)):
             next_node = exon_segment_objs[i]
 
@@ -1176,6 +1274,7 @@ class Splice_graph:
             with open("__merged_exons.list", "a") as ofh:
                 print("\n".join(merged_node_ids), file=ofh)
 
+        """
         
                 
     def _prune_exon_spurs_at_introns(self):
