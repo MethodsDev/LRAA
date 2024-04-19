@@ -26,6 +26,9 @@ logger = logging.getLogger()
 logging.basicConfig(format=FORMAT, level=logging.INFO)
 
 
+VERSION="0.0.1"
+
+
 def main():
 
     parser = argparse.ArgumentParser(description="LRAA: Long Read Alignment Assembler",
@@ -55,6 +58,9 @@ def main():
     parser.add_argument("--no_EM", action='store_true', default=False, help="do not run EM alg")
 
     parser.add_argument("--include_asm_draft_quant", action='store_true', default=False, help="include the draft (not real... based on norm reads) quant values at assembly. Potentially useful for isoform fraction info only")
+
+
+    parser.add_argument("--version", action='store_true', default=False, help='display version: {}'.format(VERSION))
     
     ## debug params
     
@@ -108,6 +114,14 @@ def main():
                                       help="restrict run to single contig")
     contig_group_setting.add_argument("--restrict_region_range", type=str, default=None,
                                       help="restrict to region on contig lend:rend")
+
+    
+
+
+    if "--version" in sys.argv:
+        print("LRAA VERSION: {}".format(VERSION))
+        if len(sys.argv) == 2:
+            sys.exit(0)
     
     args = parser.parse_args()
     
