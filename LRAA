@@ -239,10 +239,16 @@ def main():
         output_filename = f"{output_prefix}.quant.expr"
         ofh_quant_read_tracking_filename = f"{output_prefix}.quant.tracking"
         ofh_quant_read_tracker = open(ofh_quant_read_tracking_filename, "wt")
+        # write header
+        print("\t".join(["gene_id", "transcript_id", "read_name", "frac_assigned"]), file=ofh_quant_read_tracker)
     else:
         output_filename = f"{output_prefix}.gtf"
         
     ofh = open(output_filename, 'wt')
+    if QUANT_ONLY:
+        # write header
+        print("\t".join(["gene_id", "transcript_id", "uniq_reads", "all_reads", "isoform_fraction", "unique_gene_read_fraction"]), file=ofh)
+    
     
     for contig_acc in genome_contigs_list:
 

@@ -117,12 +117,19 @@ class Quantify:
             
             ## assign reads to transcripts
             gene_isoforms = self._gene_id_to_transcript_objs[top_gene]
-            transcripts_assigned = self._assign_path_to_transcript(splice_graph, mp, gene_isoforms, fraction_read_align_overlap)
+            transcripts_assigned = self._assign_path_to_transcript(splice_graph, mp, gene_isoforms, fraction_read_align_overlap,
+                                                                   trim_TSS_polyA = False, test_exact=True)
+
+            if transcripts_assigned is None:
+                # try again with TSS and polyA trimming
+                transcripts_assigned = self._assign_path_to_transcript(splice_graph, mp, gene_isoforms, fraction_read_align_overlap,
+                                                                       trim_TSS_polyA = True, test_exact=True)          
+            
 
             if transcripts_assigned is None:
                 # try again with TSS and PolyA trimmed off
-                transcripts_assigned = self._assign_path_to_transcript(splice_graph, mp, gene_isoforms, fraction_read_align_overlap, trim_TSS_polyA = True)
-
+                transcripts_assigned = self._assign_path_to_transcript(splice_graph, mp, gene_isoforms, fraction_read_align_overlap,
+                                                                       trim_TSS_polyA = True, test_exact=False)
 
             if transcripts_assigned is None:
                 logger.debug("mp_count_pair {} maps to gene but no isoform(transcript)".format(mp_count_pair))
@@ -178,7 +185,8 @@ class Quantify:
         
 
         
-    def _assign_path_to_transcript(self, splice_graph, mp, transcripts, fraction_read_align_overlap, trim_TSS_polyA = False):
+    def _assign_path_to_transcript(self, splice_graph, mp, transcripts, fraction_read_align_overlap,
+                                   trim_TSS_polyA = False, test_exact=True):
         
         assert type(mp) == MultiPath.MultiPath
         assert type(transcripts) == set, "Error, type(transcripts) is {} not set ".format(type(transcripts))
@@ -206,17 +214,26 @@ class Quantify:
             if trim_TSS_polyA:
                 transcript_sp, transcript_TSS_id, transcript_polyA_id = SPU.trim_TSS_and_PolyA(transcript_sp, contig_strand)
                 
-            
-            if (SPU.are_overlapping_and_compatible_NO_gaps_in_overlap(transcript_sp, read_sp)
-                and
-                SPU.fraction_read_overlap(splice_graph, read_sp, transcript_sp) >= fraction_read_align_overlap):
 
-                logger.debug("[trim_TSS_polyA={}]  Read {} COMPATIBLE with transcript {}".format(trim_TSS_polyA, read_sp, transcript_sp))
-                #print("Read {} compatible with transcript {}".format(read_sp, transcript_sp))
-                transcripts_compatible_with_read.append(transcript)
+            if test_exact:
+
+                if transcript_sp == read_sp:
+                    logger.debug("[trim_TSS_polyA={} test_exact={}]  Read {} IDENTICAL with transcript {}".format(trim_TSS_polyA, test_exact, read_sp, transcript_sp))
+                    transcripts_compatible_with_read.append(transcript)
+                    
 
             else:
-                logger.debug("[trim_TSS_polyA={}]  Read {} NOT_compatible with transcript {}".format(trim_TSS_polyA, read_sp, transcript_sp))
+
+                if (SPU.are_overlapping_and_compatible_NO_gaps_in_overlap(transcript_sp, read_sp)
+                    and
+                    SPU.fraction_read_overlap(splice_graph, read_sp, transcript_sp) >= fraction_read_align_overlap):
+
+                    logger.debug("[trim_TSS_polyA={} test_exact={}]  Read {} COMPATIBLE with transcript {}".format(trim_TSS_polyA, test_exact, read_sp, transcript_sp))
+                    #print("Read {} compatible with transcript {}".format(read_sp, transcript_sp))
+                    transcripts_compatible_with_read.append(transcript)
+
+                else:
+                    logger.debug("[trim_TSS_polyA={} test_exact={}]  Read {} NOT_compatible with transcript {}".format(trim_TSS_polyA, test_exact,read_sp, transcript_sp))
                         
 
         if len(transcripts_compatible_with_read) == 0:
@@ -395,6 +412,15 @@ class Quantify:
     def report_quant_results(self, transcripts, transcript_to_fractional_read_assignment, ofh_quant_vals, ofh_read_tracking):
                 
         ## generate final report.
+
+        # first, get sum of reads per gene
+        gene_to_read_count = defaultdict(int)
+        for transcript in transcripts:
+            gene_id = transcript.get_gene_id()
+            counts = transcript.get_read_counts_assigned()
+            gene_to_read_count[gene_id] += counts
+
+        
         for transcript in transcripts:
             transcript_id = transcript.get_transcript_id()
             gene_id = transcript.get_gene_id()
@@ -404,13 +430,28 @@ class Quantify:
             readnames = transcript.get_read_names()
             readnames = sorted(readnames)
 
-            logger.info("\t".join([gene_id, transcript_id, f"{counts:.1f}", f"{isoform_frac:.3f}"]))
-            print("\t".join([gene_id, transcript_id, f"{counts:.1f}", f"{isoform_frac:.3f}"]), file=ofh_quant_vals)
+            num_uniquely_assigned_reads = 0
             
             for readname in readnames:
                 frac_read_assigned = transcript_to_fractional_read_assignment[transcript_id][readname]
                 print("\t".join([gene_id, transcript_id, readname, "{:.3f}".format(frac_read_assigned)]), file=ofh_read_tracking)
+                if frac_read_assigned == 1:
+                    num_uniquely_assigned_reads += 1
+
+            gene_read_count = gene_to_read_count[gene_id]
+            unique_gene_read_fraction = num_uniquely_assigned_reads / gene_read_count
+
+            report_txt = "\t".join([gene_id,
+                                    transcript_id,
+                                    f"{num_uniquely_assigned_reads}",
+                                    f"{counts:.1f}",
+                                    f"{isoform_frac:.3f}",
+                                    f"{unique_gene_read_fraction:0.3f}"])
             
+            logger.info(report_txt)
+            print(report_txt, file=ofh_quant_vals)
+            
+                
             """
             if (DEBUG):
                 print("transcript_id\t{}\n{}".format(transcript_id, transcript._simplepath), file=ofh_read_tracking)
