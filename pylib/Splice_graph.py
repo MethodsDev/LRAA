@@ -1163,53 +1163,80 @@ class Splice_graph:
 
 
         #
-        #   \
-        #    ------ --------- ------------
-        #   /
+        #       \/                           \/
+        # ------ ------ --------- -------------------
+        #       /\                           /\
+        #
+        #       |~~~~~~~~~~~~~~~~~~~~~~~~~~~~|
+
 
         # start at a left-branched exon segment or no predecessors.
 
         
         ## identify all exon segments that are not preceded by exon segments
-        def branched_or_nothing_left(node):
-            has_pred_exon = False
-            has_non_exon_pred = False
-            
-            for pred_node in self._splice_graph.predecessors(node):
+        def branched_left(node):
+            assert type(node) == Exon
+            return (len(list(self._splice_graph.predecessors(node))) > 1)
+
+        def branched_right(node):
+            assert type(node) == Exon
+            return (len(list(self._splice_graph.successors(node))) > 1)
                 
+               
+        def branched_or_nothing_left(node):
+
+            if branched_left(node):
+                return True
+
+            pred_nodes = list(self._splice_graph.predecessors(node))
+            if len(pred_nodes) == 0:
+                return True
+
+                        
+            for pred_node in pred_nodes:
+                                
                 if type(pred_node) == Exon:
-                    has_pred_exon = True
-                else:
-                    has_non_exon_pred = True
-
-            branched_left = has_non_exon_pred
-            nothing_left = (not has_pred_exon) and (not has_non_exon_pred)
+                    if branched_right(pred_node):
+                        return True
                     
-            return branched_left or nothing_left
-
-        
-        def has_only_exon_successor(node):
-            has_exon_successor = False
-            has_non_exon_successor = False
-            for succ_node in self._splice_graph.successors(node):
-                if type(succ_node) == Exon:
-                    has_exon_successor = True
                 else:
-                    has_non_exon_successor = True
+                    # non-exon pred
+                    return True
 
-            return has_exon_successor and not has_non_exon_successor
+            return False
+                
+        
+        def branched_or_nothing_right(node):
+
+            if branched_right(node):
+                return True
+
+            succ_nodes = list(self._splice_graph.successors(node))
+            if len(succ_nodes) == 0:
+                return True
+
+            for succ_node in succ_nodes:
+                
+                if type(succ_node) == Exon:
+                    if branched_left(succ_node):
+                        return True
+                    
+                else:
+                    # non-exon pred
+                    return True
+
+            return False
+
 
         
         exon_segment_objs, intron_objs = self._get_exon_and_intron_nodes()
         
-        prev_node = exon_segment_objs[0]
+        
 
         init_exons = list()
         for exon_segment in exon_segment_objs:
-            has_exon_only_succ = has_only_exon_successor(exon_segment)
-            branched_or_nothing_left_flag =  branched_or_nothing_left(exon_segment)
-            
-            if has_exon_only_succ and branched_or_nothing_left_flag:
+            assert type(exon_segment) == Exon
+            if branched_or_nothing_left(exon_segment) and not branched_or_nothing_right(exon_segment):
                 init_exons.append(exon_segment)
 
                 
@@ -1217,17 +1244,17 @@ class Splice_graph:
             exon_seg_list = [init_node]
 
             node = init_node
-            while has_only_exon_successor(node):
+            while not branched_or_nothing_right(node):
                 node = next(self._splice_graph.successors(node))
                 assert type(node) == Exon
-                if branched_or_nothing_left(node):
-                    break
                 exon_seg_list.append(node)
-
+                            
             return exon_seg_list
 
         for init_exon in init_exons:
             logger.debug("Init exon candidate: {}".format(self.describe_node(init_exon)))
+            assert type(init_exon) == Exon
+
             
             exons_to_merge_list = get_unbranched_exon_segments(init_exon)
             if len(exons_to_merge_list) < 2:
@@ -1235,7 +1262,7 @@ class Splice_graph:
             
             # do merge (keep first exon, update attributes, then delete the others.
             exons_to_merge_list[0]._rend = exons_to_merge_list[-1]._rend
-            exons_to_merge_list[0]._mean_coverage =  self._get_mean_coverage(prev_node._lend, prev_node._rend)
+            exons_to_merge_list[0]._mean_coverage =  self._get_mean_coverage(exons_to_merge_list[0]._lend, exons_to_merge_list[0]._rend)
             
             logger.debug("Exons to merge: {}".format("\n".join([self.describe_node(exon) for exon in exons_to_merge_list])))
 
@@ -1494,6 +1521,8 @@ class Splice_graph:
 
     def _eliminate_low_support_TSS(self, node_list):
 
+        logger.debug("Eliminating low support TSS")
+        
         TSS_list = list()
         
         for node in node_list:
@@ -1508,8 +1537,8 @@ class Splice_graph:
                     sum_read_support += TSS_obj.get_read_support()
                 return sum_read_support
             
-            min_iso_fraction = PASA_SALRAA_Globals.config['min_isoform_fraction']
-
+            min_TSS_iso_fraction = PASA_SALRAA_Globals.config['min_TSS_iso_fraction']
+            
             TSS_to_purge = set()
             
             filtering = True
@@ -1519,7 +1548,7 @@ class Splice_graph:
                 sum_read_support = get_sum_read_support()
                 for i, TSS_obj in enumerate(TSS_list):
                     frac_read_support = TSS_obj.get_read_support() / sum_read_support
-                    if frac_read_support < min_iso_fraction:
+                    if frac_read_support < min_TSS_iso_fraction:
                         TSS_to_purge.update(TSS_list[i:])
                         if i == 0:
                             # all gone
@@ -1544,6 +1573,8 @@ class Splice_graph:
                 if TSS_obj in TSS_to_purge:
                     continue
 
+                logger.debug("Evaluationg TSS for purge as degradation TSS: {}".format(TSS_obj))
+                
                 # check if not connected
                 if len( list(self._splice_graph.successors(TSS_obj)) ) == 0 and len( list(self._splice_graph.predecessors(TSS_obj)) ) == 0:
                     TSS_to_purge.add(TSS_obj)
@@ -1582,6 +1613,8 @@ class Splice_graph:
                 for TSS_obj in TSS_to_purge:
                     self._TSS_objs.remove(TSS_obj)
                 self._splice_graph.remove_nodes_from(TSS_to_purge)
+
+
 
         return
     
