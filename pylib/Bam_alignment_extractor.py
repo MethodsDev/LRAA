@@ -136,6 +136,8 @@ class Bam_alignment_extractor:
               
 
     def _get_alignment_segments(self, pysam_read_alignment):
+
+        read_name = pysam_read_alignment.query_name
         
         aligned_pairs = self._get_genome_alignment_blocks(pysam_read_alignment)
  
@@ -152,13 +154,18 @@ class Bam_alignment_extractor:
             aligned_pair[0] += 1
             
             # extend earlier stored segment or append new one
-            if aligned_pair[0] - alignment_segments[-1][1] < self._read_aln_gap_merge_int:
+            delta = aligned_pair[0] - alignment_segments[-1][1]
+            #logger.debug("comparing {} to {}, delta: {}".format(alignment_segments[-1], aligned_pair, delta))
+            if delta < self._read_aln_gap_merge_int:
                 # extend rather than append
                 alignment_segments[-1][1] = aligned_pair[1]
             else:
                 # append, as too far apart from prev
                 alignment_segments.append(list(aligned_pair))
 
+
+        ##//TODO: make below trimming of short terminal alignment segments an option and configurable
+        """
 
         # trim short terminal segments from each end
         while (len(alignment_segments) > 1 and
@@ -170,7 +177,10 @@ class Bam_alignment_extractor:
             alignment_segments[len(alignment_segments)-1][1] - alignment_segments[len(alignment_segments)-1][0] + 1 < self._min_terminal_splice_exon_anchor_length):
 
             alignment_segments.pop()
+        """
+        
 
+        logger.debug("read {} pretty alignment segments: {}".format(read_name, alignment_segments))
             
         return alignment_segments
     
@@ -196,6 +206,8 @@ class Bam_alignment_extractor:
 
 
 
+        read_name = read.query_name
+        
         ref_start = read.reference_start
         read_start = 0
 
@@ -252,7 +264,7 @@ class Bam_alignment_extractor:
             prev_ref_start = ref_start
 
 
-        #print("genome segments from read: {}".format(genome_segments))
+        logger.debug("genome segments from read: {}: {}".format(read_name, genome_segments))
         
         return genome_segments
 

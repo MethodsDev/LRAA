@@ -414,14 +414,14 @@ class Splice_graph:
 
                 frac_intron_support = min_support/max_support
                 intron_coords_key = "{}:{}".format(intron_lend, intron_rend)
-                if frac_intron_support >= Splice_graph._min_alt_splice_freq:
-                    intron_obj = Intron(self._contig_acc, intron_lend, intron_rend, intron_orient, count)
-                    intron_obj.add_read_types(list(read_types))
+                #if frac_intron_support >= Splice_graph._min_alt_splice_freq:
+                intron_obj = Intron(self._contig_acc, intron_lend, intron_rend, intron_orient, count)
+                intron_obj.add_read_types(list(read_types))
                     
-                    logger.debug("Adding intron {} with frac_intron_support {}".format(intron_coords_key, frac_intron_support))
-                    self._intron_objs[intron_coords_key] = intron_obj
-                else:
-                    logger.debug("Excluding intron {} with insufficient frac_intron_support {} (below threshold Splice_graph._min_alt_splice_freq {})".format(intron_coords_key, frac_intron_support, Splice_graph._min_alt_splice_freq))
+                logger.debug("Adding intron {} with frac_intron_support {}".format(intron_coords_key, frac_intron_support))
+                self._intron_objs[intron_coords_key] = intron_obj
+                #else:
+                #    logger.debug("Excluding intron {} with insufficient frac_intron_support {} (below threshold Splice_graph._min_alt_splice_freq {})".format(intron_coords_key, frac_intron_support, Splice_graph._min_alt_splice_freq))
 
 
         
