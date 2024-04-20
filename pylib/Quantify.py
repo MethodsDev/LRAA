@@ -439,7 +439,7 @@ class Quantify:
                     num_uniquely_assigned_reads += 1
 
             gene_read_count = gene_to_read_count[gene_id]
-            unique_gene_read_fraction = num_uniquely_assigned_reads / gene_read_count
+            unique_gene_read_fraction = num_uniquely_assigned_reads / gene_read_count if gene_read_count > 0 else 0
 
             report_txt = "\t".join([gene_id,
                                     transcript_id,

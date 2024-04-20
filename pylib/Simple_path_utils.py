@@ -687,7 +687,7 @@ def refine_TSS_simple_path(splice_graph, simple_path):
         TSS_coord = nodes_with_coords_list[TSS_index][2]
 
         # special case where last exon is a single base segment and overlaps TSS
-        if lend_coord == rend_coord and rend_coord == TSS_coord and TSS_index == len(node_w_coords)-2:
+        if lend_coord == rend_coord and rend_coord == TSS_coord and TSS_index == len(nodes_with_coords_list)-2:
             # swap
             (nodes_with_coords_list[-2], nodes_with_coords_list[-1]) = (nodes_with_coords_list[-1], nodes_with_coords_list[-2])
         
