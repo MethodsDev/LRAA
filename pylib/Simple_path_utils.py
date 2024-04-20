@@ -740,18 +740,35 @@ def refine_PolyA_simple_path(splice_graph, simple_path):
 
     if contig_strand == '+' and polyA_indices[-1] != len(nodes_with_coords_list)-1:
         polyA_index = polyA_indices[-1]
+        lend_coord = nodes_with_coords_list[-1][1]
         rend_coord = nodes_with_coords_list[-1][2]
         polyA_coord = nodes_with_coords_list[polyA_index][2]
-        if rend_coord - polyA_coord <= PASA_SALRAA_Globals.config['max_dist_between_alt_polyA_sites']:
+
+        # special case where last exon is a single base segment and overlaps polyA
+        if lend_coord == rend_coord and rend_coord == polyA_coord and polyA_index == len(nodes_with_coords_list)-2:
+            # swap
+            (nodes_with_coords_list[-2], nodes_with_coords_list[-1]) = (nodes_with_coords_list[-1], nodes_with_coords_list[-2])
+
+
+        elif rend_coord - polyA_coord <= PASA_SALRAA_Globals.config['max_dist_between_alt_polyA_sites']:
             nodes_with_coords_list = nodes_with_coords_list[0:polyA_index+1]
-        
+
+            
     elif contig_strand == '-' and polyA_indices[0] != 0:
         polyA_index = polyA_indices[0]
         lend_coord =  nodes_with_coords_list[0][1]
+        rend_coord = nodes_with_coords_list[0][2]
         polyA_coord = nodes_with_coords_list[polyA_index][1]
-        if polyA_coord - lend_coord <= PASA_SALRAA_Globals.config['max_dist_between_alt_polyA_sites']:
+
+        # special case where first exon is a single base segment and aligns to polyA
+        if lend_coord == rend_coord and lend_coord == polyA_coord and polyA_index == 1:
+            # swap order
+            (nodes_with_coords_list[0], nodes_with_coords_list[1]) = (nodes_with_coords_list[1], nodes_with_coords_list[0])
+        
+        elif polyA_coord - lend_coord <= PASA_SALRAA_Globals.config['max_dist_between_alt_polyA_sites']:
             nodes_with_coords_list = nodes_with_coords_list[polyA_index:]
-    
+
+            
     # remove intervening polyAsite annotations
     if contig_strand == '+':
         idx_low = 0
