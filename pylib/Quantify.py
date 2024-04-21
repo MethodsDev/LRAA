@@ -72,7 +72,7 @@ class Quantify:
 
 
 
-    def _assign_reads_to_transcripts(self, splice_graph, mp_counter, fraction_read_align_overlap=0.75):
+    def _assign_reads_to_transcripts(self, splice_graph, mp_counter, fraction_read_align_overlap=PASA_SALRAA_Globals.config['fraction_read_align_overlap']):
 
         logger.info("# Assigning reads to transcripts")
         
@@ -413,6 +413,10 @@ class Quantify:
                 
         ## generate final report.
 
+        ## sort descendingly by read support
+        transcripts = sorted(transcripts, key=lambda x: (x.get_read_counts_assigned(), x.get_transcript_id()), reverse=True)
+        
+        
         # first, get sum of reads per gene
         gene_to_read_count = defaultdict(int)
         for transcript in transcripts:
@@ -421,6 +425,7 @@ class Quantify:
             gene_to_read_count[gene_id] += counts
 
         
+            
         for transcript in transcripts:
             transcript_id = transcript.get_transcript_id()
             gene_id = transcript.get_gene_id()

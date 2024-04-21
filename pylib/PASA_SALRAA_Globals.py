@@ -30,9 +30,13 @@ config = {
     'min_alignments_define_polyA_site' : 3,
     
 
+
+    ## read assignment to transcript criteria
+    'fraction_read_align_overlap' : 0.75, # min fraction of read length that must overlap the compatible transcript isoform structure
+    
     
     # misc settings
-    'min_path_score' : 1,
+    'min_path_score' : 2, # min number of reads required for reporting isoform
 
     
     # transcript criteria

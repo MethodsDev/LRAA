@@ -26,8 +26,8 @@ logger = logging.getLogger()
 logging.basicConfig(format=FORMAT, level=logging.INFO)
 
 
-VERSION="0.0.2"
-
+#VERSION="0.0.2"
+VERSION="BLEEDING_EDGE"
 
 def main():
 
@@ -55,7 +55,7 @@ def main():
 
     parser.add_argument("--quant_only", action='store_true', default=False, help="perform quantification only (must specify --gtf with targets for quant)")
 
-    parser.add_argument("--no_EM", action='store_true', default=False, help="do not run EM alg")
+    parser.add_argument("--EM", action='store_true', default=False, help="run EM alg (default: not EM, simply divide uncertain mappings equally among assigned target isoforms")
 
     parser.add_argument("--include_asm_draft_quant", action='store_true', default=False, help="include the draft (not real... based on norm reads) quant values at assembly. Potentially useful for isoform fraction info only")
 
@@ -134,7 +134,7 @@ def main():
     input_gtf = args.gtf
     NO_NORM = args.no_norm
     min_isoform_fraction = args.min_isoform_fraction
-    run_EM = not args.no_EM
+    run_EM = args.EM
     
     
     if args.quant_only and input_gtf is None:
