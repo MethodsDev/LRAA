@@ -9,6 +9,7 @@ config = {
     
     # read alignment criteria
     'min_per_id' : 98,
+    'min_mapping_quality' : 60,
 
 
     # splice graph construction criteria

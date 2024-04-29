@@ -48,6 +48,8 @@ class Bam_alignment_extractor:
         discarded_read_counter = defaultdict(int)
 
         read_alignments = list()
+
+        MIN_MAPPING_QUALITY = int(PASA_SALRAA_Globals.config['min_mapping_quality'])
         
         # parse read alignments, capture introns and genome coverage info.
         read_fetcher = None
@@ -63,7 +65,11 @@ class Bam_alignment_extractor:
                     continue
                 if read.is_reverse and contig_strand != '-':
                     continue
-                            
+
+            if read.mapping_quality < MIN_MAPPING_QUALITY:
+                discarded_read_counter["min_mapping_quality"] += 1
+                continue
+            
             if read.is_paired and not read.is_proper_pair:
                 discarded_read_counter["improper_pair"] += 1
                 continue
@@ -80,6 +86,8 @@ class Bam_alignment_extractor:
                 discarded_read_counter["secondary"] += 1
                 continue
 
+            
+            
 
             # determine min per_id based on read type:
             min_per_id = PASA_SALRAA_Globals.config['min_per_id']
