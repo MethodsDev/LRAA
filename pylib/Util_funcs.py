@@ -39,3 +39,14 @@ def coordpairs_overlap(coordset_A, coordset_B):
         return False
 
     
+def get_num_overlapping_bases(coordset_A, coordset_B):
+
+    if not coordpairs_overlap(coordset_A, coordset_B):
+        return 0
+
+    coords = sorted([coordset_A[0], coordset_A[1], coordset_B[0], coordset_B[1]])
+    overlap_len = coords[2] - coords[1] + 1
+
+    return overlap_len
+
+                    

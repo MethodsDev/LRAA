@@ -26,6 +26,7 @@ from multiprocessing import Process, Queue
 import traceback
 from MultiProcessManager import MultiProcessManager
 from collections import defaultdict
+import Util_funcs
 
 logger = logging.getLogger(__name__)
 
@@ -548,17 +549,30 @@ class PASA_SALRAA:
 
         path = list()
 
-        overlapping_segments = self._splice_graph.get_overlapping_exon_segments(segment[0], segment[1], min_frac_feature_overlap=PASA_SALRAA_Globals.config['min_feature_frac_overlap'])
+        overlapping_segments = self._splice_graph.get_overlapping_exon_segments(segment[0], segment[1])
         overlapping_segments = sorted(overlapping_segments, key=lambda x: x._lend)
+
+        # , min_frac_feature_overlap=PASA_SALRAA_Globals.config['min_feature_frac_overlap'])
         
-        for exon_segment in overlapping_segments:
+        for i, exon_segment in enumerate(overlapping_segments):
             # check for overlap and not extending beyond feature rend
-            if (segment[0] <= exon_segment._rend and
+            if not ( (segment[0] <= exon_segment._rend and
                 segment[1] >= exon_segment._lend and
-                exon_segment._rend <= segment[1]):
+                exon_segment._rend <= segment[1]) ):
 
+                continue
+            
+            # check amount of feature overlap if not splice-adjacent
+            if exon_segment._rend == segment[1]:
                 path.append(exon_segment.get_id())
+            else:
+                num_overlap_bases = Util_funcs.get_num_overlapping_bases([exon_segment._lend, exon_segment._rend], segment)
+                feature_len = exon_segment._rend - exon_segment._lend + 1
+                frac_feature_overlap = num_overlap_bases/feature_len
+                if frac_feature_overlap >= PASA_SALRAA_Globals.config['min_feature_frac_overlap']:
+                    path.append(exon_segment.get_id())
 
+                
         return path
 
 
@@ -567,17 +581,28 @@ class PASA_SALRAA:
 
         path = list()
 
-        overlapping_segments = self._splice_graph.get_overlapping_exon_segments(segment[0], segment[1], min_frac_feature_overlap=PASA_SALRAA_Globals.config['min_feature_frac_overlap'])
+        overlapping_segments = self._splice_graph.get_overlapping_exon_segments(segment[0], segment[1])
         overlapping_segments = sorted(overlapping_segments, key=lambda x: x._lend)
 
                 
         for exon_segment in overlapping_segments:
             # check for overlap and not extending beyond feature rend
-            if (segment[0] <= exon_segment._rend and
+            if not ( (segment[0] <= exon_segment._rend and
                 segment[1] >= exon_segment._lend and
-                exon_segment._lend >= segment[0]):
+                exon_segment._lend >= segment[0]) ):
 
+                continue
+
+                        # check amount of feature overlap if not splice-adjacent
+            if exon_segment._lend == segment[0]:
                 path.append(exon_segment.get_id())
+            else:
+                num_overlap_bases = Util_funcs.get_num_overlapping_bases([exon_segment._lend, exon_segment._rend], segment)
+                feature_len = exon_segment._rend - exon_segment._lend + 1
+                frac_feature_overlap = num_overlap_bases/feature_len
+                if frac_feature_overlap >= PASA_SALRAA_Globals.config['min_feature_frac_overlap']:
+                    path.append(exon_segment.get_id())
+                
 
         #logger.debug("segment {} maps to {}".format(segment, path))
                 
