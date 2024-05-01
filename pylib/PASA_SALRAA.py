@@ -672,7 +672,7 @@ class PASA_SALRAA:
         
         mpg = self._multipath_graph
 
-        nodes = sorted(mpg_component, key=lambda x: (x._lend, x._rend))
+        nodes = sorted(mpg_component, key=lambda x: (x._lend, x._rend, x.get_left_boundary_sort_weight(), x.get_right_boundary_sort_weight()))
         
         # init the pasa vertex list
         

@@ -7,7 +7,7 @@ import networkx as nx
 import Simple_path_utils as Simple_path_utils
 import PASA_SALRAA_Globals
 from PASA_SALRAA_Globals import SPACER
-from GenomeFeature import Intron, Exon
+from GenomeFeature import *
 import math
 
 import logging
@@ -32,6 +32,11 @@ class MultiPathGraphNode:
         self._lend = lend
         self._rend = rend
 
+        # set these if bounded by polyA or TSS
+        self._left_boundary = 0
+        self._right_boundary = 0
+        
+        
         self._mpg = mpg
 
         self._containments = set() # other MPG nodes fully contained by this node.
@@ -112,6 +117,19 @@ class MultiPathGraphNode:
         return
 
 
+    def get_left_boundary_sort_weight(self):
+        if self._left_boundary == 1:
+            return 1
+        else:
+            return 0
+
+    def get_right_boundary_sort_weight(self):
+        if self._right_boundary == 1:
+            return 1
+        else:
+            return 0
+
+    
     def get_prev_weight(self):
         return self._prev_weight
     

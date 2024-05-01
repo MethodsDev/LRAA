@@ -19,7 +19,7 @@ config = {
     
     ## TSS config
     'infer_TSS' : True, # include TSS feature in read path assignments
-    'max_dist_between_alt_TSS_sites' : 5,
+    'max_dist_between_alt_TSS_sites' : 0,
     'min_alignments_define_TSS_site' : 3,
     'max_frac_compatible_expression' : 0.5, # if 2 transcripts (A,B) are compatible and A contains B, and B < this fraction expression, B excluded as likely degradation product
     'min_TSS_iso_fraction' : 0.01, # like min_isoform_fraction, but specifically targeting TSS features

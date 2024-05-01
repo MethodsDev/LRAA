@@ -354,18 +354,39 @@ class Splice_graph:
         total_read_alignments_used = 0
 
 
+        ## do not count boundaries with soft clipping for TSS sites.  TODO:// examine polyA on reads for polyA sites.
         TSS_position_counter = defaultdict(int)
         polyA_position_counter = defaultdict(int)
-        
-        
-        for pretty_alignment in pretty_alignments:
 
+
+        if PASA_SALRAA_Globals.DEBUG:
+            TSS_reads_ofh = open("__TSS_read_support.tsv", "at")
+            POLYA_reads_ofh = open("__POLYA_read_support.tsv", "at")
+        
+
+
+        if contig_strand == '+':
+            pretty_alignments = sorted(pretty_alignments, key=lambda x: x.get_alignment_span())
+        else:
+            pretty_alignments = sorted(pretty_alignments, key=lambda x: list(reversed(x.get_alignment_span())))
+
+            
+        for pretty_alignment in pretty_alignments:
+            
             read_name = pretty_alignment.get_read_name()
             align_lend, align_rend = pretty_alignment.get_alignment_span()
 
             TSS_pos, polyA_pos = (align_lend, align_rend) if contig_strand == '+' else (align_rend, align_lend)
-            TSS_position_counter[TSS_pos] += 1
+            TSS_pos_soft_clipping = pretty_alignment.left_soft_clipping if contig_strand == '+' else pretty_alignment.right_soft_clipping
+
+            if TSS_pos_soft_clipping == 0:
+                TSS_position_counter[TSS_pos] += 1
+
             polyA_position_counter[polyA_pos] += 1
+            
+            if PASA_SALRAA_Globals.DEBUG:
+                print("\t".join([contig_acc, contig_strand, str(TSS_pos), read_name]), file=TSS_reads_ofh)
+                print("\t".join([contig_acc, contig_strand, str(polyA_pos), read_name]), file=POLYA_reads_ofh)
             
             alignment_segments = pretty_alignment.get_pretty_alignment_segments()
             #print("Pretty alignment segments: " + str(alignment_segments))

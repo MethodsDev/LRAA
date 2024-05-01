@@ -24,6 +24,9 @@ class Pretty_alignment:
         #else:
         #    self._read_type = "ILMN"
         self._read_type = "PacBio"
+
+        self.left_soft_clipping, self.right_soft_clipping = self._get_read_soft_clipping_info(pysam_alignment)
+
         
         
     def __repr__(self):
@@ -49,5 +52,19 @@ class Pretty_alignment:
 
     def get_read_type(self):
         return self._read_type
+
+    
+    def _get_read_soft_clipping_info(self, pysam_alignment):
+
+        cigar_tuples = pysam_alignment.cigartuples
+
+        S=4 # soft clipping cigar code in pysam
+        
+        left_soft_clipping = cigar_tuples[0][1] if cigar_tuples[0][0] == S else 0
+
+        right_soft_clipping = cigar_tuples[-1][1] if cigar_tuples[-1][0] == S else 0
+
+        return left_soft_clipping, right_soft_clipping
+
 
     

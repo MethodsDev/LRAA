@@ -85,6 +85,21 @@ class Transcript (GenomeFeature):
     def set_simple_path(self, simple_path):
         self._simplepath = simple_path
 
+
+    def get_left_boundary_sort_weight(self):
+        assert self._simplepath is not None
+        if re.match("TSS:|POLYA:", self._simplepath[0]):
+            return 1
+        else:
+            return 0
+
+    def get_right_boundary_sort_weight(self):
+        assert self._simplepath is not None
+        if re.match("TSS:|POLYA:", self._simplepath[-1]):
+            return 1
+        else:
+            return 0
+            
     
     def __repr__(self):
 

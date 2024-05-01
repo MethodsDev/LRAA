@@ -6,7 +6,7 @@ import networkx as nx
 import Simple_path_utils as Simple_path_utils
 import PASA_SALRAA_Globals
 from PASA_SALRAA_Globals import SPACER
-from GenomeFeature import Intron, Exon
+from GenomeFeature import *
 from MultiPathGraphNode import MultiPathGraphNode
 from collections import defaultdict
 
@@ -63,10 +63,19 @@ class MultiPathGraph:
 
             lend_coord = first_node_obj.get_coords()[0]
             rend_coord = last_node_obj.get_coords()[1]
+            
+            
 
             mp_graph_node = MultiPathGraphNode(mp, count, lend_coord, rend_coord, mpg=self)
             mp_graph.add_node(mp_graph_node)
 
+            if type(first_node_obj) in (TSS, PolyAsite):
+                mp_graph_node._left_boundary = 1
+
+            if type(last_node_obj) in (TSS, PolyAsite):
+                mp_graph_node._right_boundary = 1
+
+            
             self._mp_graph_nodes_list.append(mp_graph_node)
 
             # assign mp to splice graph component
@@ -81,8 +90,8 @@ class MultiPathGraph:
 
                 
         ## sort
-        self._mp_graph_nodes_list = sorted(self._mp_graph_nodes_list, key=lambda x: (x._lend, x._rend))
-
+        self._mp_graph_nodes_list = sorted(self._mp_graph_nodes_list, key=lambda x: (x._lend, x._rend, x.get_left_boundary_sort_weight(), x.get_right_boundary_sort_weight()))
+        
         
 
         if PASA_SALRAA_Globals.DEBUG:

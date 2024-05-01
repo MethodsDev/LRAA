@@ -551,10 +551,15 @@ class Quantify:
             transcript_list = list(transcript_set)
             contig_strand = transcript_list[0].get_strand()
 
-            transcript_list = sorted(transcript_list, key=lambda x: x.get_coords())
+            transcript_list = sorted(transcript_list, key=lambda x: (x.get_coords()[0], x.get_coords()[1], x.get_left_boundary_sort_weight(), x.get_right_boundary_sort_weight()))
+            
             if contig_strand == '-':
-                transcript_list = list(reversed( sorted(transcript_list, key=lambda x: (x.get_coords()[1], x.get_coords()[0]) ) ) )
-
+                transcript_list = list(sorted(transcript_list, key=lambda x: (-1 * x.get_coords()[1],
+                                                                              -1 * x.get_coords()[0],
+                                                                              -1 * x.get_right_boundary_sort_weight(),
+                                                                              -1 * x.get_left_boundary_sort_weight()
+                                                                              ) ) ) 
+            
             transcript_prune_as_degradation = set()
             for i in range(len(transcript_list)-1):
                 transcript_i = transcript_list[i]
@@ -585,6 +590,7 @@ class Quantify:
                         # TODO:// need sensible logic for exlcuding likely degradation products.
                         
                         subsume_J = False
+                        #subsume_J = True ## DEBUGGING
                         
                         if i_TSS_id is not None:
                             if j_TSS_id is not None:

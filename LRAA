@@ -315,7 +315,7 @@ def main():
                 pasa_salraa_obj.assign_transcripts_paths_in_graph(input_transcripts)
 
                 if PASA_SALRAA_Globals.DEBUG:
-                    report_transcript_paths_in_graph(input_transcripts)
+                    report_transcript_paths_in_graph(input_transcripts, "__input_transcripts_path_in_graph")
 
                     
                 
@@ -350,7 +350,7 @@ def main():
 
                 if input_transcripts and PASA_SALRAA_Globals.DEBUG:
                     pasa_salraa_obj.assign_transcripts_paths_in_graph(input_transcripts)
-                    report_transcript_paths_in_graph(input_transcripts)
+                    report_transcript_paths_in_graph(input_transcripts, "__input_transcripts_path_in_graph")
                 
                 logger.info(f"-begin reconstructing isoforms for {contig_acc}")
                 transcripts = pasa_salraa_obj.reconstruct_isoforms(single_best_only)
@@ -362,7 +362,9 @@ def main():
                     transcripts, frac_read_assignments = Quantify.filter_isoforms_by_min_isoform_fraction(transcripts, min_isoform_fraction, run_EM)
 
                 logger.info("writing gtf output for {} [{}] containing {} transcripts".format(contig_acc, contig_strand, len(transcripts)))
-                
+
+                if PASA_SALRAA_Globals.DEBUG:
+                    report_transcript_paths_in_graph(transcripts, "__output_transcripts_path_in_graph")
                     
                 for transcript in transcripts:
                     ofh.write(transcript.to_GTF_format() + "\n")
@@ -402,10 +404,10 @@ def get_genome_contigs_listing(genome_fasta_filename):
     return contigs_list
 
 
-def report_transcript_paths_in_graph(input_transcripts):
+def report_transcript_paths_in_graph(transcripts, filename):
 
-    with open("__input_transcripts_path_in_graph", "at") as ofh:
-        for transcript in input_transcripts:
+    with open(filename, "at") as ofh:
+        for transcript in transcripts:
             sp = transcript.get_simple_path()
             exon_segments = transcript.get_exon_segments()
             transcript_id = transcript.get_transcript_id()
