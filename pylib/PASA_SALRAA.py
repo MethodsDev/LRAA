@@ -308,6 +308,11 @@ class PASA_SALRAA:
                 transcripts.append(transcript_obj)
                 logger.debug("-assembled: {}".format(str(transcript_obj)))
 
+
+        if PASA_SALRAA_Globals.config['collapse_alt_TSS_and_PolyA']:
+            transcripts = self._collapse_identical_intron_isoforms(transcripts)
+
+        
         logger.info("-reconstructed {} transcripts from component {}".format(len(transcripts), transcript_counter))
                 
         if q is not None:
@@ -859,4 +864,55 @@ class PASA_SALRAA:
                 
         return
     
+                
+
+    def _collapse_identical_intron_isoforms(self, transcripts):
+
+        def get_intron_token(transcript):
+            sp = transcript.get_simple_path()
+            intron_ids = [x for x in sp if re.match("I:", x)]
+            if len(intron_ids) > 0:
+                token = "^".join(intron_ids)
+                return token
+            else:
+                return None
+
+        sg = self.get_splice_graph()
+        contig_acc = sg.get_contig_acc()
+        contig_strand = sg.get_contig_strand()
+        
+        transcripts_ret = list()
+
+        intron_tok_to_transcripts = defaultdict(list)
+        
+        for transcript in transcripts:
+            intron_tok = get_intron_token(transcript)
+            if intron_tok is not None:
+                intron_tok_to_transcripts[intron_tok].append(transcript)
+            else:
+                transcripts_ret.append(transcript)
+
+        for intron_tok, transcript_list in intron_tok_to_transcripts.items():
+            if len(transcript_list) == 1:
+                transcripts_ret.extend(transcript_list)
+            else:
+                # merge them.
+                merged_transcript = transcript_list.pop()
+                while len(transcript_list) > 0:
+
+                    next_transcript = transcript_list.pop()
+
+                    logger.debug("Merging ident intron transcript {} into {}".format(merged_transcript, next_transcript))
+                    
+                    all_read_names = set(merged_transcript.get_read_names()) | set(next_transcript.get_read_names())
+
+                    new_transcript_mp = MultiPath(sg, [merged_transcript.get_simple_path(), next_transcript.get_simple_path()], read_names=all_read_names)
+
+                    merged_transcript = new_transcript_mp.toTranscript() 
+
+                transcripts_ret.append(merged_transcript)
+                
+        return transcripts_ret
+
+
                 

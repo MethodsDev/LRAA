@@ -164,18 +164,23 @@ class PASA_scored_path:
             mp = mpgn.get_multiPathObj()
             simple_path_list.append(mp.get_simple_path())
         
-        transcript_mp = MultiPath.MultiPath(splice_graph, simple_path_list)
+        transcript_mp = MultiPath.MultiPath(splice_graph, simple_path_list, read_names=read_names)
 
-        exons_and_introns = transcript_mp.get_ordered_exons_and_introns()
+        transcript_obj = transcript_mp.toTranscript()
+
+        
+        #exons_and_introns = transcript_mp.get_ordered_exons_and_introns()
 
         #print("exons and introns: ")
         #for exon_or_intron in exons_and_introns:
         #    print("\t" + str(exon_or_intron))
         
-        transcript_exon_segments = list()
+        #transcript_exon_segments = list()
         
-        contig_acc = exons_and_introns[0].get_contig_acc()
-
+        #contig_acc = exons_and_introns[0].get_contig_acc()
+        #contig_acc = splice_graph.get_contig_acc()
+        
+        """
         for feature in exons_and_introns:
             if type(feature) == GenomeFeature.Exon:
                 transcript_exon_segments.append(feature.get_coords())
@@ -187,12 +192,16 @@ class PASA_scored_path:
                 if intron_orient != orient:
                     logger.warn("Error, intron orient not matching up with contig strand")
 
+        
+
+        
+        transcript_exon_segments = transcript_mp.get_exon_segments()
                 
         if len(transcript_exon_segments) == 0:
             logger.warning("bug - shouldn't have exonless transcript features: {}".format(transcript_path)) # //FIXME: bug
             return None
 
-        transcript_exon_segments = Simple_path_utils.merge_adjacent_segments(transcript_exon_segments)
+
 
         #print("merged segments: " + str(transcript_exon_segments))
 
@@ -204,6 +213,10 @@ class PASA_scored_path:
         transcript_obj.add_read_names(read_names)
         transcript_obj._multipath = transcript_mp
         transcript_obj._simplepath = transcript_mp.get_simple_path()
+        
+        """
+
+
         
         
         return transcript_obj

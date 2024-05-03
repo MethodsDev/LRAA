@@ -10,6 +10,7 @@ import logging
 from GenomeFeature import Exon
 from unittest.mock import Mock
 from Splice_graph import Splice_graph
+import Transcript
 
 logger = logging.getLogger(__name__)
 
@@ -30,12 +31,20 @@ class MultiPath:
         self._simple_path = self._merge_paths_to_simple_multi_path(paths_list)
 
         #print(str(self._simple_path))
+
+        
         
         # determine span
         coords = list()
+        exon_segments = list()
         for node_id in self._simple_path:
             if node_id != SPACER:
-                coords.extend( self._splice_graph.get_node_obj_via_id(node_id).get_coords())
+                node_obj = self._splice_graph.get_node_obj_via_id(node_id)
+                coordpair = node_obj.get_coords()
+                coords.extend(coordpair)
+                if type(node_obj) == Exon:
+                    exon_segments.append(coordpair)
+                    
         coords = sorted(coords)
 
         self._lend = coords[0]
@@ -43,6 +52,9 @@ class MultiPath:
 
         self._read_types = read_types
         self._read_names = read_names
+
+        self._exon_segments = Simple_path_utils.merge_adjacent_segments(exon_segments)
+        
         
         return
 
@@ -52,7 +64,10 @@ class MultiPath:
         simple_path = Simple_path_utils.trim_terminal_spacers(simple_path)
         return(simple_path)
 
-
+        
+    def get_exon_segments(self):
+        return self._exon_segments.copy()
+        
     # read type handling
         
     def include_read_type(self, read_type):
@@ -286,6 +301,22 @@ class MultiPath:
         
         return split_mps
 
+
+    def toTranscript(self):
+
+        sg = self.get_splice_graph()
+        contig_acc = sg.get_contig_acc()
+        contig_strand = sg.get_contig_strand()
+
+        exon_segments = self.get_exon_segments()
+
+        transcript_obj = Transcript.Transcript(contig_acc, exon_segments, contig_strand)
+        transcript_obj._multipath = self
+        transcript_obj.add_read_names(self.get_read_names())
+        transcript_obj._simplepath = self.get_simple_path()
+
+        return transcript_obj
+        
 
     def __repr__(self):
 

@@ -122,7 +122,7 @@ class Transcript (GenomeFeature):
         if self._simplepath is not None:
             text += " {} ".format(self._simplepath)
         
-        if self._meta is not None:
+        if self._meta is not None and len(self._meta) > 0:
             text += "\t" + str(self._meta)
 
         return text
