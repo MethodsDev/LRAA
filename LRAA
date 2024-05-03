@@ -92,7 +92,7 @@ def main():
     config_group.add_argument("--no_infer_TSS", action='store_true', default=False, help='do not infer TSS')
     config_group.add_argument("--no_infer_PolyA", action='store_true', default=False, help='do not infer_PolyA')
     
-    
+    config_group.add_argument("--collapse", action='store_true', default=False, help='collapse isoforms that are compatible and contained by longer isoforms')
     
     ## alt splice settings
 
@@ -135,6 +135,9 @@ def main():
     NO_NORM = args.no_norm
     min_isoform_fraction = args.min_isoform_fraction
     run_EM = args.EM
+
+    if args.collapse:
+        PASA_SALRAA_Globals.config['collapse_alt_TSS_and_PolyA'] = True
     
     
     if args.quant_only and input_gtf is None:

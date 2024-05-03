@@ -41,6 +41,10 @@ class Transcript (GenomeFeature):
         self._read_counts_assigned = None # set during expression quantification
 
         self._isoform_fraction = None # set during expression quantification
+
+        self._cdna_len = 0
+        for exon_segment in segment_coordinates_list:
+            self._cdna_len += exon_segment[1] - exon_segment[0] + 1
         
         return
 
@@ -54,7 +58,9 @@ class Transcript (GenomeFeature):
 
     def get_orient(self):
         return(self.get_strand())
-   
+
+    def get_cdna_len(self):
+        return self._cdna_len
 
     def get_transcript_id(self):
         if self._transcript_id is not None:
@@ -79,10 +85,13 @@ class Transcript (GenomeFeature):
 
     def get_simple_path(self):
         assert self._simplepath is not None
+        assert len(self._simplepath) > 0
         return self._simplepath
         
 
     def set_simple_path(self, simple_path):
+        assert simple_path is not None
+        assert len(simple_path) > 0
         self._simplepath = simple_path
 
 
@@ -110,7 +119,9 @@ class Transcript (GenomeFeature):
                                                                  self.get_transcript_id(),
                                                                  self.get_gene_id(),
                                                                  self._exon_segments)
-
+        if self._simplepath is not None:
+            text += " {} ".format(self._simplepath)
+        
         if self._meta is not None:
             text += "\t" + str(self._meta)
 

@@ -551,6 +551,8 @@ class Quantify:
             transcript_list = list(transcript_set)
             contig_strand = transcript_list[0].get_strand()
 
+
+            """  #TODO: figure out sorting order to speed this up.
             transcript_list = sorted(transcript_list, key=lambda x: (x.get_coords()[0], x.get_coords()[1], x.get_left_boundary_sort_weight(), x.get_right_boundary_sort_weight()))
             
             if contig_strand == '-':
@@ -558,10 +560,14 @@ class Quantify:
                                                                               -1 * x.get_coords()[0],
                                                                               -1 * x.get_right_boundary_sort_weight(),
                                                                               -1 * x.get_left_boundary_sort_weight()
-                                                                              ) ) ) 
+                                                                           ) ) ) 
+            """
+
+            # sort by desc cdna len
+            transcript_list = list(reversed(sorted(transcript_list, key=lambda x: x.get_cdna_len())))
             
             transcript_prune_as_degradation = set()
-            for i in range(len(transcript_list)-1):
+            for i in range(len(transcript_list)):
                 transcript_i = transcript_list[i]
 
                 if transcript_i in transcript_prune_as_degradation:
@@ -572,7 +578,13 @@ class Quantify:
                 i_path_trimmed, i_TSS_id, i_polyA_id = SPU.trim_TSS_and_PolyA(transcript_i_simple_path, contig_strand)
                 transcript_i_read_counts_assigned = transcript_i.get_read_counts_assigned()
                 
-                for j in range(i+1, len(transcript_list)):
+                #for j in range(i+1, len(transcript_list)):
+
+                for j in range(len(transcript_list)):
+
+                    if i==j:
+                        continue
+                    
                     transcript_j = transcript_list[j]
 
                     if transcript_j in transcript_prune_as_degradation:
@@ -585,14 +597,21 @@ class Quantify:
                     # Simple_path_utils.simple_paths_overlap_and_compatible_spacefree_region_path_A(self.get_splice_graph(), my_path, other_path)
                     frac_expression_i = transcript_j_read_counts_assigned / transcript_i_read_counts_assigned
 
+
+                    logger.debug("Exploring path: {} as subsuming {}".format(transcript_i, transcript_j))
+                    
                     if SPU.path_A_contains_path_B(i_path_trimmed, j_path_trimmed):
 
                         # TODO:// need sensible logic for exlcuding likely degradation products.
                         
                         subsume_J = False
                         #subsume_J = True ## DEBUGGING
+
+                        if PASA_SALRAA_Globals.config['collapse_alt_TSS_and_PolyA']:
+                            logger.debug("Collapsing compatible path: {} into {}".format(transcript_j, transcript_i))
+                            subsume_J = True
                         
-                        if i_TSS_id is not None:
+                        elif i_TSS_id is not None:
                             if j_TSS_id is not None:
                                 i_TSS_read_count = sg.get_node_obj_via_id(i_TSS_id).get_read_support()
                                 j_TSS_read_count = sg.get_node_obj_via_id(j_TSS_id).get_read_support()
