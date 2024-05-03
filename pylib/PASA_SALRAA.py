@@ -906,6 +906,10 @@ class PASA_SALRAA:
             else:
                 # merge them.
                 merged_transcript = transcript_list.pop()
+                # retain the original ids here
+                trans_id = merged_transcript.get_transcript_id()
+                gene_id = merged_transcript.get_gene_id()
+                
                 while len(transcript_list) > 0:
 
                     next_transcript = transcript_list.pop()
@@ -918,6 +922,9 @@ class PASA_SALRAA:
 
                     merged_transcript = new_transcript_mp.toTranscript() 
 
+
+                merged_transcript.set_gene_id(gene_id)
+                merged_transcript.set_transcript_id(trans_id)
                 transcripts_ret.append(merged_transcript)
                 
         return transcripts_ret
