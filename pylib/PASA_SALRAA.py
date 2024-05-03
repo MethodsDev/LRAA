@@ -388,14 +388,22 @@ class PASA_SALRAA:
             mp_list = None
             if paths_list:
                 mp = MultiPath(self._splice_graph, paths_list, read_types = { read_type, }, read_names = { read_name, } )
+                
                 mp_list = [mp]
                 if not allow_spacers:
+                    sp = mp.get_simple_path()
+                    if SPACER in sp:
+                        logger.debug("-SKIPPING read path that contains a SPACER: {}".format(mp))
+                        continue
+
+                    """
                     mp_list = mp.split_multipath_at_spacers()
                     if len(mp_list) > 1:
                         logger.debug("-SKIPPING read path that contains a SPACER: {}".format(mp))
                         if PASA_SALRAA_Globals.DEBUG:
                             read_graph_mappings_ofh.write("\t".join([read_name, str(grouped_alignments[read_name]), str(mp_list), "DISCARDED"]) + "\n")
                         continue
+                    """
 
                 logger.debug("paths_list: {} -> mp: {}".format(paths_list, mp_list))
                 for mp in mp_list:

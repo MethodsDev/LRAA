@@ -164,6 +164,8 @@ def count_exons_in_simple_path(simple_path):
 
 def merge_adjacent_segments(segment_list):
 
+    assert len(segment_list) > 0
+
     segment_list = sorted(segment_list, key=lambda x: x[0])
     
     ret_segments = list()

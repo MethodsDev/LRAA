@@ -220,8 +220,16 @@ def main():
     # build from reads.
     # define coverage intervals and introns as graph components.
 
+    restrict_to_contig_orient = None
+
     if args.restrict_to_contig:
-        genome_contigs_list = [args.restrict_to_contig]
+        restricted_contig = args.restrict_to_contig
+        m = re.search("^(\\w+)([\\+\\-])$", restricted_contig)
+        if m is not None:
+            restricted_contig = m.group(1)
+            restrict_to_contig_orient = m.group(2)
+        
+        genome_contigs_list = [restricted_contig]
     else:
         genome_contigs_list = get_genome_contigs_listing(genome_fasta_filename)
 
@@ -272,6 +280,9 @@ def main():
         contig_seq_str = Util_funcs.retrieve_contig_seq_from_fasta_file(contig_acc, genome_fasta_filename)
         
         for contig_strand in ('+','-'):
+
+            if restrict_to_contig_orient is not None and restrict_to_contig_orient != contig_strand:
+                continue
         
             logger.info(f"-processing contig: {contig_acc} {contig_strand}")
 

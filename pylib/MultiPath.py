@@ -285,6 +285,7 @@ class MultiPath:
             return [self]
         
         # need to split at spacers
+        logger.info("attempt split path at spacers: {}".format(simple_path))
         split_simple_paths_list = Simple_path_utils.split_path_at_spacers(simple_path)
 
         split_mps = list()
