@@ -204,8 +204,9 @@ class Splice_graph:
             self._prune_lowly_expressed_intron_overlapping_exon_segments()  
         
         self._merge_neighboring_proximal_unbranched_exon_segments()
-        
-        # self._prune_exon_spurs_at_introns() ## TODO:// implement this in a data-driven way.
+
+        if not quant_mode:
+            self._prune_exon_spurs_at_introns()
 
         if Splice_graph._remove_unspliced_introns and not quant_mode:
             self._prune_unspliced_introns()
@@ -1340,11 +1341,18 @@ class Splice_graph:
         
         def is_R_spur(exon_node):
 
+            """
             has_intron_successor = False
             for successor in self._splice_graph.successors(exon_node):
                 if type(successor) == Intron:
                     has_intron_successor = True
 
+            """
+
+            if exon_node.get_feature_length() > PASA_SALRAA_Globals.config['max_exon_spur_length']:
+                return False
+            
+            has_successor = self._node_has_successors(exon_node)
 
             has_intron_predecessor = False
             has_alt_intron = False
@@ -1359,17 +1367,27 @@ class Splice_graph:
                         if type(successor) == Intron:
                             has_alt_intron = True
 
-            return (not has_intron_successor) and (not has_intron_predecessor) and has_alt_intron
+            #return (not has_intron_successor) and (not has_intron_predecessor) and has_alt_intron
+            return (not has_successor) and (not has_intron_predecessor) and has_alt_intron
+        
 
-            
+        
         def is_L_spur(exon_node):
 
+            """
             has_intron_predecessor = False
 
             for predecessor in self._splice_graph.predecessors(exon_node):
                 if type(predecessor) == Intron:
                     has_intron_predecessor = True
+
+            """
+
+            if exon_node.get_feature_length() > PASA_SALRAA_Globals.config['max_exon_spur_length']:
+                return False
+
             
+            has_predecessor = self._node_has_predecessors(exon_node)
 
             has_intron_successor = False
             has_alt_intron = False
@@ -1383,7 +1401,8 @@ class Splice_graph:
                         if type(predecessor) == Intron:
                             has_alt_intron = True
 
-            return (not has_intron_predecessor) and (not has_intron_successor) and has_alt_intron
+            #return (not has_intron_predecessor) and (not has_intron_successor) and has_alt_intron
+            return (not has_predecessor) and (not has_intron_successor) and has_alt_intron
         
 
         exons_to_prune = list()

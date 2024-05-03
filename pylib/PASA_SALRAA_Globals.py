@@ -16,6 +16,7 @@ config = {
     'min_alt_splice_freq' : 0.01,
     'min_alt_unspliced_freq' : 0.01,
     'min_feature_frac_overlap' : 0.50,
+    'max_exon_spur_length' : 5, # exon spurs not tied to TSS or PolyA and at most this length get pruned
     
     ## TSS config
     'infer_TSS' : True, # include TSS feature in read path assignments
