@@ -1,4 +1,4 @@
-DIRS = sirvs simple_quant_eval
+DIRS = sirvs simple_quant_eval single_contig sep_contigs 
 
 test:
 	@for i in $(DIRS); do \
