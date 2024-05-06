@@ -85,3 +85,12 @@ RUN git clone --recursive https://github.com/MethodsDev/LRAA.git && \
     make
 
 
+RUN pip install intervaltree
+
+## Samtools
+ENV SAMTOOLS_VERSION 1.13
+RUN wget https://github.com/samtools/samtools/releases/download/${SAMTOOLS_VERSION}/samtools-${SAMTOOLS_VERSION}.tar.bz2 && \
+    tar xvf samtools-${SAMTOOLS_VERSION}.tar.bz2 && \
+    cd samtools-${SAMTOOLS_VERSION} && \
+    ./configure && make && make install
+

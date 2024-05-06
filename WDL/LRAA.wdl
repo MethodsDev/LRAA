@@ -5,9 +5,11 @@ workflow lraa_wf {
     input {
         File genome_fa
         File aligned_reads_bam
+        File? aligned_reads_bai
         String sample_id
         File? gtf_file
-        Boolean quant_only
+        Boolean quant_only = false
+        Boolean no_norm = false
 
         String docker = "us-central1-docker.pkg.dev/methods-dev-lab/lraa/lraa:latest"
         Int cpu = 4
@@ -21,9 +23,12 @@ workflow lraa_wf {
         input:
             genome_fa=genome_fa,
             aligned_reads_bam=aligned_reads_bam,
+            aligned_reads_bai=aligned_reads_bai,
             sample_id=sample_id,
             gtf_file=gtf_file,
             quant_only=quant_only,
+            no_norm=no_norm,
+        
             docker=docker,
             cpu=cpu,
             memory=memory,
@@ -47,9 +52,11 @@ task lraa_task {
     input {
         File genome_fa
         File aligned_reads_bam
+        File? aligned_reads_bai
         String sample_id
         File? gtf_file
         Boolean quant_only
+        Boolean no_norm
 
         String docker
         Int cpu
@@ -67,15 +74,16 @@ task lraa_task {
         set -ex
 
 
-        out_prefix = ~{output_prefix}
+        out_prefix=~{output_prefix}
         if [[ quant_only == "true" ]]; then
             out_prefix=""
         fi
         
-        /usr/local/src/LRAA/LRAA --genome ~genome_fa \
-                                 --bam ~aligned_reads_bam \
+        /usr/local/src/LRAA/LRAA --genome ~{genome_fa} \
+                                 --bam ~{aligned_reads_bam} \
                                  --output_prefix ~{sample_id}.LRAA \
                                  ~{true='--quant_only' false='' quant_only} \
+                                 ~{true="--no_norm" false="" no_norm} \
                                  ~{"--gtf " + gtf_file} \
                                  --output_prefix ~{sample_id}.LRAA${out_prefix}
 
