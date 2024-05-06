@@ -69,6 +69,8 @@ ENV BIN /usr/local/bin
 ## Python 3 stuff
 RUN ln -sf /usr/bin/python3 /usr/bin/python
 
+RUN pip install argparse pysam networkx
+
 WORKDIR $SRC
 
 ENV LRAA_VERSION="v0.0.4"
