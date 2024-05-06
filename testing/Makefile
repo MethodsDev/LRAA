@@ -5,6 +5,11 @@ test:
     echo "Running example in $$i..."; \
     (cd $$i; $(MAKE) test) || exit $$?; done
 
+
+
+test_docker:
+	cd sirvs && ${MAKE} test_docker
+
 clean:
 	@for i in $(DIRS); do \
     echo "Running example in $$i..."; \

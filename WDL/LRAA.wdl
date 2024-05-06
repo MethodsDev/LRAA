@@ -73,9 +73,8 @@ task lraa_task {
         
         set -ex
 
-
         out_prefix=~{output_prefix}
-        if [[ quant_only == "true" ]]; then
+        if [[ ~{quant_only} == "true" ]]; then
             out_prefix=""
         fi
         
