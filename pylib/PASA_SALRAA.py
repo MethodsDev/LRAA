@@ -97,25 +97,22 @@ class PASA_SALRAA:
         
         all_reconstructed_transcripts = list()
 
-        USE_MULTIPROCESSOR = False
-        if self._num_parallel_processes > 1:
-            USE_MULTIPROCESSOR = True
-
-
         ##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         ##  *** Note, this consumes an inordinate amount of RAM when multiprocessing is used here in the current implementation ***
         ##             DISABLING MULTITHREADING FOR NOW
         ##
-        USE_MULTIPROCESSOR = False
+        USE_MULTIPROCESSOR = True
         ##
         ##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         
         q = None        
-        if USE_MULTIPROCESSOR:
+        if USE_MULTIPROCESSOR and self._num_parallel_processes > 1:
             logger.info("-Running assembly jobs with multiprocessing")
             q = Queue()
             mpm = MultiProcessManager(self._num_parallel_processes, q)
         else:
+            USE_MULTIPROCESSOR = False
+
             logger.info("-Running using single thread, so multiprocessing disabled here.") # easier for debugging sometimes
 
 
@@ -314,6 +311,11 @@ class PASA_SALRAA:
 
         
         logger.info("-reconstructed {} transcripts from component {}".format(len(transcripts), transcript_counter))
+
+        # lighten the transcripts before returning them
+        for transcript in transcripts:
+            transcript.lighten()
+        
                 
         if q is not None:
             # using MultiProcessing Queue

@@ -185,6 +185,12 @@ class Transcript (GenomeFeature):
         return self._isoform_fraction
     
 
+    def lighten(self):
+        # lighten transcript by removing nonessential memory allocs
+        self._scored_path_obj = None
+        self._multipath = None
+        
+
     def to_GTF_format(self):
 
         ## transcript line:
