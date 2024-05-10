@@ -11,7 +11,16 @@ test:
 	../../LRAA --quant_only --genome data/SIRVs1-7.genome.fa --bam data/sim.fasta.mm2.bam --gtf data/SIRVs1-7.annot.gtf
 	diff LRAA.quant.expr data/latest_quant_info.tsv
 
+
+
+
+test_docker:
+	miniwdl run ../../WDL/LRAA.wdl -i data/input_refFree_asm.json --no-cache
+	miniwdl run ../../WDL/LRAA.wdl -i data/input_refGuided_asm.json --no-cache
+	miniwdl run ../../WDL/LRAA.wdl -i data/input_quant_only.json --no-cache
+
+
 clean:
-	rm -rf ./gffcompare* ./LRAA.gtf ./__*
+	rm -rf ./gffcompare* ./LRAA.gtf ./__* ./*_lraa_wf ./_LAST
 
 
