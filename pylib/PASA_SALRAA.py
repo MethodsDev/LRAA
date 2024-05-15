@@ -341,6 +341,11 @@ class PASA_SALRAA:
                                                               region_rend=self._splice_graph._region_rend,
                                                               pretty=True)
 
+        ## correct alignments containing soft-clips
+        for pretty_alignment in pretty_alignments:
+            if pretty_alignment.has_soft_clipping():
+                pretty_alignment.try_correct_alignment(self._splice_graph)
+        
 
         # grouping read alignments according to read pairings (for illumina PE data):
         # group alignments:  grouped_alignments['read_name'] = list(read1_pretty_alignment, read2_pretty_alignment, ...)

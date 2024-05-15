@@ -52,9 +52,11 @@ class Splice_graph:
         self._splice_graph = None  # becomes networkx digraph TODO://rename this var as confusing when using _splice_graph as this obj in other modules
         
         self._node_id_to_node = dict()
-        self._itree_exon_segments = None #itree.IntervalTree()
+        self._itree_exon_segments = None #itree.IntervalTree() # stores Exon, TSS, and PolyAsite objects
+        
         self._intron_objs = dict() # "lend:rend" => intron_obj
-
+        self._itree_introns = None # itree.IntervalTree()
+        
         ## connected components (genes)
         self._components = list() # ordered list of graph components
         self._node_id_to_component = dict() # node_id -> component index
@@ -147,6 +149,18 @@ class Splice_graph:
                     overlapping_exon_segments.append(node)
                         
         return overlapping_exon_segments
+
+
+    def get_overlapping_introns(self, lend, rend):
+
+        overlapping_introns = list()
+        
+        for overlapping_intron_interval in self._itree_introns[lend : rend + 1]:
+            overlapping_introns.append(overlapping_intron_interval.data)
+
+        return overlapping_introns
+
+    
     
 
     def build_splice_graph_for_contig(self, contig_acc, contig_strand, contig_seq_str, alignments_bam_file,
@@ -1433,7 +1447,7 @@ class Splice_graph:
     def _finalize_splice_graph(self):
 
         self._itree_exon_segments = itree.IntervalTree()
-               
+        
         ## store node ID to node object
         for node in self._splice_graph:
             self._node_id_to_node[ node.get_id() ] = node
@@ -1456,7 +1470,17 @@ class Splice_graph:
 
 
         self._validate_itree()
-                            
+
+        ################################
+        ## add introns to separate itree
+        
+        self._itree_introns = itree.IntervalTree()
+        
+        for intron_obj in self._intron_objs.values():
+            lend, rend = intron_obj.get_coords()
+            self._itree_introns[lend : rend + 1] = intron_obj
+
+        
         return
 
 
