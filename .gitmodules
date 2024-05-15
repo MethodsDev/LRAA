@@ -1,3 +1,0 @@
-[submodule "plugins/bamsifter"]
-	path = plugins/bamsifter
-	url = https://github.com/trinityrnaseq/bamsifter.git
