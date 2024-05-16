@@ -120,7 +120,7 @@ def sift_bam(SS_bam_file, norm_bam_filename, normalize_max_cov_level, read_start
 
             if len(read_queue) > 0:
                 write_reads(read_queue)
-                read_queue.empty()
+                read_queue.clear()
 
         read_queue.append(read)
         
