@@ -81,28 +81,35 @@ class Pretty_alignment:
 
 
 
-    def try_correct_alignment(self, splice_graph):
-
-        alignment_segments = self.get_pretty_alignment_segments()
-
-        left_soft_clipping, right_soft_clipping = self._get_read_soft_clipping_info()
+    @classmethod
+    def try_correct_alignments(cls, pretty_alignments_list, splice_graph, contig_seq):
     
-        read_sequence = self._pysam_alignment.query_sequence
 
-        if left_soft_clipping:
-            left_alignment_segment = alignment_segments[0]
-            exon_seg_lend, exon_seg_rend = left_alignment_segment
-            overlapping_introns = list()
-            for overlapping_intron in splice_graph.get_overlapping_introns(exon_seg_lend, exon_seg_rend):
-                intron_lend, intron_rend = overlapping_intron.get_coords()
-                if intron_rend > exon_seg_lend and intron_rend < exon_seg_rend:
-                    overlapping_introns.append(overlapping_intron)
+        for pretty_alignment in pretty_alignments_list:
+
+            if not pretty_alignment.has_soft_clipping():
+                continue
             
-            print("Got overlapping introns: {}".format(overlapping_introns))
+            alignment_segments = pretty_alignment.get_pretty_alignment_segments()
+
+            left_soft_clipping, right_soft_clipping = pretty_alignment._get_read_soft_clipping_info()
+
+            read_sequence = pretty_alignment._pysam_alignment.query_sequence
+            
+            if left_soft_clipping:
+                left_alignment_segment = alignment_segments[0]
+                exon_seg_lend, exon_seg_rend = left_alignment_segment
+                overlapping_introns = list()
+                for overlapping_intron in splice_graph.get_overlapping_introns(exon_seg_lend, exon_seg_rend):
+                    intron_lend, intron_rend = overlapping_intron.get_coords()
+                    if intron_rend > exon_seg_lend and intron_rend < exon_seg_rend:
+                        overlapping_introns.append(overlapping_intron)
+
+                print("Got overlapping introns: {}".format(overlapping_introns))
 
 
-        if right_soft_clipping:
-            right_alignment_segment = alignment_segments[1]
+            if right_soft_clipping:
+                right_alignment_segment = alignment_segments[-1]
 
 
 

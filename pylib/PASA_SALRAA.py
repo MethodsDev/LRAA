@@ -19,6 +19,7 @@ from MultiPathGraph import MultiPathGraph
 from PASA_vertex import PASA_vertex
 from Transcript import Transcript
 import Simple_path_utils
+from Pretty_alignment import *
 from PASA_scored_path import PASA_scored_path
 from shutil import rmtree
 import time
@@ -342,9 +343,7 @@ class PASA_SALRAA:
                                                               pretty=True)
 
         ## correct alignments containing soft-clips
-        for pretty_alignment in pretty_alignments:
-            if pretty_alignment.has_soft_clipping():
-                pretty_alignment.try_correct_alignment(self._splice_graph)
+        Pretty_alignment.try_correct_alignments(pretty_alignments, self._splice_graph, contig_seq)
         
 
         # grouping read alignments according to read pairings (for illumina PE data):
