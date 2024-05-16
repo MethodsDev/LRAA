@@ -11,8 +11,8 @@ config = {
     'min_per_id' : 98,
     'min_mapping_quality' : 60,
     'try_correct_alignments' : False,
+    'max_softclip_realign_test' : 10,
     
-
     # splice graph construction criteria
     'min_alt_splice_freq' : 0.01,
     'min_alt_unspliced_freq' : 0.01,

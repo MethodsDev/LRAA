@@ -6,6 +6,7 @@ import subprocess
 import logging
 import string
 import pysam
+import PASA_SALRAA_Globals
 from collections import defaultdict
 
 
@@ -83,7 +84,12 @@ class Pretty_alignment:
 
     @classmethod
     def try_correct_alignments(cls, pretty_alignments_list, splice_graph, contig_seq):
-    
+
+        logger.info("Attempting to correct alignments at soft-clips")
+        
+        max_softclip_realign_test = PASA_SALRAA_Globals.config['max_softclip_realign_test']
+        
+        
         for pretty_alignment in pretty_alignments_list:
 
             if not pretty_alignment.has_soft_clipping():
@@ -102,7 +108,7 @@ class Pretty_alignment:
             ## TODO: include polyA trimming if not trimmed.
 
             
-            if left_soft_clipping:
+            if left_soft_clipping > 0 and left_soft_clipping <= max_softclip_realign_test:
                 left_alignment_segment = alignment_segments[0]
                 exon_seg_lend, exon_seg_rend = left_alignment_segment
                 overlapping_introns = list()
@@ -114,13 +120,30 @@ class Pretty_alignment:
                 print("Got left overlapping introns: {}".format(overlapping_introns))
                 for left_overlapping_intron in overlapping_introns:
                     intron_lend, intron_rend = left_overlapping_intron.get_coords()
-                    read_rend = aligned_pairs[intron_rend]
-                    left_read_seq = read_sequence[0:read_rend+1]
-                    print("Checking read realignment for {}".format(left_read_seq))
 
-                
-
-            if right_soft_clipping:
+                    intron_adjacent_pos = intron_rend + 1
+                    if intron_adjacent_pos not in aligned_pairs:
+                        continue
+                    read_rend = aligned_pairs[intron_adjacent_pos] - 1
+                    if read_rend -1 <=  max_softclip_realign_test:
+                        left_read_seq = read_sequence[0:read_rend]
+                        print("Checking read realignment for {}".format(left_read_seq))
+                        
+                        genomic_rend = intron_lend - 1
+                        genomic_lend = genomic_rend - len(left_read_seq) + 1
+                        
+                        genomic_substr = contig_seq[genomic_lend - 1 : genomic_rend]
+                        print("Comparing to genomic rend seq: {}".format(genomic_substr))
+                        
+                        if left_read_seq.upper() == genomic_substr.upper():
+                            print("\tLeft MATCH FOUND")
+                            # do reassignment:
+                            alignment_segments[0][0] = intron_rend + 1
+                            alignment_segments.insert(0, [genomic_lend, genomic_rend])
+                            break
+            
+            
+            if right_soft_clipping > 0 and right_soft_clipping <= max_softclip_realign_test:
                 right_alignment_segment = alignment_segments[-1]
                 exon_seg_lend, exon_seg_rend = right_alignment_segment
                 overlapping_introns = list()
@@ -132,19 +155,23 @@ class Pretty_alignment:
                 print("Got right overlapping introns: {}".format(overlapping_introns))
                 for right_overlapping_intron in overlapping_introns:
                     intron_lend, intron_rend = right_overlapping_intron.get_coords()
-                    read_lend = aligned_pairs[intron_lend-1]
-                    right_read_seq = read_sequence[read_lend:]
-                    print("Checking read realignment for {}".format(right_read_seq))
-                    genomic_lend = intron_rend + 1
-                    genomic_rend = genomic_lend + len(right_read_seq) - 1
-                    genomic_substr = contig_seq[genomic_lend - 1 : genomic_rend]
-                    print("Comparing to genomic rend seq: {}".format(genomic_substr))
-                    if right_read_seq.upper() == genomic_substr.upper():
-                        print("\tMATCH FOUND")
-                        # do reassignment:
-                        alignment_segments[-1][1] = intron_lend -1
-                        alignment_segments.append([genomic_lend, genomic_rend])
-                        break
+                    intron_adjacent_pos = intron_lend - 1
+                    if intron_adjacent_pos not in aligned_pairs:
+                        continue
+                    read_lend = aligned_pairs[intron_adjacent_pos]
+                    if len(read_sequence) - read_lend + 1 <= max_softclip_realign_test:
+                        right_read_seq = read_sequence[read_lend:]
+                        print("Checking read realignment for {}".format(right_read_seq))
+                        genomic_lend = intron_rend + 1
+                        genomic_rend = genomic_lend + len(right_read_seq) - 1
+                        genomic_substr = contig_seq[genomic_lend - 1 : genomic_rend]
+                        print("Comparing to genomic rend seq: {}".format(genomic_substr))
+                        if right_read_seq.upper() == genomic_substr.upper():
+                            print("\tRight MATCH FOUND")
+                            # do reassignment:
+                            alignment_segments[-1][1] = intron_lend -1
+                            alignment_segments.append([genomic_lend, genomic_rend])
+                            break
 
         return
 
