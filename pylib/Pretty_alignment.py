@@ -105,7 +105,19 @@ class Pretty_alignment:
             aligned_pairs = dict([ (y+1, x+1) for x,y in pretty_alignment._pysam_alignment.get_aligned_pairs(matches_only=True) ])
 
 
-            ## TODO: include polyA trimming if not trimmed.
+            # ignore soft-clips involving just polyA - only useful if sim data here with tacked-on polyA - could make more useful, but just trim polyA before running is easiest.
+            if (read.is_forward and
+                right_soft_clipping > 0 and
+                right_soft_clipping <= max_softclip_realign_test and
+                re.match("^A+$", read_sequence[ (-1*right_soft_clipping):], re.I) is not None):
+                continue
+
+            
+            if (read.is_reverse and
+                left_soft_clipping > 0 and
+                left_soft_clipping <= max_softclip_realign_test and
+                re.match("^T+$", read_sequence[0:left_soft_clipping], re.I) is not None):
+                continue
 
             
             if left_soft_clipping > 0 and left_soft_clipping <= max_softclip_realign_test:
