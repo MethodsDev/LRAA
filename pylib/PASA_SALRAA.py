@@ -343,7 +343,8 @@ class PASA_SALRAA:
                                                               pretty=True)
 
         ## correct alignments containing soft-clips
-        Pretty_alignment.try_correct_alignments(pretty_alignments, self._splice_graph, contig_seq)
+        if PASA_SALRAA_Globals.config['try_correct_alignments']:
+            Pretty_alignment.try_correct_alignments(pretty_alignments, self._splice_graph, contig_seq)
         
 
         # grouping read alignments according to read pairings (for illumina PE data):

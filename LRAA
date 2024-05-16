@@ -91,6 +91,8 @@ def main():
 
     config_group.add_argument("--no_infer_TSS", action='store_true', default=False, help='do not infer TSS')
     config_group.add_argument("--no_infer_PolyA", action='store_true', default=False, help='do not infer_PolyA')
+
+    config_group.add_argument("--try_correct_alignments", action='store_true', default=False, help='try to correct alignments at terminal soft clips')
     
     #config_group.add_argument("--collapse", action='store_true', default=False, help='collapse isoforms that are compatible and contained by longer isoforms')
     
@@ -149,6 +151,7 @@ def main():
     PASA_SALRAA_Globals.config['min_isoform_fraction'] = args.min_isoform_fraction
     PASA_SALRAA_Globals.config['infer_TSS'] = not args.no_infer_TSS
     PASA_SALRAA_Globals.config['infer_PolyA'] = not args.no_infer_PolyA
+    PASA_SALRAA_Globals.config['try_correct_alignments'] = args.try_correct_alignments
     
     
     if args.mpm_monitor:
