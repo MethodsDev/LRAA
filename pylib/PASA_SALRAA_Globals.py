@@ -26,7 +26,7 @@ config = {
     'max_frac_compatible_expression' : 0.5, # if 2 transcripts (A,B) are compatible and A contains B, and B < this fraction expression, B excluded as likely degradation product
     'min_TSS_iso_fraction' : 0.01, # like min_isoform_fraction, but specifically targeting TSS features
     'max_frac_alt_TSS_from_degradation' : 0.20,
-    'max_soft_clip_at_TSS' : 3,
+    'max_soft_clip_at_TSS' : 7,
     
     ## polyA site config
     'infer_PolyA' : True, # include PolyA site feature in read path assignments
@@ -51,7 +51,7 @@ config = {
     # assembly
     'normalize_max_cov_level' : 10000,
     'restrict_asm_to_collapse' : True, # if True, no chaining of overlapping/extended paths
-    'collapse_alt_TSS_and_PolyA' : True  # if True, collapses paths that are overlapping and contained but differ in TSS or PolyA
+    'collapse_alt_TSS_and_PolyA' : False  # if True, collapses paths that are overlapping and contained but differ in TSS or PolyA
 
     
     }

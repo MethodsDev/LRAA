@@ -199,15 +199,15 @@ class Splice_graph:
         # initializes self._splice_graph
         # -defines exons by segmenting genomic coverage based on intron splice coordinates
         # - constructs self._splice_graph as nx.DiGraph()
-        self._build_draft_splice_graph() 
+        self._build_draft_splice_graph()
 
         if self.is_empty():
             return None
 
         
         if PASA_SALRAA_Globals.DEBUG:
-            self.write_intron_exon_splice_graph_bed_files("__prefilter", pad=0)
-            self.describe_graph("__prefilter.graph")
+            self.write_intron_exon_splice_graph_bed_files("__prefilter_r1", pad=0)
+            self.describe_graph("__prefilter_r1.graph")
                 
 
         ##----------------------------------------------
@@ -219,8 +219,15 @@ class Splice_graph:
         
         self._merge_neighboring_proximal_unbranched_exon_segments()
 
+        
+        if PASA_SALRAA_Globals.DEBUG:
+            self.write_intron_exon_splice_graph_bed_files("__prefilter_r2", pad=0)
+            self.describe_graph("__prefilter_r2.graph")
+
+        
         if not quant_mode:
             self._prune_exon_spurs_at_introns()
+        
 
         if Splice_graph._remove_unspliced_introns and not quant_mode:
             self._prune_unspliced_introns()
@@ -237,7 +244,7 @@ class Splice_graph:
 
         if len(self._PolyA_objs) > 0:
                self._incorporate_PolyAsites()
-        
+               
         
         self._finalize_splice_graph() # do again after TSS and PolyA integration
 
@@ -260,7 +267,10 @@ class Splice_graph:
                 if len(self._PolyA_objs) > 0:
                     connected_component = self._eliminate_low_support_PolyA(connected_component)
 
-            # revise again
+            if not quant_mode:
+                self._prune_exon_spurs_at_introns()
+
+                    # revise again
             self._merge_neighboring_proximal_unbranched_exon_segments()
             self._finalize_splice_graph() # do again after TSS and PolyA integration
             connected_components = list(nx.connected_components(self._splice_graph.to_undirected()))
@@ -294,7 +304,7 @@ class Splice_graph:
 
     def _node_has_predecessors(self, node):
 
-        if (len(list(self._splice_graph.predecessors(node)))) > 0:
+        if len(list(self._splice_graph.predecessors(node))) > 0:
             return True
         else:
             return False
@@ -1342,6 +1352,8 @@ class Splice_graph:
                 
     def _prune_exon_spurs_at_introns(self):
 
+        logger.info("checking for exon spurs at introns")
+        
         exon_segment_objs, intron_objs = self._get_exon_and_intron_nodes()
 
 
@@ -1355,15 +1367,10 @@ class Splice_graph:
         
         def is_R_spur(exon_node):
 
-            """
-            has_intron_successor = False
-            for successor in self._splice_graph.successors(exon_node):
-                if type(successor) == Intron:
-                    has_intron_successor = True
-
-            """
+            logger.debug("Evaluating {} as potential R_spur".format(exon_node))
 
             if exon_node.get_feature_length() > PASA_SALRAA_Globals.config['max_exon_spur_length']:
+                logger.debug("{} not R spur, feature length: {} < max_exon_spur_length: {}".format(exon_node, exon_node.get_feature_length(), PASA_SALRAA_Globals.config['max_exon_spur_length']))
                 return False
             
             has_successor = self._node_has_successors(exon_node)
@@ -1382,27 +1389,40 @@ class Splice_graph:
                             has_alt_intron = True
 
             #return (not has_intron_successor) and (not has_intron_predecessor) and has_alt_intron
-            return (not has_successor) and (not has_intron_predecessor) and has_alt_intron
+            R_spur_boolean = (not has_successor) and (not has_intron_predecessor) and has_alt_intron
+
+            logger.debug("{} is R spur == {}, (not has_successor = {}), (not has_intron_predecessor = {}), and (has_alt_intron = {})".format(exon_node, R_spur_boolean,
+                                                                                                                                             not has_successor,
+                                                                                                                                             not has_intron_predecessor,
+                                                                                                                                             has_alt_intron))
+            
+            return R_spur_boolean
+
+
         
+        #######           ---------------------
+        #                /       ^intron^      \
+        #    -----------/===                 ===\-------------------
+        #                R_spur              L_spur
+
 
         
         def is_L_spur(exon_node):
 
-            """
-            has_intron_predecessor = False
 
-            for predecessor in self._splice_graph.predecessors(exon_node):
-                if type(predecessor) == Intron:
-                    has_intron_predecessor = True
-
-            """
-
+            logger.debug("Evaluating {} as potential L_spur".format(exon_node))
+            
             if exon_node.get_feature_length() > PASA_SALRAA_Globals.config['max_exon_spur_length']:
+                logger.debug("{} not L spur, feature length: {} < max_exon_spur_length: {}".format(exon_node, exon_node.get_feature_length(), PASA_SALRAA_Globals.config['max_exon_spur_length']))
                 return False
 
             
             has_predecessor = self._node_has_predecessors(exon_node)
 
+            if has_predecessor:
+                logger.debug("{} has predecessors: {}".format(exon_node, list(self._splice_graph.predecessors(exon_node)))) 
+
+            
             has_intron_successor = False
             has_alt_intron = False
 
@@ -1412,11 +1432,20 @@ class Splice_graph:
                 
                 elif type(successor) == Exon:
                     for predecessor in self._splice_graph.predecessors(successor):
+                        logger.debug("evaluating if predecessor {} of successor {} is an intron".format(predecessor, successor))
                         if type(predecessor) == Intron:
                             has_alt_intron = True
 
-            #return (not has_intron_predecessor) and (not has_intron_successor) and has_alt_intron
-            return (not has_predecessor) and (not has_intron_successor) and has_alt_intron
+
+
+            L_spur_boolean = (not has_predecessor) and (not has_intron_successor) and has_alt_intron
+                            
+            logger.debug("{} is L spur == {}, (not has_predecessor = {}), (not has_intron_successor = {}), and (has_alt_intron = {})".format(exon_node, L_spur_boolean,
+                                                                                                                                             not has_predecessor,
+                                                                                                                                             not has_intron_successor,
+                                                                                                                                             has_alt_intron))
+            
+            return L_spur_boolean
         
 
         exons_to_prune = list()

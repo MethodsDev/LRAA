@@ -477,6 +477,29 @@ class Quantify:
     def filter_isoforms_by_min_isoform_fraction(transcripts, min_isoform_fraction, run_EM):
 
         logger.info("Filtering transcripts according to min isoform fraction: {}".format(min_isoform_fraction))
+
+        transcript_id_to_transcript = dict([ (x.get_transcript_id(), x) for x in transcripts] )
+        
+
+        def get_gene_unique_read_counts(frac_read_assignments):
+            gene_id_to_unique_read_count = defaultdict(int)
+            for transcript_id, transcript_read_frac_assignments in frac_read_assignments.items():
+                gene_id = transcript_id_to_transcript[transcript_id].get_gene_id()
+                for read, frac_assigned in transcript_read_frac_assignments.items():
+                    if frac_assigned >= 0.9999: # close enough to 1.0
+                        gene_id_to_unique_read_count[gene_id] += 1
+                
+            return gene_id_to_unique_read_count
+        
+
+        def get_idoform_unique_assigned_read_count(transcript_id, frac_read_assignments):
+            num_unique_reads = 0
+            for read in frac_read_assignments[transcript_id]:
+                if frac_read_assignments[transcript_id][read] >= 0.9999: # close enough to 1.0
+                    num_unique_reads += 1
+
+            return num_unique_reads
+                                
         
         isoforms_were_filtered = True # init for loop
 
@@ -496,15 +519,30 @@ class Quantify:
             isoforms_were_filtered = False # update to True if we do filter an isoform out.
 
             frac_read_assignments = q._estimate_isoform_read_support(transcripts, run_EM)
-
+            gene_id_to_unique_read_count = get_gene_unique_read_counts(frac_read_assignments)
+            
             genes_represented = set()
             for transcript in transcripts:
                 num_total_isoforms += 1
+                transcript_id = transcript.get_transcript_id()
                 gene_id = transcript.get_gene_id()
                 genes_represented.add(gene_id)
-                if transcript.get_isoform_fraction() < min_isoform_fraction:
+                gene_unique_read_count = gene_id_to_unique_read_count[gene_id]
+                transcript_unique_read_count = get_idoform_unique_assigned_read_count(transcript_id, frac_read_assignments)
+                
+                frac_gene_unique_reads = transcript_unique_read_count / gene_unique_read_count
+                
+                print("Transcript_id: {} has frac of gene_unique_reads: {}".format(transcript_id, frac_gene_unique_reads))
+
+                if (not isoforms_were_filtered and
+                    (frac_gene_unique_reads < min_isoform_fraction
+                      or
+                       transcript.get_isoform_fraction() < min_isoform_fraction)
+                    ):
+                    
                     isoforms_were_filtered = True
                     num_filtered_isoforms += 1
+                    
                 else:
                     transcripts_retained.append(transcript)
 
@@ -569,7 +607,8 @@ class Quantify:
             transcript_prune_as_degradation = set()
             for i in range(len(transcript_list)):
                 transcript_i = transcript_list[i]
-
+                transcript_i_id = transcript_i.get_transcript_id()
+                
                 if transcript_i in transcript_prune_as_degradation:
                     continue
 
@@ -589,6 +628,8 @@ class Quantify:
 
                     if transcript_j in transcript_prune_as_degradation:
                         continue
+
+                    transcript_j_id = transcript_j.get_transcript_id()
                     
                     transcript_j_simple_path = transcript_j.get_simple_path()
                     j_path_trimmed, j_TSS_id, j_polyA_id = SPU.trim_TSS_and_PolyA(transcript_j_simple_path, contig_strand)
@@ -615,7 +656,14 @@ class Quantify:
                             if j_TSS_id is not None:
                                 i_TSS_read_count = sg.get_node_obj_via_id(i_TSS_id).get_read_support()
                                 j_TSS_read_count = sg.get_node_obj_via_id(j_TSS_id).get_read_support()
-                                if j_TSS_read_count/i_TSS_read_count < PASA_SALRAA_Globals.config['max_frac_alt_TSS_from_degradation']:
+
+                                frac_max_TSS =  j_TSS_read_count/i_TSS_read_count
+                                logger.debug("frac_max_TSS: {:.3f} of path_j: {} to path_i{}".format(frac_max_TSS, transcript_j_simple_path, transcript_i_simple_path))
+
+                                logger.debug("\t".join(["TSS_fracs", transcript_i_id, transcript_j_id, str(i_TSS_read_count), str(j_TSS_read_count), "{:.3f}".format(frac_max_TSS)]))
+                                
+                                if frac_max_TSS < PASA_SALRAA_Globals.config['max_frac_alt_TSS_from_degradation']:
+                                    logger.debug("based on frac_max_TSS: {:.3f}, path_i: {} is subsuming path_j: {}".format(frac_max_TSS, transcript_i_simple_path, transcript_j_simple_path))
                                     subsume_J = True
                             else:
                                 # no j_TSS but have i_TSS
@@ -623,17 +671,19 @@ class Quantify:
                         else: #if frac_expression_i <= PASA_SALRAA_Globals.config['max_frac_alt_TSS_from_degradation']:
                             subsume_J = True
 
-                        if not subsume_J:
+                        #if not subsume_J:
                             # see if just a polyA difference
-                            if i_TSS_id == j_TSS_id:
-                                subsume_J = True
+                            #if i_TSS_id == j_TSS_id:
+                            #    subsume_J = True
                             
-
+                        
                         if subsume_J:
                             logger.debug("Pruning {} as likely degradation product of {}".format(transcript_j, transcript_i))
                             transcript_prune_as_degradation.add(transcript_j)
                             transcript_i.add_read_names(transcript_j.get_read_names())
 
+
+                            
             # retain the ones not pruned
             for transcript in transcript_set:
                 if transcript not in transcript_prune_as_degradation:

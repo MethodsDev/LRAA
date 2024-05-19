@@ -98,13 +98,7 @@ class PASA_SALRAA:
         
         all_reconstructed_transcripts = list()
 
-        ##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        ##  *** Note, this consumes an inordinate amount of RAM when multiprocessing is used here in the current implementation ***
-        ##             DISABLING MULTITHREADING FOR NOW
-        ##
         USE_MULTIPROCESSOR = True
-        ##
-        ##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         
         q = None        
         if USE_MULTIPROCESSOR and self._num_parallel_processes > 1:
