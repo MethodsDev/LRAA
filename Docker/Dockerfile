@@ -73,18 +73,6 @@ RUN pip install argparse pysam networkx
 
 WORKDIR $SRC
 
-ENV LRAA_VERSION="v0.0.4"
-ENV LRAA_CO=3da1410
-
-RUN git clone --recursive https://github.com/MethodsDev/LRAA.git && \
-    cd LRAA && \
-    git checkout ${LRAA_CO} && \
-    git submodule init && git submodule update && \
-    git submodule foreach --recursive git submodule init && \
-    git submodule foreach --recursive git submodule update && \
-    make
-
-
 RUN pip install intervaltree
 
 ## Samtools
@@ -93,4 +81,15 @@ RUN wget https://github.com/samtools/samtools/releases/download/${SAMTOOLS_VERSI
     tar xvf samtools-${SAMTOOLS_VERSION}.tar.bz2 && \
     cd samtools-${SAMTOOLS_VERSION} && \
     ./configure && make && make install
+
+
+WORKDIR $SRC
+
+ENV LRAA_VERSION="v0.0.5"
+ENV LRAA_CO=2e745499b541868f9ed72a6249408a024d137758
+
+RUN git clone --recursive https://github.com/MethodsDev/LRAA.git && \
+    cd LRAA && \
+    git checkout ${LRAA_CO}
+
 
