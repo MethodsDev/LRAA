@@ -220,15 +220,7 @@ class Splice_graph:
         self._merge_neighboring_proximal_unbranched_exon_segments()
 
         
-        if PASA_SALRAA_Globals.DEBUG:
-            self.write_intron_exon_splice_graph_bed_files("__prefilter_r2", pad=0)
-            self.describe_graph("__prefilter_r2.graph")
-
-        
-        if not quant_mode:
-            self._prune_exon_spurs_at_introns()
-        
-
+            
         if Splice_graph._remove_unspliced_introns and not quant_mode:
             self._prune_unspliced_introns()
         
@@ -248,13 +240,11 @@ class Splice_graph:
         
         self._finalize_splice_graph() # do again after TSS and PolyA integration
 
+
         
-        #if PASA_SALRAA_Globals.DEBUG:
-        #    self.write_intron_exon_splice_graph_bed_files("__final_graph", pad=0)
-        #    self.describe_graph("__final.graph")
-
-        #print(self._itree_exon_segments )
-
+        if PASA_SALRAA_Globals.DEBUG:
+            self.write_intron_exon_splice_graph_bed_files("__prefilter_r2", pad=0)
+            self.describe_graph("__prefilter_r2.graph")
 
         connected_components = list(nx.connected_components(self._splice_graph.to_undirected()))
 
@@ -267,13 +257,23 @@ class Splice_graph:
                 if len(self._PolyA_objs) > 0:
                     connected_component = self._eliminate_low_support_PolyA(connected_component)
 
+            # revise again
+            self._merge_neighboring_proximal_unbranched_exon_segments()
+
+            if PASA_SALRAA_Globals.DEBUG:
+                self.write_intron_exon_splice_graph_bed_files("__prefilter_r3", pad=0)
+                self.describe_graph("__prefilter_r3.graph")
+
             if not quant_mode:
                 self._prune_exon_spurs_at_introns()
 
-                    # revise again
-            self._merge_neighboring_proximal_unbranched_exon_segments()
             self._finalize_splice_graph() # do again after TSS and PolyA integration
             connected_components = list(nx.connected_components(self._splice_graph.to_undirected()))
+
+        else:
+            if not quant_mode:
+                self._prune_exon_spurs_at_introns()
+                self._finalize_splice_graph()
             
                
         if PASA_SALRAA_Globals.DEBUG:
@@ -1432,7 +1432,7 @@ class Splice_graph:
                 
                 elif type(successor) == Exon:
                     for predecessor in self._splice_graph.predecessors(successor):
-                        logger.debug("evaluating if predecessor {} of successor {} is an intron".format(predecessor, successor))
+                        logger.debug("evaluating if predecessor {} of successor {} to {} is an intron".format(predecessor, successor, exon_node))
                         if type(predecessor) == Intron:
                             has_alt_intron = True
 

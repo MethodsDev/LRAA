@@ -12,28 +12,29 @@ config = {
     'min_mapping_quality' : 20,
     'try_correct_alignments' : False,
     'max_softclip_realign_test' : 10,
+
     
     # splice graph construction criteria
     'min_alt_splice_freq' : 0.01,
     'min_alt_unspliced_freq' : 0.01,
     'min_feature_frac_overlap' : 0.50,
     'max_exon_spur_length' : 5, # exon spurs not tied to TSS or PolyA and at most this length get pruned
+
     
     ## TSS config
     'infer_TSS' : True, # include TSS feature in read path assignments
     'max_dist_between_alt_TSS_sites' : 0,
     'min_alignments_define_TSS_site' : 3,
     'max_frac_compatible_expression' : 0.5, # if 2 transcripts (A,B) are compatible and A contains B, and B < this fraction expression, B excluded as likely degradation product
-    'min_TSS_iso_fraction' : 0.01, # like min_isoform_fraction, but specifically targeting TSS features
+    'min_TSS_iso_fraction' : 0.05, # like min_isoform_fraction, but specifically targeting TSS features
     'max_frac_alt_TSS_from_degradation' : 0.20,
-    'max_soft_clip_at_TSS' : 7,
+    'max_soft_clip_at_TSS' : 3,
+
     
     ## polyA site config
     'infer_PolyA' : True, # include PolyA site feature in read path assignments
     'max_dist_between_alt_polyA_sites' : 50,
     'min_alignments_define_polyA_site' : 3,
-    
-
 
     ## read assignment to transcript criteria
     'fraction_read_align_overlap' : 0.75, # min fraction of read length that must overlap the compatible transcript isoform structure

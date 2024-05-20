@@ -99,10 +99,12 @@ class Pretty_alignment:
 
             left_soft_clipping, right_soft_clipping = pretty_alignment._get_read_soft_clipping_info()
 
-            read_sequence = pretty_alignment._pysam_alignment.query_sequence
+            read = pretty_alignment._pysam_alignment
+            
+            read_sequence = read.query_sequence
 
             # get mapping of genome pos -> read pos
-            aligned_pairs = dict([ (y+1, x+1) for x,y in pretty_alignment._pysam_alignment.get_aligned_pairs(matches_only=True) ])
+            aligned_pairs = dict([ (y+1, x+1) for x,y in read.get_aligned_pairs(matches_only=True) ])
 
 
             # ignore soft-clips involving just polyA - only useful if sim data here with tacked-on polyA - could make more useful, but just trim polyA before running is easiest.
