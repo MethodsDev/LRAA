@@ -375,6 +375,20 @@ def main():
 
                 transcripts, frac_read_assignments = Quantify.prune_likely_degradation_products(transcripts, sg, run_EM)
                 
+                if PASA_SALRAA_Globals.DEBUG or args.include_asm_draft_quant:
+                    prefilter_transcripts_ofh = open("__transcripts-prefilter.gtf", "at")
+                    for transcript in transcripts:
+                        prefilter_transcripts_ofh.write(transcript.to_GTF_format() + "\n")
+                    prefilter_transcripts_ofh.close()
+                    
+                    debug_quant_ofh = open("__transcripts-prefilter-quant_info.tsv", "at")
+                    debug_quant_read_tracking_ofh = open("__transcripts-prefilter-quant_info.reads_tracked.tsv", "at")
+                    q = Quantify()
+                    q.report_quant_results(transcripts, frac_read_assignments, debug_quant_ofh, debug_quant_read_tracking_ofh)
+                    debug_quant_ofh.close()
+                    debug_quant_read_tracking_ofh.close()
+
+                
                 if min_isoform_fraction > 0:
                     transcripts, frac_read_assignments = Quantify.filter_isoforms_by_min_isoform_fraction(transcripts, min_isoform_fraction, run_EM)
 
