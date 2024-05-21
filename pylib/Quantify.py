@@ -476,6 +476,8 @@ class Quantify:
     @staticmethod
     def filter_isoforms_by_min_isoform_fraction(transcripts, min_isoform_fraction, run_EM):
 
+        min_frac_gene_unique_reads = PASA_SALRAA_Globals.config['min_frac_gene_unique_reads']
+        
         logger.info("Filtering transcripts according to min isoform fraction: {}".format(min_isoform_fraction))
 
         transcript_id_to_transcript = dict([ (x.get_transcript_id(), x) for x in transcripts] )
@@ -509,6 +511,8 @@ class Quantify:
         filtering_round = 0
 
         frac_read_assignments = None
+
+
         
         while isoforms_were_filtered:
 
@@ -535,7 +539,7 @@ class Quantify:
                 print("Transcript_id: {} has frac of gene_unique_reads: {}".format(transcript_id, frac_gene_unique_reads))
 
                 if (not isoforms_were_filtered and
-                    (frac_gene_unique_reads < min_isoform_fraction
+                    (frac_gene_unique_reads < min_frac_gene_unique_reads
                       or
                        transcript.get_isoform_fraction() < min_isoform_fraction)
                     ):

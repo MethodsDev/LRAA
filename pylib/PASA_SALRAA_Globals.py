@@ -44,9 +44,10 @@ config = {
     'min_path_score' : 2, # min number of reads required for reporting isoform
 
     
-    # transcript criteria
+    # transcript filtering criteria
     'min_transcript_length' : 200,
     'min_isoform_fraction' : 0.01,
+    'min_frac_gene_unique_reads' : 0.01, # minimum fraction of all uniquely assigned reads per gene
     
     
     # assembly
