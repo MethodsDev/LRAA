@@ -12,6 +12,7 @@ import intervaltree as itree
 from GenomeFeature import *
 from Bam_alignment_extractor import Bam_alignment_extractor
 import PASA_SALRAA_Globals
+import statistics
 
 logger = logging.getLogger(__name__)
 
@@ -479,11 +480,17 @@ class Splice_graph:
         if PASA_SALRAA_Globals.config['infer_TSS']:
 
             if PASA_SALRAA_Globals.DEBUG:
-                write_pos_counter_info("__prelim_TSS_raw_counts.tsv", polyA_position_counter, contig_acc, contig_strand)
+                write_pos_counter_info("__prelim_TSS_raw_counts.tsv", TSS_position_counter, contig_acc, contig_strand)
+
+
+            TSS_position_counter = self._evaluate_TSS_coverage_cliff(TSS_position_counter, contig_strand)
             
             TSS_grouped_positions = aggregate_sites_within_window(TSS_position_counter,
                                                                   PASA_SALRAA_Globals.config['max_dist_between_alt_TSS_sites'],
                                                                   PASA_SALRAA_Globals.config['min_alignments_define_TSS_site'])
+
+            
+
             
             for TSS_peak in TSS_grouped_positions:
                 position, count = TSS_peak
@@ -569,6 +576,73 @@ class Splice_graph:
         return
 
 
+
+    def _evaluate_TSS_coverage_cliff(self, TSS_position_counter, contig_strand):
+        # determine if it looks like the TSS position is near or at a coverage cliff.
+
+        cliff_check_size = PASA_SALRAA_Globals.config['TSS_cliff_size']
+        pseudocount = 0.1
+        
+        cliff_factor = PASA_SALRAA_Globals.config['TSS_cliff_factor']
+
+        TSS_pos_to_delete = set()
+
+        local_TSS_itree = itree.IntervalTree()
+
+        for TSS_pos, count in TSS_position_counter.items():
+            local_TSS_itree[TSS_pos:TSS_pos+1] = (TSS_pos, count) 
+        
+        def get_mean_TSS_count_in_region(region_lend, region_rend):
+
+            counts = list()
+            for interval in local_TSS_itree[region_lend:region_rend+1]:
+                TSS_pos, count = interval.data
+                assert TSS_pos >= region_lend and TSS_pos <= region_rend
+                counts.append(count)
+
+            if counts:
+                return statistics.mean(counts)
+            else:
+                return 0
+            
+            
+        
+        for TSS_pos in TSS_position_counter:
+
+            if contig_strand == '+':
+            
+                left_side_mean_coverage = get_mean_TSS_count_in_region(TSS_pos - cliff_check_size, TSS_pos - 1)
+                right_side_mean_coverage = get_mean_TSS_count_in_region(TSS_pos, TSS_pos + cliff_check_size - 1)
+
+                TSS_cov_enrich = (right_side_mean_coverage + pseudocount) / (left_side_mean_coverage + pseudocount)
+
+                print("TSS pos: {} cov_enrichment: {:.3f}".format(TSS_pos, TSS_cov_enrich))
+                
+                if TSS_cov_enrich < cliff_factor:
+                    TSS_pos_to_delete.add(TSS_pos)
+                    logger.debug("Eliminating TSS site {} based on not being at a cliff".format(TSS_pos))
+
+
+            else:
+                # minus strand
+                left_side_mean_coverage = get_mean_TSS_count_in_region(TSS_pos - cliff_check_size +1, TSS_pos)
+                right_side_mean_coverage = get_mean_TSS_count_in_region(TSS_pos + 1, TSS_pos + cliff_check_size)
+
+                TSS_cov_enrich = (left_side_mean_coverage + pseudocount) / (right_side_mean_coverage + pseudocount)
+
+                print("TSS pos: {} cov_enrichment: {:.3f}".format(TSS_pos, TSS_cov_enrich))
+                
+                if TSS_cov_enrich < cliff_factor:
+                    TSS_pos_to_delete.add(TSS_pos)
+                    logger.debug("Eliminating TSS site {} based on not being at a cliff".format(TSS_pos))
+                
+        
+        for TSS_pos in TSS_pos_to_delete:
+            del TSS_position_counter[TSS_pos]
+
+        
+        return TSS_position_counter
+    
 
     def _incorporate_TSS(self):
 

@@ -474,6 +474,21 @@ class Quantify:
     
 
 
+
+    @staticmethod
+    def get_gene_read_counts(frac_read_assignments, transcript_id_to_transcript_obj):
+        gene_id_to_read_count = defaultdict(int)
+        for transcript_id, transcript_read_frac_assignments in frac_read_assignments.items():
+            gene_id = transcript_id_to_transcript_obj[transcript_id].get_gene_id()
+            for read, frac_assigned in transcript_read_frac_assignments.items():
+                gene_id_to_read_count[gene_id] += frac_assigned
+
+        return gene_id_to_read_count
+        
+
+
+    
+
     @staticmethod
     def filter_isoforms_by_min_isoform_fraction(transcripts, min_isoform_fraction, run_EM):
 
@@ -481,17 +496,7 @@ class Quantify:
         
         logger.info("Filtering transcripts according to min isoform fraction: {}".format(min_isoform_fraction))
 
-        transcript_id_to_transcript = dict([ (x.get_transcript_id(), x) for x in transcripts] )
-        
-
-        def get_gene_read_counts(frac_read_assignments):
-            gene_id_to_unique_read_count = defaultdict(int)
-            for transcript_id, transcript_read_frac_assignments in frac_read_assignments.items():
-                gene_id = transcript_id_to_transcript[transcript_id].get_gene_id()
-                for read, frac_assigned in transcript_read_frac_assignments.items():
-                    gene_id_to_unique_read_count[gene_id] += frac_assigned
-                
-            return gene_id_to_unique_read_count
+        transcript_id_to_transcript_obj = dict([ (x.get_transcript_id(), x) for x in transcripts] )
         
 
         def get_idoform_unique_assigned_read_count(transcript_id, frac_read_assignments):
@@ -523,7 +528,7 @@ class Quantify:
             isoforms_were_filtered = False # update to True if we do filter an isoform out.
 
             frac_read_assignments = q._estimate_isoform_read_support(transcripts, run_EM)
-            gene_id_to_read_count = get_gene_read_counts(frac_read_assignments)
+            gene_id_to_read_count = Quantify.get_gene_read_counts(frac_read_assignments, transcript_id_to_transcript_obj)
             
             genes_represented = set()
             for transcript in transcripts:
@@ -574,8 +579,11 @@ class Quantify:
         
         # run an initial quant.
         q = Quantify()
-        q._estimate_isoform_read_support(transcripts, run_EM)
+        frac_read_assignments = q._estimate_isoform_read_support(transcripts, run_EM)
 
+        transcript_id_to_transcript_obj = dict([ (x.get_transcript_id(), x) for x in transcripts] )
+        gene_read_counts = Quantify.get_gene_read_counts(frac_read_assignments, transcript_id_to_transcript_obj)
+        
         transcripts_ret = list() # transcripts not pruned and returned.
                 
         # first organize by gene_id
@@ -616,6 +624,10 @@ class Quantify:
             for i in range(len(transcript_list)):
                 transcript_i = transcript_list[i]
                 transcript_i_id = transcript_i.get_transcript_id()
+
+                gene_i_id = transcript_i.get_gene_id()
+
+                gene_read_count = gene_read_counts[gene_i_id]
                 
                 if transcript_i in transcript_prune_as_degradation:
                     continue
@@ -638,23 +650,32 @@ class Quantify:
                         continue
 
                     transcript_j_id = transcript_j.get_transcript_id()
+                    gene_j_id = transcript_j.get_gene_id()
+
+                    assert gene_i_id == gene_j_id
                     
                     transcript_j_simple_path = transcript_j.get_simple_path()
                     j_path_trimmed, j_TSS_id, j_polyA_id = SPU.trim_TSS_and_PolyA(transcript_j_simple_path, contig_strand)
                     transcript_j_read_counts_assigned = transcript_j.get_read_counts_assigned()
+
+                    if len(j_path_trimmed) > len(i_path_trimmed):
+                        # no way can i subsume j
+                        continue
                     
                     # Simple_path_utils.simple_paths_overlap_and_compatible_spacefree_region_path_A(self.get_splice_graph(), my_path, other_path)
                     frac_expression_i = transcript_j_read_counts_assigned / transcript_i_read_counts_assigned
 
+                    frac_gene_expression_j = transcript_j_read_counts_assigned / gene_read_count
 
-                    logger.debug("Exploring path: {} as subsuming {}".format(transcript_i, transcript_j))
+                    
+                    logger.debug("Exploring path: {} as subsuming {}".format(transcript_i_simple_path, transcript_j_simple_path))
                     
                     if SPU.path_A_contains_path_B(i_path_trimmed, j_path_trimmed):
 
-                        # TODO:// need sensible logic for exlcuding likely degradation products.
-                        
+                        logger.debug("splice compatible & contained transcript_j_id {} has frac gene expression: {}".format(transcript_j_id, frac_gene_expression_j))
+                                     
                         subsume_J = False
-                        #subsume_J = True ## DEBUGGING
+                        
 
                         if PASA_SALRAA_Globals.config['collapse_alt_TSS_and_PolyA']:
                             logger.debug("Collapsing compatible path: {} into {}".format(transcript_j, transcript_i))
@@ -674,6 +695,10 @@ class Quantify:
                                 logger.debug("based on frac_max_TSS: {:.3f}, path_i: {} is subsuming path_j: {}".format(frac_max_TSS, transcript_i_simple_path, transcript_j_simple_path))
                                 subsume_J = True
 
+                            elif frac_gene_expression_j < PASA_SALRAA_Globals.config['min_frac_alignments_define_TSS_site']:
+                                logger.debug("based on frac_gene_expression: {:.3f}, path_i: {} is subsuming path_j: {}".format(frac_gene_expression_j, transcript_i_simple_path, transcript_j_simple_path))
+                                subsume_J = True
+
 
 
                         elif i_TSS_id is not None and j_TSS_id is None:
@@ -691,18 +716,17 @@ class Quantify:
                         #####  PolyA check ######    
                         ## But dont subsume if they have polyA and they differ
                         if subsume_J:
-                            if i_polyA_id is not None and j_polyA_id is not None:
-                                if i_polyA_id != j_polyA_id:
-                                    subsume_J = False
-                            elif j_polyA_id is not None:
-                                subsume_J = False
-                        
-                        #if not subsume_J:
-                            # see if just a polyA difference
-                            #if i_TSS_id == j_TSS_id:
-                            #    subsume_J = True
+                            # here we might resurrect it based on polyA status
+                            if frac_gene_expression_j >= PASA_SALRAA_Globals.config['min_frac_alignments_define_polyA_site']: 
                             
-                        #subsume_J = False
+                                if i_polyA_id is not None and j_polyA_id is not None:
+                                    if i_polyA_id != j_polyA_id:
+                                        subsume_J = False
+                                        logger.debug("resurrecting {} based on alt polyA".format(transcript_j_id))
+                                elif j_polyA_id is not None:
+                                    logger.debug("resurrecting {} based on defined polyA".format(transcript_j_id))
+                                    subsume_J = False
+
                         
                         if subsume_J:
                             logger.debug("Pruning {} as likely degradation product of {}".format(transcript_j, transcript_i))

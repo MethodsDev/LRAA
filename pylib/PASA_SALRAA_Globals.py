@@ -25,16 +25,19 @@ config = {
     'infer_TSS' : True, # include TSS feature in read path assignments
     'max_dist_between_alt_TSS_sites' : 0,
     'min_alignments_define_TSS_site' : 3,
+    'min_frac_alignments_define_TSS_site' : 0.2,
     'max_frac_compatible_expression' : 0.5, # if 2 transcripts (A,B) are compatible and A contains B, and B < this fraction expression, B excluded as likely degradation product
     'min_TSS_iso_fraction' : 0.05, # like min_isoform_fraction, but specifically targeting TSS features
     'max_frac_alt_TSS_from_degradation' : 0.20,
     'max_soft_clip_at_TSS' : 3,
-
+    'TSS_cliff_factor' : 20, # should have at least this-fold increase in read coverage on the transcribed side of the TSS site.
+    'TSS_cliff_size' : 10, # examine this length around each TSS candidate for coverage according to cliff_factor above
     
     ## polyA site config
     'infer_PolyA' : True, # include PolyA site feature in read path assignments
     'max_dist_between_alt_polyA_sites' : 50,
     'min_alignments_define_polyA_site' : 3,
+    'min_frac_alignments_define_polyA_site' : 0.1,
     'min_PolyA_ident_length' : 7, # examine softclipped ends of reads, if have polyA with at least this number of bases at terminus, strip it and extended match out.
     'max_soft_clip_at_PolyA' : 3, 
     
