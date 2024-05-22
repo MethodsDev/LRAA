@@ -295,13 +295,14 @@ class Quantify:
 
             
         ## DEBUGGING
-        logger.debug("# Isoform read assignments:\n")
-        for read_name in read_name_to_transcripts:
-            transcripts_read_assigned = read_name_to_transcripts[read_name]
-            logger.debug("read_name {} assigned to {}".format(read_name, transcripts_read_assigned))
-            if len(transcripts_read_assigned) > 1:
-                logger.debug("*** Splitting read: {} across {} transcripts: {}".format(read_name, len(transcripts_read_assigned), transcripts_read_assigned))
-            
+        if False:
+            logger.debug("# Isoform read assignments:\n")
+            for read_name in read_name_to_transcripts:
+                transcripts_read_assigned = read_name_to_transcripts[read_name]
+                logger.debug("read_name {} assigned to {}".format(read_name, transcripts_read_assigned))
+                if len(transcripts_read_assigned) > 1:
+                    logger.debug("*** Splitting read: {} across {} transcripts: {}".format(read_name, len(transcripts_read_assigned), transcripts_read_assigned))
+
 
 
 
@@ -483,13 +484,12 @@ class Quantify:
         transcript_id_to_transcript = dict([ (x.get_transcript_id(), x) for x in transcripts] )
         
 
-        def get_gene_unique_read_counts(frac_read_assignments):
+        def get_gene_read_counts(frac_read_assignments):
             gene_id_to_unique_read_count = defaultdict(int)
             for transcript_id, transcript_read_frac_assignments in frac_read_assignments.items():
                 gene_id = transcript_id_to_transcript[transcript_id].get_gene_id()
                 for read, frac_assigned in transcript_read_frac_assignments.items():
-                    if frac_assigned >= 0.9999: # close enough to 1.0
-                        gene_id_to_unique_read_count[gene_id] += 1
+                    gene_id_to_unique_read_count[gene_id] += frac_assigned
                 
             return gene_id_to_unique_read_count
         
@@ -523,7 +523,7 @@ class Quantify:
             isoforms_were_filtered = False # update to True if we do filter an isoform out.
 
             frac_read_assignments = q._estimate_isoform_read_support(transcripts, run_EM)
-            gene_id_to_unique_read_count = get_gene_unique_read_counts(frac_read_assignments)
+            gene_id_to_read_count = get_gene_read_counts(frac_read_assignments)
             
             genes_represented = set()
             for transcript in transcripts:
@@ -531,12 +531,12 @@ class Quantify:
                 transcript_id = transcript.get_transcript_id()
                 gene_id = transcript.get_gene_id()
                 genes_represented.add(gene_id)
-                gene_unique_read_count = gene_id_to_unique_read_count[gene_id]
+                gene_read_count = gene_id_to_read_count[gene_id]
                 transcript_unique_read_count = get_idoform_unique_assigned_read_count(transcript_id, frac_read_assignments)
                 
-                frac_gene_unique_reads = transcript_unique_read_count / gene_unique_read_count
+                frac_gene_unique_reads = transcript_unique_read_count / gene_read_count
                 
-                print("Transcript_id: {} has frac of gene_unique_reads: {}".format(transcript_id, frac_gene_unique_reads))
+                logger.debug("Transcript_id: {} has unique read frac of gene total reads: {}".format(transcript_id, frac_gene_unique_reads))
 
                 if (not isoforms_were_filtered and
                     (frac_gene_unique_reads < min_frac_gene_unique_reads
@@ -546,6 +546,8 @@ class Quantify:
                     
                     isoforms_were_filtered = True
                     num_filtered_isoforms += 1
+
+                    logger.debug("Filtering out transcript_id {} as low fraction of unique reads: {}".format(transcript_id, frac_gene_unique_reads))
                     
                 else:
                     transcripts_retained.append(transcript)
@@ -566,6 +568,8 @@ class Quantify:
     @staticmethod
     def prune_likely_degradation_products(transcripts, splice_graph, run_EM):
 
+        logger.info("Pruning likely degradation products")
+        
         sg = splice_graph
         
         # run an initial quant.
@@ -656,30 +660,49 @@ class Quantify:
                             logger.debug("Collapsing compatible path: {} into {}".format(transcript_j, transcript_i))
                             subsume_J = True
                         
-                        elif i_TSS_id is not None:
-                            if j_TSS_id is not None:
-                                i_TSS_read_count = sg.get_node_obj_via_id(i_TSS_id).get_read_support()
-                                j_TSS_read_count = sg.get_node_obj_via_id(j_TSS_id).get_read_support()
+                        elif i_TSS_id is not None and j_TSS_id is not None:
 
-                                frac_max_TSS =  j_TSS_read_count/i_TSS_read_count
-                                logger.debug("frac_max_TSS: {:.3f} of path_j: {} to path_i{}".format(frac_max_TSS, transcript_j_simple_path, transcript_i_simple_path))
+                            i_TSS_read_count = sg.get_node_obj_via_id(i_TSS_id).get_read_support()
+                            j_TSS_read_count = sg.get_node_obj_via_id(j_TSS_id).get_read_support()
 
-                                logger.debug("\t".join(["TSS_fracs", transcript_i_id, transcript_j_id, str(i_TSS_read_count), str(j_TSS_read_count), "{:.3f}".format(frac_max_TSS)]))
-                                
-                                if frac_max_TSS < PASA_SALRAA_Globals.config['max_frac_alt_TSS_from_degradation']:
-                                    logger.debug("based on frac_max_TSS: {:.3f}, path_i: {} is subsuming path_j: {}".format(frac_max_TSS, transcript_i_simple_path, transcript_j_simple_path))
-                                    subsume_J = True
-                            else:
-                                # no j_TSS but have i_TSS
+                            frac_max_TSS =  j_TSS_read_count/i_TSS_read_count
+                            logger.debug("frac_max_TSS: {:.3f} of path_j: {} to path_i{}".format(frac_max_TSS, transcript_j_simple_path, transcript_i_simple_path))
+
+                            logger.debug("\t".join(["TSS_fracs", transcript_i_id, transcript_j_id, str(i_TSS_read_count), str(j_TSS_read_count), "{:.3f}".format(frac_max_TSS)]))
+
+                            if frac_max_TSS < PASA_SALRAA_Globals.config['max_frac_alt_TSS_from_degradation']:
+                                logger.debug("based on frac_max_TSS: {:.3f}, path_i: {} is subsuming path_j: {}".format(frac_max_TSS, transcript_i_simple_path, transcript_j_simple_path))
                                 subsume_J = True
-                        else: #if frac_expression_i <= PASA_SALRAA_Globals.config['max_frac_alt_TSS_from_degradation']:
+
+
+
+                        elif i_TSS_id is not None and j_TSS_id is None:
+                            # no j_TSS but have i_TSS
                             subsume_J = True
 
+                        elif i_TSS_id is None and j_TSS_id is not None:
+                            subsume_J = False
+
+
+                        else:
+                            # neither has a TSS assigned.
+                            subsume_J = True
+
+                        #####  PolyA check ######    
+                        ## But dont subsume if they have polyA and they differ
+                        if subsume_J:
+                            if i_polyA_id is not None and j_polyA_id is not None:
+                                if i_polyA_id != j_polyA_id:
+                                    subsume_J = False
+                            elif j_polyA_id is not None:
+                                subsume_J = False
+                        
                         #if not subsume_J:
                             # see if just a polyA difference
                             #if i_TSS_id == j_TSS_id:
                             #    subsume_J = True
                             
+                        #subsume_J = False
                         
                         if subsume_J:
                             logger.debug("Pruning {} as likely degradation product of {}".format(transcript_j, transcript_i))

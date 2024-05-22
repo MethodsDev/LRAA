@@ -35,7 +35,9 @@ config = {
     'infer_PolyA' : True, # include PolyA site feature in read path assignments
     'max_dist_between_alt_polyA_sites' : 50,
     'min_alignments_define_polyA_site' : 3,
-
+    'min_PolyA_ident_length' : 7, # examine softclipped ends of reads, if have polyA with at least this number of bases at terminus, strip it and extended match out.
+    'max_soft_clip_at_PolyA' : 3, 
+    
     ## read assignment to transcript criteria
     'fraction_read_align_overlap' : 0.75, # min fraction of read length that must overlap the compatible transcript isoform structure
     

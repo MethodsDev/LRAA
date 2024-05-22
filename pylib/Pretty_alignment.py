@@ -26,7 +26,20 @@ class Pretty_alignment:
         #    self._read_type = "ILMN"
         self._read_type = "PacBio"
 
-        self.left_soft_clipping, self.right_soft_clipping = self._get_read_soft_clipping_info(pysam_alignment)
+        
+        ## soft clipping before/after polyA trimming.
+        # - pre-trimming
+        self.orig_left_soft_clipping = None
+        self.orig_right_soft_clipping = None
+        self.orig_left_soft_clipped_seq = None
+        self.orig_right_soft_clipped_seq = None
+        # - post-trimming
+        self.left_soft_clipping = None
+        self.right_soft_clipping = None
+        self.left_soft_clipped_seq = None
+        self.right_soft_clipped_seq = None
+        
+        self._set_read_soft_clipping_info(pysam_alignment) # sets above
 
         
         
@@ -55,7 +68,7 @@ class Pretty_alignment:
         return self._read_type
 
     
-    def _get_read_soft_clipping_info(self, pysam_alignment=None):
+    def _set_read_soft_clipping_info(self, pysam_alignment=None):
 
         if pysam_alignment is None:
             pysam_alignment = self._pysam_alignment
@@ -65,17 +78,56 @@ class Pretty_alignment:
         S=4 # soft clipping cigar code in pysam
         
         left_soft_clipping = cigar_tuples[0][1] if cigar_tuples[0][0] == S else 0
+        self.orig_left_soft_clipping = left_soft_clipping
 
+        
         right_soft_clipping = cigar_tuples[-1][1] if cigar_tuples[-1][0] == S else 0
+        self.orig_right_soft_clipping = right_soft_clipping
 
-        return left_soft_clipping, right_soft_clipping
+        read_sequence = pysam_alignment.query_sequence
+        left_soft_clipped_seq = ""
+        if left_soft_clipping > 0:
+            left_soft_clipped_seq = read_sequence[0:left_soft_clipping]
+
+        self.orig_left_soft_clipped_seq = left_soft_clipped_seq
+            
+        right_soft_clipped_seq = ""
+        if right_soft_clipping > 0:
+            right_soft_clipped_seq = read_sequence[ (-1*right_soft_clipping) : ]
+
+        self.orig_right_soft_clipped_seq = right_soft_clipped_seq
+        
+        ## deal with polyA
+        min_PolyA_ident_length = PASA_SALRAA_Globals.config['min_PolyA_ident_length']
+
+        if pysam_alignment.is_forward and right_soft_clipping >= min_PolyA_ident_length :
+            polyA_regex = "A" * min_PolyA_ident_length + "+$"
+            right_soft_clippled_seq = re.sub(polyA_regex, "", right_soft_clipped_seq)
+            right_soft_clipping = len(right_soft_clipped_seq)
+            logger.debug("Stripped polyA from end of read {}".format(pysam_alignment.query_name))
+
+        elif pysam_alignment.is_reverse and left_soft_clipping >= min_PolyA_ident_length:
+            polyT_regex = "^" + "T"*min_PolyA_ident_length + "+"
+            left_soft_clipped_seq = re.sub(polyT_regex, "", left_soft_clipped_seq)
+            left_soft_clipping = len(left_soft_clipped_seq)
+            logger.debug("Stripped polyT from beginning of read {}".format(pysam_alignment.query_name))
+        
+
+        # set obj vars
+        self.left_soft_clipping = left_soft_clipping
+        self.right_soft_clipping = right_soft_clipping
+        self.left_soft_clipped_seq = left_soft_clipped_seq
+        self.right_soft_clipped_seq = right_soft_clipped_seq
 
 
     
-
     def has_soft_clipping(self):
-        left_soft_clip, right_soft_clip = self._get_read_soft_clipping_info()
-        if left_soft_clip > 0 or right_soft_clip > 0:
+
+        assert self.left_soft_clipping is not None
+        assert self.right_soft_clipping is not None
+
+        
+        if self.left_soft_clipping > 0 or self.right_soft_clipping > 0:
             return True
         else:
             return False
@@ -97,30 +149,30 @@ class Pretty_alignment:
             
             alignment_segments = pretty_alignment.get_pretty_alignment_segments()
 
-            left_soft_clipping, right_soft_clipping = pretty_alignment._get_read_soft_clipping_info()
+            left_soft_clipping, right_soft_clipping = pretty_alignment.left_soft_clipping, pretty_alignment.right_soft_clipping
+            orig_left_soft_clipping, orig_right_soft_clipping = pretty_alignment.orig_left_soft_clipping, pretty_alignment.orig_right_soft_clipping
 
+            
             read = pretty_alignment._pysam_alignment
             
             read_sequence = read.query_sequence
+            read_name = read.query_name
 
+            read_adj_lend = orig_left_soft_clipping - left_soft_clipping + 1
+            assert read_adj_lend >= 1
+            read_adj_rend = len(read_sequence) - orig_right_soft_clipping + right_soft_clipping
+            assert read_adj_rend <= len(read_sequence)
+            
             # get mapping of genome pos -> read pos
             aligned_pairs = dict([ (y+1, x+1) for x,y in read.get_aligned_pairs(matches_only=True) ])
 
 
-            # ignore soft-clips involving just polyA - only useful if sim data here with tacked-on polyA - could make more useful, but just trim polyA before running is easiest.
-            if (read.is_forward and
-                right_soft_clipping > 0 and
-                right_soft_clipping <= max_softclip_realign_test and
-                re.match("^A+$", read_sequence[ (-1*right_soft_clipping):], re.I) is not None):
-                continue
 
-            
-            if (read.is_reverse and
-                left_soft_clipping > 0 and
-                left_soft_clipping <= max_softclip_realign_test and
-                re.match("^T+$", read_sequence[0:left_soft_clipping], re.I) is not None):
-                continue
+            ## examine left-side intron realignment
 
+            # exons   <------------>           <---------------> 
+            #  read                        XXXXX||||||||||||||||
+            # raligned         |||||            ||||||||||||||||
             
             if left_soft_clipping > 0 and left_soft_clipping <= max_softclip_realign_test:
                 left_alignment_segment = alignment_segments[0]
@@ -138,9 +190,11 @@ class Pretty_alignment:
                     intron_adjacent_pos = intron_rend + 1
                     if intron_adjacent_pos not in aligned_pairs:
                         continue
+                    
                     read_rend = aligned_pairs[intron_adjacent_pos] - 1
-                    if read_rend -1 <=  max_softclip_realign_test:
-                        left_read_seq = read_sequence[0:read_rend]
+                    if read_rend - read_adj_lend + 1 <=  max_softclip_realign_test:
+                        
+                        left_read_seq = read_sequence[read_adj_lend -1 : read_rend]
                         #print("Checking read realignment for {}".format(left_read_seq))
                         
                         genomic_rend = intron_lend - 1
@@ -151,12 +205,21 @@ class Pretty_alignment:
                         
                         if left_read_seq.upper() == genomic_substr.upper():
                             #print("\tLeft MATCH FOUND")
+                            logger.debug("-left-side alignment correction for read {} repositioning sequence {}".format(read_name, genomic_substr))
                             # do reassignment:
                             alignment_segments[0][0] = intron_rend + 1
                             alignment_segments.insert(0, [genomic_lend, genomic_rend])
                             break
+
             
-            
+
+            # examine right-side intron realignment
+
+            # exons    <------------>           <---------------> 
+            #  read    ||||||||||||||XXXXX
+            # raligned ||||||||||||||           |||||
+
+                        
             if right_soft_clipping > 0 and right_soft_clipping <= max_softclip_realign_test:
                 right_alignment_segment = alignment_segments[-1]
                 exon_seg_lend, exon_seg_rend = right_alignment_segment
@@ -174,7 +237,7 @@ class Pretty_alignment:
                         continue
                     read_lend = aligned_pairs[intron_adjacent_pos]
                     if len(read_sequence) - read_lend + 1 <= max_softclip_realign_test:
-                        right_read_seq = read_sequence[read_lend:]
+                        right_read_seq = read_sequence[read_lend:read_adj_rend]
                         #print("Checking read realignment for {}".format(right_read_seq))
                         genomic_lend = intron_rend + 1
                         genomic_rend = genomic_lend + len(right_read_seq) - 1
@@ -182,6 +245,7 @@ class Pretty_alignment:
                         #print("Comparing to genomic rend seq: {}".format(genomic_substr))
                         if right_read_seq.upper() == genomic_substr.upper():
                             #print("\tRight MATCH FOUND")
+                            logger.debug("-right-side alignment correction for read {} repositioning sequence {}".format(read_name, genomic_substr))
                             # do reassignment:
                             alignment_segments[-1][1] = intron_lend -1
                             alignment_segments.append([genomic_lend, genomic_rend])

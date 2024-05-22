@@ -403,11 +403,15 @@ class Splice_graph:
 
             TSS_pos, polyA_pos = (align_lend, align_rend) if contig_strand == '+' else (align_rend, align_lend)
             TSS_pos_soft_clipping = pretty_alignment.left_soft_clipping if contig_strand == '+' else pretty_alignment.right_soft_clipping
-
+            polyA_pos_soft_clipping = pretty_alignment.right_soft_clipping if contig_strand == '+' else pretty_alignment.left_soft_clipping
+            
+            
             if TSS_pos_soft_clipping <= PASA_SALRAA_Globals.config['max_soft_clip_at_TSS']:
                 TSS_position_counter[TSS_pos] += 1
 
-            polyA_position_counter[polyA_pos] += 1
+            if polyA_pos_soft_clipping <= PASA_SALRAA_Globals.config['max_soft_clip_at_PolyA']:
+                polyA_position_counter[polyA_pos] += 1
+            
             
             if PASA_SALRAA_Globals.DEBUG:
                 print("\t".join([contig_acc, contig_strand, str(TSS_pos), read_name]), file=TSS_reads_ofh)

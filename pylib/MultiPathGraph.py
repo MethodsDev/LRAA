@@ -138,8 +138,9 @@ class MultiPathGraph:
                 #print(f"component_id: {component_id}\tmp_node_obj: {mp_node_obj}")
 
 
-            ordered_nodes = sorted(ordered_nodes, key=lambda x: (x._lend, x._rend))  
-
+            #ordered_nodes = sorted(ordered_nodes, key=lambda x: (x._lend, x._rend))  
+            ordered_nodes = sorted(ordered_nodes, key=lambda x: (x._lend, x._rend, x.get_left_boundary_sort_weight(), x.get_right_boundary_sort_weight()))
+                        
             num_ordered_nodes = len(ordered_nodes)
             logger.info(f"Building MP Graph for component_id {component_id} with {num_ordered_nodes} multipaths")
 

@@ -246,10 +246,14 @@ class MultiPathGraphNode:
 
     
     def contains_other_node(self, other_node):
-                
+        
+        self_path =  self.get_simple_path()
+        other_path = other_node.get_simple_path()
+        
         # this is spacer-aware
-        if Simple_path_utils.simple_path_A_contains_and_compatible_with_simple_path_B_spacefree_region_path_A(self.get_splice_graph(), self.get_simple_path(), other_node.get_simple_path()):
+        if Simple_path_utils.simple_path_A_contains_and_compatible_with_simple_path_B_spacefree_region_path_A(self.get_splice_graph(), self_path, other_path):
             #logger.debug("Path {}\ncontains Path {}".format(self.get_simple_path(), other_node.get_simple_path()))
+            assert len(self_path) >= len(other_path)
             return True
         else:
             return False
