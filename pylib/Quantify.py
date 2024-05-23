@@ -686,17 +686,22 @@ class Quantify:
                             i_TSS_read_count = sg.get_node_obj_via_id(i_TSS_id).get_read_support()
                             j_TSS_read_count = sg.get_node_obj_via_id(j_TSS_id).get_read_support()
 
-                            frac_max_TSS =  j_TSS_read_count/i_TSS_read_count
-                            logger.debug("frac_max_TSS: {:.3f} of path_j: {} to path_i{}".format(frac_max_TSS, transcript_j_simple_path, transcript_i_simple_path))
+                            
+                            
+                            frac_i_TSS =  j_TSS_read_count/i_TSS_read_count
+                            logger.debug("frac_i_TSS: {:.3f} of path_j: {} to path_i{}".format(frac_i_TSS, transcript_j_simple_path, transcript_i_simple_path))
 
-                            logger.debug("\t".join(["TSS_fracs", transcript_i_id, transcript_j_id, str(i_TSS_read_count), str(j_TSS_read_count), "{:.3f}".format(frac_max_TSS)]))
-
-                            if frac_max_TSS < PASA_SALRAA_Globals.config['max_frac_alt_TSS_from_degradation']:
-                                logger.debug("based on frac_max_TSS: {:.3f}, path_i: {} is subsuming path_j: {}".format(frac_max_TSS, transcript_i_simple_path, transcript_j_simple_path))
+                            frac_gene_express_j_TSS = j_TSS_read_count / gene_read_count
+                            
+                            if frac_i_TSS < PASA_SALRAA_Globals.config['max_frac_alt_TSS_from_degradation']:
+                                logger.debug("based on frac_i_TSS: {:.3f}, path_i: {} is subsuming path_j: {}".format(frac_i_TSS, transcript_i_simple_path, transcript_j_simple_path))
                                 subsume_J = True
 
-                            elif frac_gene_expression_j < PASA_SALRAA_Globals.config['min_frac_alignments_define_TSS_site']:
-                                logger.debug("based on frac_gene_expression: {:.3f}, path_i: {} is subsuming path_j: {}".format(frac_gene_expression_j, transcript_i_simple_path, transcript_j_simple_path))
+                            elif frac_gene_express_j_TSS < PASA_SALRAA_Globals.config['min_frac_gene_alignments_define_TSS_site']:
+                                logger.debug(
+                                    "based on j_TSS count frac_gene_expression: {:.3f}, path_i: {} is subsuming path_j: {}".format(
+                                    frac_gene_express_j_TSS, transcript_i_simple_path, transcript_j_simple_path)
+                                    )
                                 subsume_J = True
 
 

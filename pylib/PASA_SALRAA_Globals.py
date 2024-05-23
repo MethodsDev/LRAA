@@ -6,33 +6,42 @@ SPACER="???"
 DEBUG=False
 
 config = {
-    
+
+    #########################
     # read alignment criteria
     'min_per_id' : 98,
     'min_mapping_quality' : 20,
     'try_correct_alignments' : False,
     'max_softclip_realign_test' : 10,
 
-    
+
+    ####################################
     # splice graph construction criteria
     'min_alt_splice_freq' : 0.01,
     'min_alt_unspliced_freq' : 0.01,
     'min_feature_frac_overlap' : 0.50,
     'max_exon_spur_length' : 5, # exon spurs not tied to TSS or PolyA and at most this length get pruned
 
-    
-    ## TSS config
+
+    ############
+    # TSS config
     'infer_TSS' : True, # include TSS feature in read path assignments
     'max_dist_between_alt_TSS_sites' : 0,
     'min_alignments_define_TSS_site' : 3,
-    'min_frac_alignments_define_TSS_site' : 0.2,
-    'max_frac_compatible_expression' : 0.5, # if 2 transcripts (A,B) are compatible and A contains B, and B < this fraction expression, B excluded as likely degradation product
-    'min_TSS_iso_fraction' : 0.05, # like min_isoform_fraction, but specifically targeting TSS features
-    'max_frac_alt_TSS_from_degradation' : 0.20,
-    'max_soft_clip_at_TSS' : 3,
-    'TSS_cliff_factor' : 20, # should have at least this-fold increase in read coverage on the transcribed side of the TSS site.
-    'TSS_cliff_size' : 10, # examine this length around each TSS candidate for coverage according to cliff_factor above
+    'max_soft_clip_at_TSS' : 0,
+    'min_TSS_iso_fraction' : 0.05, # during initial TSS definition, require for a 'gene' that a TSS has at least this fraction of TSS-candidate gene reads assigned.
+
+    ## - alt TSS isoform pruning 
+
+    # during splice graph construction: walking exon segments from a more dominant site, removing less supported sites below fraction of dominant
+    # during isoform resolution: comparing isoform i that contains j, j >= this frac of i TSS read support
+    'max_frac_alt_TSS_from_degradation' : 0.20, 
+
+    # to retain j TSS when comparing to i TSS, j TSS must have >= read support fraction of all gene reads
+    'min_frac_gene_alignments_define_TSS_site' : 0.05, 
     
+
+    ####################
     ## polyA site config
     'infer_PolyA' : True, # include PolyA site feature in read path assignments
     'max_dist_between_alt_polyA_sites' : 50,

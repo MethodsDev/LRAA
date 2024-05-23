@@ -483,14 +483,14 @@ class Splice_graph:
                 write_pos_counter_info("__prelim_TSS_raw_counts.tsv", TSS_position_counter, contig_acc, contig_strand)
 
 
-            TSS_position_counter = self._evaluate_TSS_coverage_cliff(TSS_position_counter, contig_strand)
+                
             
             TSS_grouped_positions = aggregate_sites_within_window(TSS_position_counter,
                                                                   PASA_SALRAA_Globals.config['max_dist_between_alt_TSS_sites'],
                                                                   PASA_SALRAA_Globals.config['min_alignments_define_TSS_site'])
-
             
 
+            
             
             for TSS_peak in TSS_grouped_positions:
                 position, count = TSS_peak
@@ -576,73 +576,6 @@ class Splice_graph:
         return
 
 
-
-    def _evaluate_TSS_coverage_cliff(self, TSS_position_counter, contig_strand):
-        # determine if it looks like the TSS position is near or at a coverage cliff.
-
-        cliff_check_size = PASA_SALRAA_Globals.config['TSS_cliff_size']
-        pseudocount = 0.1
-        
-        cliff_factor = PASA_SALRAA_Globals.config['TSS_cliff_factor']
-
-        TSS_pos_to_delete = set()
-
-        local_TSS_itree = itree.IntervalTree()
-
-        for TSS_pos, count in TSS_position_counter.items():
-            local_TSS_itree[TSS_pos:TSS_pos+1] = (TSS_pos, count) 
-        
-        def get_mean_TSS_count_in_region(region_lend, region_rend):
-
-            counts = list()
-            for interval in local_TSS_itree[region_lend:region_rend+1]:
-                TSS_pos, count = interval.data
-                assert TSS_pos >= region_lend and TSS_pos <= region_rend
-                counts.append(count)
-
-            if counts:
-                return statistics.mean(counts)
-            else:
-                return 0
-            
-            
-        
-        for TSS_pos in TSS_position_counter:
-
-            if contig_strand == '+':
-            
-                left_side_mean_coverage = get_mean_TSS_count_in_region(TSS_pos - cliff_check_size, TSS_pos - 1)
-                right_side_mean_coverage = get_mean_TSS_count_in_region(TSS_pos, TSS_pos + cliff_check_size - 1)
-
-                TSS_cov_enrich = (right_side_mean_coverage + pseudocount) / (left_side_mean_coverage + pseudocount)
-
-                print("TSS pos: {} cov_enrichment: {:.3f}".format(TSS_pos, TSS_cov_enrich))
-                
-                if TSS_cov_enrich < cliff_factor:
-                    TSS_pos_to_delete.add(TSS_pos)
-                    logger.debug("Eliminating TSS site {} based on not being at a cliff".format(TSS_pos))
-
-
-            else:
-                # minus strand
-                left_side_mean_coverage = get_mean_TSS_count_in_region(TSS_pos - cliff_check_size +1, TSS_pos)
-                right_side_mean_coverage = get_mean_TSS_count_in_region(TSS_pos + 1, TSS_pos + cliff_check_size)
-
-                TSS_cov_enrich = (left_side_mean_coverage + pseudocount) / (right_side_mean_coverage + pseudocount)
-
-                print("TSS pos: {} cov_enrichment: {:.3f}".format(TSS_pos, TSS_cov_enrich))
-                
-                if TSS_cov_enrich < cliff_factor:
-                    TSS_pos_to_delete.add(TSS_pos)
-                    logger.debug("Eliminating TSS site {} based on not being at a cliff".format(TSS_pos))
-                
-        
-        for TSS_pos in TSS_pos_to_delete:
-            del TSS_position_counter[TSS_pos]
-
-        
-        return TSS_position_counter
-    
 
     def _incorporate_TSS(self):
 
@@ -1689,7 +1622,7 @@ class Splice_graph:
         return len(self._splice_graph) == 0
 
 
-
+    
     def _eliminate_low_support_TSS(self, node_list):
 
         logger.debug("Eliminating low support TSS")
@@ -1702,34 +1635,24 @@ class Splice_graph:
 
         if TSS_list:
 
-            def get_sum_read_support():
-                sum_read_support = 0
-                for TSS_obj in TSS_list:
-                    sum_read_support += TSS_obj.get_read_support()
-                return sum_read_support
+            sum_TSS_read_support = 0
+            for TSS_obj in TSS_list:
+                sum_TSS_read_support += TSS_obj.get_read_support()
+                
             
             min_TSS_iso_fraction = PASA_SALRAA_Globals.config['min_TSS_iso_fraction']
             
-            TSS_to_purge = set()
+            TSS_to_purge = list()
+
+            TSS_list = sorted(TSS_list, key=lambda x: x.get_read_support(), reverse=True)
+
+            for i, TSS_obj in enumerate(TSS_list):
+                frac_read_support = TSS_obj.get_read_support() / sum_TSS_read_support
+                if frac_read_support < min_TSS_iso_fraction:
+                    TSS_to_purge = TSS_list[i:]
+                    TSS_list = TSS_list[0:i]
+                    break
             
-            filtering = True
-            while len(TSS_list) > 0 and filtering:
-                filtering = False # reinit
-                TSS_list = sorted(TSS_list, key=lambda x: x.get_read_support(), reverse=True)
-                sum_read_support = get_sum_read_support()
-                for i, TSS_obj in enumerate(TSS_list):
-                    frac_read_support = TSS_obj.get_read_support() / sum_read_support
-                    if frac_read_support < min_TSS_iso_fraction:
-                        TSS_to_purge.update(TSS_list[i:])
-                        if i == 0:
-                            # all gone
-                            TSS_list.clear()
-                        else:
-                            TSS_list = TSS_list[0:i]
-
-                        filtering = True
-
-                        
             if TSS_to_purge:
                 logger.debug("Purging TSSs due to min isoform fraction requirements: {}".format(TSS_to_purge))
                 for TSS_obj in TSS_to_purge:
@@ -1737,8 +1660,12 @@ class Splice_graph:
                 self._splice_graph.remove_nodes_from(TSS_to_purge)
                 TSS_to_purge.clear()
 
+
+           
+                
             # remove remaining potential degradation products
             # walk the splice graph along linear exon connections and prune alt TSSs that have lower than the frac dominant support
+            TSS_to_purge = set() # reinit as set
             max_frac_TSS_is_degradation = PASA_SALRAA_Globals.config['max_frac_alt_TSS_from_degradation'] # if neighboring TSS has this frac or less, gets purged as degradation product 
             for TSS_obj in TSS_list:
                 if TSS_obj in TSS_to_purge:
@@ -1784,15 +1711,16 @@ class Splice_graph:
                 for TSS_obj in TSS_to_purge:
                     self._TSS_objs.remove(TSS_obj)
                 self._splice_graph.remove_nodes_from(TSS_to_purge)
-
+        
 
 
         return
     
-
+    
     def _eliminate_low_support_PolyA(self, node_list):
         pass
     
+
 
 
 ## general utility functions used above.
@@ -1890,6 +1818,8 @@ def append_log_file(filename, genome_features_list):
 
 
 
+
+    
 def write_pos_counter_info(filename, position_counter, contig_acc, contig_strand):
 
     position_counts = list(position_counter.items())
