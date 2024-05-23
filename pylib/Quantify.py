@@ -680,44 +680,52 @@ class Quantify:
                         if PASA_SALRAA_Globals.config['collapse_alt_TSS_and_PolyA']:
                             logger.debug("Collapsing compatible path: {} into {}".format(transcript_j, transcript_i))
                             subsume_J = True
-                        
-                        elif i_TSS_id is not None and j_TSS_id is not None:
 
-                            i_TSS_read_count = sg.get_node_obj_via_id(i_TSS_id).get_read_support()
+
+                        elif j_TSS_id is not None:
+                            
+
                             j_TSS_read_count = sg.get_node_obj_via_id(j_TSS_id).get_read_support()
 
-                            
-                            
-                            frac_i_TSS =  j_TSS_read_count/i_TSS_read_count
-                            logger.debug("frac_i_TSS: {:.3f} of path_j: {} to path_i{}".format(frac_i_TSS, transcript_j_simple_path, transcript_i_simple_path))
-
                             frac_gene_express_j_TSS = j_TSS_read_count / gene_read_count
-                            
-                            if frac_i_TSS < PASA_SALRAA_Globals.config['max_frac_alt_TSS_from_degradation']:
-                                logger.debug("based on frac_i_TSS: {:.3f}, path_i: {} is subsuming path_j: {}".format(frac_i_TSS, transcript_i_simple_path, transcript_j_simple_path))
-                                subsume_J = True
+                            logger.debug("frac_gene_express_j_TSS {} {} : {:.3f}".format(transcript_j_id, transcript_j_simple_path, frac_gene_express_j_TSS))
 
-                            elif frac_gene_express_j_TSS < PASA_SALRAA_Globals.config['min_frac_gene_alignments_define_TSS_site']:
+                            
+                            if frac_gene_express_j_TSS < PASA_SALRAA_Globals.config['min_frac_gene_alignments_define_TSS_site']:
                                 logger.debug(
                                     "based on j_TSS count frac_gene_expression: {:.3f}, path_i: {} is subsuming path_j: {}".format(
-                                    frac_gene_express_j_TSS, transcript_i_simple_path, transcript_j_simple_path)
-                                    )
+                                        frac_gene_express_j_TSS, transcript_i_simple_path, transcript_j_simple_path)
+                                        )
                                 subsume_J = True
+                                
+                                                            
+                            elif i_TSS_id is not None:
 
+                                i_TSS_read_count = sg.get_node_obj_via_id(i_TSS_id).get_read_support()
+
+                                frac_i_TSS =  j_TSS_read_count/i_TSS_read_count
+                                logger.debug("frac_i_TSS: {:.3f} of path_j: {} to path_i{}".format(frac_i_TSS, transcript_j_simple_path, transcript_i_simple_path))
+
+
+                                if frac_i_TSS < PASA_SALRAA_Globals.config['max_frac_alt_TSS_from_degradation']:
+                                    logger.debug("based on frac_i_TSS: {:.3f}, path_i: {} is subsuming path_j: {}".format(frac_i_TSS, transcript_i_simple_path, transcript_j_simple_path))
+                                    subsume_J = True
+
+                            elif i_TSS_id is None:
+                                subsume_J = False
 
 
                         elif i_TSS_id is not None and j_TSS_id is None:
                             # no j_TSS but have i_TSS
                             subsume_J = True
 
-                        elif i_TSS_id is None and j_TSS_id is not None:
-                            subsume_J = False
-
 
                         else:
                             # neither has a TSS assigned.
                             subsume_J = True
 
+
+                            
                         #####  PolyA check ######    
                         ## But dont subsume if they have polyA and they differ
                         if subsume_J:
