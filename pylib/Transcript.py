@@ -53,6 +53,19 @@ class Transcript (GenomeFeature):
     def get_exon_segments(self):
         return self._exon_segments.copy()
 
+    def get_introns(self):
+        intron_coordsets = list()
+        exon_segments = self.get_exon_segments()
+        if len(exon_segments) > 1:
+            exon_segments = sorted(exon_segments, key=lambda x: x[0])
+            for i in range(1, len(exon_segments)):
+                intron_lend = exon_segments[i-1][1]+1
+                intron_rend = exon_segments[i][0] - 1
+                assert intron_lend < intron_rend
+                intron_coordsets.append( (intron_lend, intron_rend) )
+        return intron_coordsets
+    
+    
     def get_strand(self):
         return(self._orient)
 
