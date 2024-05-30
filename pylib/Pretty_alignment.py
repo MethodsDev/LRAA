@@ -163,7 +163,11 @@ class Pretty_alignment:
         logger.info("Attempting to correct alignments at soft-clips")
         
         max_softclip_realign_test = PASA_SALRAA_Globals.config['max_softclip_realign_test']
-        
+
+        ##################
+        # - more extreme verbose setting for debugging this method
+        local_debug = False
+        ##################
         
         for pretty_alignment in pretty_alignments_list:
 
@@ -198,15 +202,22 @@ class Pretty_alignment:
             # raligned         |||||            ||||||||||||||||
             
             if left_soft_clipping > 0 and left_soft_clipping <= max_softclip_realign_test:
+
+
+                if local_debug:
+                    print("evaluating left alignment correction for: {}".format(pretty_alignment))
+
                 left_alignment_segment = alignment_segments[0]
                 exon_seg_lend, exon_seg_rend = left_alignment_segment
                 overlapping_introns = list()
-                for overlapping_intron in splice_graph.get_overlapping_introns(exon_seg_lend, exon_seg_rend):
+                for overlapping_intron in splice_graph.get_overlapping_introns(exon_seg_lend-1, exon_seg_rend):
                     intron_lend, intron_rend = overlapping_intron.get_coords()
-                    if intron_rend > exon_seg_lend and intron_rend < exon_seg_rend:
+                    if intron_rend +1 >= exon_seg_lend and intron_rend < exon_seg_rend:
                         overlapping_introns.append(overlapping_intron)
 
-                #print("Got left overlapping introns: {}".format(overlapping_introns))
+                if local_debug:
+                    print("Got left overlapping introns: {}".format(overlapping_introns))
+
                 for left_overlapping_intron in overlapping_introns:
                     intron_lend, intron_rend = left_overlapping_intron.get_coords()
 
@@ -218,16 +229,22 @@ class Pretty_alignment:
                     if read_rend - read_adj_lend + 1 <=  max_softclip_realign_test:
                         
                         left_read_seq = read_sequence[read_adj_lend -1 : read_rend]
-                        #print("Checking read realignment for {}".format(left_read_seq))
+
+                        if local_debug:
+                            print("Checking read realignment for {}".format(left_read_seq))
                         
                         genomic_rend = intron_lend - 1
                         genomic_lend = genomic_rend - len(left_read_seq) + 1
                         
                         genomic_substr = contig_seq[genomic_lend - 1 : genomic_rend]
-                        #print("Comparing to genomic rend seq: {}".format(genomic_substr))
+                        
+                        if local_debug:
+                            print("Comparing to genomic rend seq: {}".format(genomic_substr))
                         
                         if left_read_seq.upper() == genomic_substr.upper():
-                            #print("\tLeft MATCH FOUND")
+
+                            if local_debug:
+                                print("\tLeft MATCH FOUND")
                             logger.debug("-left-side alignment correction for read {} repositioning sequence {}".format(read_name, genomic_substr))
                             # do reassignment:
                             alignment_segments[0][0] = intron_rend + 1
@@ -244,15 +261,22 @@ class Pretty_alignment:
 
                         
             if right_soft_clipping > 0 and right_soft_clipping <= max_softclip_realign_test:
+
+                if local_debug:
+                    print("evaluating right alignment correction for: {}".format(pretty_alignment))
+
+
                 right_alignment_segment = alignment_segments[-1]
                 exon_seg_lend, exon_seg_rend = right_alignment_segment
                 overlapping_introns = list()
-                for overlapping_intron in splice_graph.get_overlapping_introns(exon_seg_lend, exon_seg_rend):
+                for overlapping_intron in splice_graph.get_overlapping_introns(exon_seg_lend, exon_seg_rend+1):
                     intron_lend, intron_rend = overlapping_intron.get_coords()
-                    if intron_lend > exon_seg_lend and intron_lend < exon_seg_rend:
+                    if intron_lend > exon_seg_lend and intron_lend <= exon_seg_rend+1:
                         overlapping_introns.append(overlapping_intron)
 
-                #print("Got right overlapping introns: {}".format(overlapping_introns))
+                if local_debug:
+                    print("Got right overlapping introns: {}".format(overlapping_introns))
+
                 for right_overlapping_intron in overlapping_introns:
                     intron_lend, intron_rend = right_overlapping_intron.get_coords()
                     intron_adjacent_pos = intron_lend - 1
@@ -261,13 +285,16 @@ class Pretty_alignment:
                     read_lend = aligned_pairs[intron_adjacent_pos]
                     if len(read_sequence) - read_lend + 1 <= max_softclip_realign_test:
                         right_read_seq = read_sequence[read_lend:read_adj_rend]
-                        #print("Checking read realignment for {}".format(right_read_seq))
+                        if local_debug:
+                            print("Checking read realignment for {}".format(right_read_seq))
                         genomic_lend = intron_rend + 1
                         genomic_rend = genomic_lend + len(right_read_seq) - 1
                         genomic_substr = contig_seq[genomic_lend - 1 : genomic_rend]
-                        #print("Comparing to genomic rend seq: {}".format(genomic_substr))
+                        if local_debug:
+                            print("Comparing to genomic rend seq: {}".format(genomic_substr))
                         if right_read_seq.upper() == genomic_substr.upper():
-                            #print("\tRight MATCH FOUND")
+                            if local_debug:
+                                print("\tRight MATCH FOUND")
                             logger.debug("-right-side alignment correction for read {} repositioning sequence {}".format(read_name, genomic_substr))
                             # do reassignment:
                             alignment_segments[-1][1] = intron_lend -1
