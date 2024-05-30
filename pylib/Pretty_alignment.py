@@ -56,6 +56,16 @@ class Pretty_alignment:
     def get_pretty_alignment_segments(self):
         return self._pretty_alignment_segments
 
+
+    def get_strand(self):
+        if self._pysam_alignment.is_forward:
+            return('+')
+        elif self._pysam_alignment.is_reverse:
+            return('-')
+        else:
+            return("?")
+
+    
     def get_introns(self):
         intron_coordsets = list()
         exon_segments = self.get_pretty_alignment_segments()

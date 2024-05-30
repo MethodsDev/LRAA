@@ -490,6 +490,7 @@ class Splice_graph:
                                                                   PASA_SALRAA_Globals.config['min_alignments_define_TSS_site'])
             
 
+            TSS_grouped_positions = filter_non_peaky_positions(TSS_grouped_positions, TSS_position_counter, contig_acc, contig_strand)
             
             
             for TSS_peak in TSS_grouped_positions:
@@ -1652,6 +1653,7 @@ class Splice_graph:
                     TSS_to_purge = TSS_list[i:]
                     TSS_list = TSS_list[0:i]
                     break
+
             
             if TSS_to_purge:
                 logger.debug("Purging TSSs due to min isoform fraction requirements: {}".format(TSS_to_purge))
@@ -1723,7 +1725,53 @@ class Splice_graph:
 
 
 
+
+
+    
+
 ## general utility functions used above.
+
+
+def filter_non_peaky_positions(grouped_position_counts, position_counter, contig_acc, contig_strand):
+
+
+    grouped_position_counts_kept = list()
+
+    grouped_position_counts = sorted(grouped_position_counts, key=lambda x: x[0])
+    ofh = open("__TSS_filter_non_peaky_positions.tsv", "at")
+    pseudocount = 1
+    
+    window_len = PASA_SALRAA_Globals.config['TSS_window_read_enrich_len']
+    window_enrichment_factor = PASA_SALRAA_Globals.config['TSS_window_read_enrich_factor']
+    
+    for grouped_position in grouped_position_counts:
+        position, count = grouped_position
+        position_real_count = position_counter[position]
+        
+        adjacent_counts = [0,0]
+        for i in range(position - window_len, position + window_len):
+            if i != position:
+                pos_count = position_counter[i]
+                if pos_count > 0:
+                    adjacent_counts.append(pos_count)
+                
+        median_adjacent_count = statistics.median(adjacent_counts) if len(adjacent_counts) > 0 else 0  #adjacent_counts/(2*window_len)
+        pos_frac_counts = (position_real_count + pseudocount) / (median_adjacent_count + pseudocount)
+        
+        kept = (pos_frac_counts >= window_enrichment_factor)
+        
+        print("\t".join([contig_acc, contig_strand, str(position), str(position_real_count), str(median_adjacent_count), str(pos_frac_counts), str(kept)]), file=ofh)
+
+        if kept:
+            grouped_position_counts_kept.append(grouped_position)
+        
+    return grouped_position_counts_kept
+
+
+
+
+
+
 def aggregate_sites_within_window(pos_counter, max_distance_between_aggregated_sites, min_count_aggregated_site):
 
     position_count_structs = list()

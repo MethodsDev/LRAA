@@ -27,10 +27,13 @@ config = {
     # TSS config
     'infer_TSS' : True, # include TSS feature in read path assignments
     'max_dist_between_alt_TSS_sites' : 0,
-    'min_alignments_define_TSS_site' : 3,
+    'min_alignments_define_TSS_site' : 5,
     'max_soft_clip_at_TSS' : 0,
     'min_TSS_iso_fraction' : 0.05, # during initial TSS definition, require for a 'gene' that a TSS has at least this fraction of TSS-candidate gene reads assigned.
 
+    'TSS_window_read_enrich_len' : 50,
+    'TSS_window_read_enrich_factor' : 5,
+    
     ## - alt TSS isoform pruning 
 
     # during splice graph construction: walking exon segments from a more dominant site, removing less supported sites below fraction of dominant

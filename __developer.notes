@@ -80,4 +80,36 @@ transcript_path = self._retrieve_best_transcript(pasa_vertices)
 #################################################################################
 
 
+########################################
+## Notes on TSS-definition and filtering
+    
+    - Splice graph construction:
+    	- count read end positions if reads have <= PASA_SALRAA_Globals.config['max_soft_clip_at_TSS']
+        	- writes: __prelim_TSS_raw_counts.tsv
+        - aggregates sites within window and according to min alignment count:
+               PASA_SALRAA_Globals.config['max_dist_between_alt_TSS_sites']
+               PASA_SALRAA_Globals.config['min_alignments_define_TSS_site']
 
+       - TSS peaks in grouped positions are added as prelim TSS objects
+            - writes: __prefilter_TSS_info.bed
+
+       - TSS objs are incorporated into the splice graph, fracturing exon segments
+
+       - TSS filtering based on graph connected components:
+             - whole component: TSSs are eliminated if read support / total TSS read counts < PASA_SALRAA_Globals.config['min_TSS_iso_fraction']  
+    		- walking exons downstream from a top-read-count TSS, removing alt TSSs if alt TSS < PASA_SALRAA_Globals.config['max_frac_alt_TSS_from_degradation']  
+
+
+    - Reads are assigned paths based on the refined splice graph including remaining TSSs
+    - Read paths are clustered based on common paths.
+    - Quantify.prune_likely_degradation_products:
+    	various rules based on comparing two paths i,j where path_j is contained and compatible with path_i
+    		- frac_gene_express_j_TSS < PASA_SALRAA_Globals.config['min_frac_gene_alignments_define_TSS_site']
+    		- frac_i_TSS =  j_TSS_read_count/i_TSS_read_count & frac_i_TSS < PASA_SALRAA_Globals.config['max_frac_alt_TSS_from_degradation']:
+            - various polyA-based logic in case polyA sites differ
+
+    -  Quantify.filter_isoforms_by_min_isoform_fraction
+		- basic logic on filtering lowly supported isoforms, not exactly alt-TSS specific
+
+
+    
