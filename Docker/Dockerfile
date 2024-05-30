@@ -85,8 +85,8 @@ RUN wget https://github.com/samtools/samtools/releases/download/${SAMTOOLS_VERSI
 
 WORKDIR $SRC
 
-ENV LRAA_VERSION="v0.0.6"
-ENV LRAA_CO=61d8cfb3b6edc138d7d4d505b27bd01739b31a58
+ENV LRAA_VERSION="v0.0.7"
+ENV LRAA_CO=ca266a2b42a0c2fd03dcbdb77243152b719ae128
 
 RUN git clone --recursive https://github.com/MethodsDev/LRAA.git && \
     cd LRAA && \
