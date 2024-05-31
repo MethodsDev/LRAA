@@ -431,7 +431,8 @@ class PASA_SALRAA:
             segments = transcript.get_exon_segments()
             path = self._map_read_to_graph(segments)
             logger.debug(str(transcript) + " maps to graph as " + str(path))
-            transcript.set_simple_path(path)
+            if path is not None:
+                transcript.set_simple_path(path)
 
         return
 
