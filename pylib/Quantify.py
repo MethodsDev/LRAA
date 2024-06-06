@@ -132,6 +132,12 @@ class Quantify:
                                                                        trim_TSS_polyA = True, test_exact=False)
 
             if transcripts_assigned is None:
+                # last resort, do majority voting
+                transcripts_assigned = self._assign_path_to_transcript_by_majority_voting(splice_graph, mp, gene_isoforms)
+                
+
+                
+            if transcripts_assigned is None:
                 logger.debug("mp_count_pair {} maps to gene but no isoform(transcript)".format(mp_count_pair))
             else:
                 logger.debug("mp_count_pair {} maps to transcripts: {}".format(mp_count_pair, transcripts_assigned))
@@ -241,7 +247,49 @@ class Quantify:
         else:
             return transcripts_compatible_with_read
 
+
+
         
+    def _assign_path_to_transcript_by_majority_voting(self, splice_graph, mp, transcripts):
+        
+        assert type(mp) == MultiPath.MultiPath
+        assert type(transcripts) == set, "Error, type(transcripts) is {} not set ".format(type(transcripts))
+        assert type(list(transcripts)[0]) == Transcript.Transcript
+
+        contig_strand = splice_graph.get_contig_strand()
+        
+        read_sp = mp.get_simple_path()
+ 
+        # store read name to mp for later debugging.
+        for read_name in mp.get_read_names():
+            self._read_name_to_multipath[read_name] = mp
+
+        
+        scored_transcripts = list()
+        
+        for transcript in transcripts:
+            transcript_sp = transcript._simplepath
+
+            shared_simple_nodes = [simple_node for simple_node in read_sp if simple_node in transcript_sp]
+
+            if len(shared_simple_nodes) > 0:
+                scored_transcripts.append([len(shared_simple_nodes), transcript])
+
+        if len(scored_transcripts) > 0:
+            scored_transcripts = sorted(scored_transcripts, key=lambda x: x[0], reverse=True)
+            top_transcript_score_pair = scored_transcripts.pop(0)
+            top_transcript_score, top_transcript = top_transcript_score_pair
+            top_transcripts = [top_transcript]
+            # capture ties
+            for alt_top_transcript in scored_transcripts:
+                if alt_top_transcript[0] == top_transcript_score:
+                    top_transcripts.append(alt_top_transcript[1])
+            
+            return top_transcripts
+
+        else:
+            return None
+                
 
     def _estimate_isoform_read_support(self, transcripts, run_EM):
 

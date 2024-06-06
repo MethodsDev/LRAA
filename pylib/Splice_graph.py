@@ -140,10 +140,14 @@ class Splice_graph:
                     coords = sorted([lend, rend, range_lend, range_rend])
                     overlap_len = coords[2] - coords[1] + 1
                     frac_feature_len_overlap = overlap_len / feature_len
+                                        
+                                        
+                    target_range_len = range_rend - range_lend + 1
+                    frac_target_range_len_overlap = overlap_len / target_range_len
 
-                    logger.debug("\t\tRange {}-{} overlaps {}, overlap_len = {}, frac_overlap = {}".format(range_lend, range_rend, node, overlap_len, frac_feature_len_overlap))
-                
-                    if frac_feature_len_overlap >= min_frac_feature_overlap:  #PASA_SALRAA_Globals.config['min_feature_frac_overlap']:
+                    logger.debug("\t\tRange {}-{} overlaps {}, overlap_len = {}, frac_feature_overlap = {:.3f}, frac_range_overlap = {:.3f}".format(range_lend, range_rend, node, overlap_len, frac_feature_len_overlap, frac_target_range_len_overlap))
+                    
+                    if frac_feature_len_overlap >= min_frac_feature_overlap or frac_target_range_len_overlap >= min_frac_feature_overlap:  #PASA_SALRAA_Globals.config['min_feature_frac_overlap']:
                         overlapping_exon_segments.append(node)
 
                 else:
