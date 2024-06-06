@@ -12,7 +12,7 @@ config = {
     'min_per_id' : 98,
     'min_mapping_quality' : 20,
     'try_correct_alignments' : True,
-    'max_softclip_realign_test' : 10,
+    'max_softclip_realign_test' : 20,
 
 
     ####################################
