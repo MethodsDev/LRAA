@@ -59,7 +59,6 @@ def main():
 
     parser.add_argument("--include_asm_draft_quant", action='store_true', default=False, help="include the draft (not real... based on norm reads) quant values at assembly. Potentially useful for isoform fraction info only")
 
-
     parser.add_argument("--version", action='store_true', default=False, help='display version: {}'.format(VERSION))
     
     ## debug params
@@ -86,6 +85,9 @@ def main():
     config_group.add_argument("--min_per_id", type=float, default=PASA_SALRAA_Globals.config['min_per_id'],
                               help='min per_id for pacbio read alignments. default: ({})'.format(PASA_SALRAA_Globals.config['min_per_id']))
 
+    config_group.add_argument("--min_mapping_quality", type=int, default=PASA_SALRAA_Globals.config['min_mapping_quality'],
+                            help="minimum read alignment mapping quality (default: {})".format(PASA_SALRAA_Globals.config['min_mapping_quality']))
+    
     config_group.add_argument("--min_isoform_fraction", type=float, default=PASA_SALRAA_Globals.config['min_isoform_fraction'],
                               help='exclude reconstructed isoforms that have read support less than this fraction of all isoforms at each gene (no impact on --quant_only). default: ({})'.format(PASA_SALRAA_Globals.config['min_isoform_fraction']))
 
@@ -148,6 +150,7 @@ def main():
     # update config
     PASA_SALRAA_Globals.config['min_path_score'] = args.min_path_score
     PASA_SALRAA_Globals.config['min_per_id'] = args.min_per_id
+    PASA_SALRAA_Globals.config['min_mapping_quality'] = args.min_mapping_quality
     PASA_SALRAA_Globals.config['min_isoform_fraction'] = args.min_isoform_fraction
     PASA_SALRAA_Globals.config['infer_TSS'] = not args.no_infer_TSS
     PASA_SALRAA_Globals.config['infer_PolyA'] = not args.no_infer_PolyA
